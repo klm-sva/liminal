@@ -1,21 +1,28 @@
 import { Resend } from "resend";
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@liminalsva.com";
-const APP   = process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
+function getResend(): Resend {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
+
+function FROM() { return process.env.RESEND_FROM_EMAIL ?? "noreply@liminalsva.com"; }
+function APP()  { return process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com"; }
 
 // ─── 1. Welcome ───────────────────────────────────────────────────────────────
 
 export async function sendWelcomeEmail({ to, name }: { to: string; name: string }) {
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: "Welcome to Liminal",
     html: `
       <h1>Welcome, ${name}!</h1>
       <p>Your Liminal account is ready. Start by creating your first certification project.</p>
-      <p><a href="${APP}/dashboard">Go to Dashboard →</a></p>
+      <p><a href="${APP()}/dashboard">Go to Dashboard →</a></p>
     `,
   });
 }
@@ -35,8 +42,8 @@ export async function sendUploadConfirmationEmail({
   orderId: string;
   fileCount: number;
 }) {
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `Upload received — ${creditName}`,
     html: `
@@ -44,7 +51,7 @@ export async function sendUploadConfirmationEmail({
       <p>Hi ${name},</p>
       <p>We received <strong>${fileCount} file(s)</strong> for <strong>${creditName}</strong>.</p>
       <p>When you're ready to submit for review, click the button below.</p>
-      <p><a href="${APP}/orders/${orderId}">Review and Submit →</a></p>
+      <p><a href="${APP()}/orders/${orderId}">Review and Submit →</a></p>
     `,
   });
 }
@@ -65,8 +72,8 @@ export async function sendDocumentsRequestedEmail({
   issues: string[];
 }) {
   const issueList = issues.map((i) => `<li>${i}</li>`).join("\n");
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `Action required — ${creditName}`,
     html: `
@@ -75,7 +82,7 @@ export async function sendDocumentsRequestedEmail({
       <p>We reviewed your submission for <strong>${creditName}</strong> and need the following before we can proceed:</p>
       <ul>${issueList}</ul>
       <p>Please upload the corrected documents and mark your submission as ready again.</p>
-      <p><a href="${APP}/orders/${orderId}">Upload Documents →</a></p>
+      <p><a href="${APP()}/orders/${orderId}">Upload Documents →</a></p>
     `,
   });
 }
@@ -91,8 +98,8 @@ export async function sendProcessingStartedEmail({
   name: string;
   creditName: string;
 }) {
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `Processing your submission — ${creditName}`,
     html: `
@@ -121,17 +128,17 @@ export async function sendOutputDeliveryEmail({
 }) {
   const links = outputPaths
     .map((p) => {
-      const filename  = p.split("/").pop() ?? p;
+      const filename   = p.split("/").pop() ?? p;
       const isEditable = filename.includes("editable");
-      const label     = isEditable
+      const label      = isEditable
         ? `${filename} <span style="color:#388fa6;font-size:12px;">(editable version)</span>`
         : filename;
-      return `<li style="margin-bottom:6px;"><a href="${APP}/orders/${orderId}/download?path=${encodeURIComponent(p)}">${label}</a></li>`;
+      return `<li style="margin-bottom:6px;"><a href="${APP()}/orders/${orderId}/download?path=${encodeURIComponent(p)}">${label}</a></li>`;
     })
     .join("\n");
 
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `Your ${creditName} submission is ready`,
     html: `
@@ -145,7 +152,7 @@ export async function sendOutputDeliveryEmail({
         then save as a PDF using <strong>File &rarr; Print &rarr; Save as PDF</strong>.
       </p>
       <p><strong>Important:</strong> These files will be automatically deleted in 48 hours. Please download and save them now.</p>
-      <p><a href="${APP}/orders/${orderId}">View Order →</a></p>
+      <p><a href="${APP()}/orders/${orderId}">View Order →</a></p>
     `,
   });
 }
@@ -163,8 +170,8 @@ export async function sendDeletionWarningEmail({
   creditName: string;
   orderId: string;
 }) {
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `Action required — download your ${creditName} files before they expire`,
     html: `
@@ -172,7 +179,7 @@ export async function sendDeletionWarningEmail({
       <p>Hi ${name},</p>
       <p>The files for your <strong>${creditName}</strong> order will be permanently deleted in 48 hours as part of our privacy policy.</p>
       <p>Please download your submission documents before they expire.</p>
-      <p><a href="${APP}/orders/${orderId}">Download Files →</a></p>
+      <p><a href="${APP()}/orders/${orderId}">Download Files →</a></p>
     `,
   });
 }
@@ -190,8 +197,8 @@ export async function sendProjectInviteEmail({
   projectName: string;
   inviteUrl: string;
 }) {
-  return resend.emails.send({
-    from:    FROM,
+  return getResend().emails.send({
+    from:    FROM(),
     to,
     subject: `${inviterName} invited you to ${projectName} on Liminal`,
     html: `
