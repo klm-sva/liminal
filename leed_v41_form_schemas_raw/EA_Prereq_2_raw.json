@@ -1,0 +1,161 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "projMeetReqASHRAE": false,
+      "selectedOption": "",
+      "energyPrfmCompliance": {
+        "onSiteEnergyDocs": 0,
+        "retailEnergyCalcDocs": 0,
+        "dataCenterCalcDocs": 0,
+        "energyModelingDocs": 0,
+        "minEnrgyPrfmCalcDocs": 0,
+        "annualElectricity": "",
+        "annualElectricityUnits": "kWh/year",
+        "annualNaturalGas": "",
+        "annualNaturalGasUnits": "therms/year",
+        "baseAnnualElectricity": "",
+        "baseAnnualElectricityUnits": "kWh/year",
+        "baseAnnualNaturalGas": "",
+        "baseAnnualNaturalGasUnits": "therms/year",
+        "onPeakElectricalDocs": 0,
+        "totEnergyCostSavings": ""
+      },
+      "prescriptCompliance": {
+        "projMeetReqASHRAE16": false,
+        "prescriptCompliDocs": 0
+      },
+      "section11EnergyCost": {
+        "energyModelReportDocs": 0,
+        "energyCostCompliDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA103",
+      "shortId": "EA103",
+      "name": "Minimum Energy Performance",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Project meets the mandatory requirements of ASHRAE 90.1-2016, Sections 5.4, 6.4, 7.4, 8.4, 9.4, and 10.4 as applicable to the project scope of work.",
+      "type": "checkbox",
+      "name": "projMeetReqASHRAE",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. Energy Performance Compliance\n\nASHRAE 90.1-2016 Appendix G Performance Rating Method (0-18 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Prescriptive Compliance with ASHRAE 90.1-2016 (0-6 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 3. Section 11 Energy Cost Budget Method Compliance with ASHRAE 90.1-2016 (0 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

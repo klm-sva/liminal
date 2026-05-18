@@ -1,0 +1,432 @@
+{
+  "generated": "2026-05-06T01:47:34.410Z",
+  "totalForms": 53,
+  "successful": 53,
+  "failed": 0,
+  "perCredit": {
+    "IP Credit 1": {
+      "status": "success",
+      "totalFields": 15,
+      "teamFields": 6,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 1": {
+      "status": "success",
+      "totalFields": 12,
+      "teamFields": 7,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 2": {
+      "status": "success",
+      "totalFields": 22,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 3": {
+      "status": "success",
+      "totalFields": 16,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 4": {
+      "status": "success",
+      "totalFields": 40,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 4,
+      "error": null
+    },
+    "LT Credit 5": {
+      "status": "success",
+      "totalFields": 23,
+      "teamFields": 4,
+      "autoFields": 2,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 6": {
+      "status": "success",
+      "totalFields": 37,
+      "teamFields": 8,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "LT Credit 7": {
+      "status": "success",
+      "totalFields": 24,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "LT Credit 8": {
+      "status": "success",
+      "totalFields": 19,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "SS Prereq 1": {
+      "status": "success",
+      "totalFields": 17,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "SS Credit 1": {
+      "status": "success",
+      "totalFields": 11,
+      "teamFields": 7,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "SS Credit 2": {
+      "status": "success",
+      "totalFields": 25,
+      "teamFields": 9,
+      "autoFields": 0,
+      "calcFields": 5,
+      "error": null
+    },
+    "SS Credit 3": {
+      "status": "success",
+      "totalFields": 18,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 3,
+      "error": null
+    },
+    "SS Credit 4": {
+      "status": "success",
+      "totalFields": 25,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "SS Credit 5": {
+      "status": "success",
+      "totalFields": 32,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "SS Credit 6": {
+      "status": "success",
+      "totalFields": 34,
+      "teamFields": 10,
+      "autoFields": 0,
+      "calcFields": 3,
+      "error": null
+    },
+    "SS Credit 8": {
+      "status": "success",
+      "totalFields": 11,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "WE Prereq 1": {
+      "status": "success",
+      "totalFields": 26,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "WE Prereq 2": {
+      "status": "success",
+      "totalFields": 51,
+      "teamFields": 8,
+      "autoFields": 0,
+      "calcFields": 9,
+      "error": null
+    },
+    "WE Prereq 3": {
+      "status": "success",
+      "totalFields": 13,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "WE Credit 1": {
+      "status": "success",
+      "totalFields": 26,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "WE Credit 2": {
+      "status": "success",
+      "totalFields": 51,
+      "teamFields": 8,
+      "autoFields": 0,
+      "calcFields": 9,
+      "error": null
+    },
+    "WE Credit 3": {
+      "status": "success",
+      "totalFields": 41,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "WE Credit 4": {
+      "status": "success",
+      "totalFields": 15,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Prereq 1": {
+      "status": "success",
+      "totalFields": 44,
+      "teamFields": 12,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Prereq 2": {
+      "status": "success",
+      "totalFields": 32,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Prereq 3": {
+      "status": "success",
+      "totalFields": 13,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Prereq 4": {
+      "status": "success",
+      "totalFields": 15,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "EA Credit 1": {
+      "status": "success",
+      "totalFields": 21,
+      "teamFields": 5,
+      "autoFields": 1,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Credit 2": {
+      "status": "success",
+      "totalFields": 76,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 13,
+      "error": null
+    },
+    "EA Credit 3": {
+      "status": "success",
+      "totalFields": 13,
+      "teamFields": 6,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Credit 4": {
+      "status": "success",
+      "totalFields": 26,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "EA Credit 5": {
+      "status": "success",
+      "totalFields": 20,
+      "teamFields": 14,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EA Credit 6": {
+      "status": "success",
+      "totalFields": 19,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "MR Prereq 1": {
+      "status": "success",
+      "totalFields": 14,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "MR Credit 1": {
+      "status": "success",
+      "totalFields": 46,
+      "teamFields": 3,
+      "autoFields": 0,
+      "calcFields": 4,
+      "error": null
+    },
+    "MR Credit 2": {
+      "status": "success",
+      "totalFields": 18,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "MR Credit 3": {
+      "status": "success",
+      "totalFields": 14,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "MR Credit 4": {
+      "status": "success",
+      "totalFields": 19,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "MR Credit 9": {
+      "status": "success",
+      "totalFields": 33,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 6,
+      "error": null
+    },
+    "EQ Prereq 1": {
+      "status": "success",
+      "totalFields": 40,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 2,
+      "error": null
+    },
+    "EQ Prereq 2": {
+      "status": "success",
+      "totalFields": 20,
+      "teamFields": 7,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EQ Credit 1": {
+      "status": "success",
+      "totalFields": 35,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 3,
+      "error": null
+    },
+    "EQ Credit 2": {
+      "status": "success",
+      "totalFields": 28,
+      "teamFields": 6,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "EQ Credit 3": {
+      "status": "success",
+      "totalFields": 14,
+      "teamFields": 6,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EQ Credit 4": {
+      "status": "success",
+      "totalFields": 17,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "EQ Credit 5": {
+      "status": "success",
+      "totalFields": 29,
+      "teamFields": 13,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "EQ Credit 6": {
+      "status": "success",
+      "totalFields": 28,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 3,
+      "error": null
+    },
+    "EQ Credit 7": {
+      "status": "success",
+      "totalFields": 23,
+      "teamFields": 5,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "EQ Credit 8": {
+      "status": "success",
+      "totalFields": 12,
+      "teamFields": 7,
+      "autoFields": 0,
+      "calcFields": 1,
+      "error": null
+    },
+    "EQ Credit 9": {
+      "status": "success",
+      "totalFields": 13,
+      "teamFields": 4,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    },
+    "IN Credits 1-5": {
+      "status": "success",
+      "totalFields": 15,
+      "teamFields": 3,
+      "autoFields": 0,
+      "calcFields": 5,
+      "error": null
+    },
+    "IN Credit 6": {
+      "status": "success",
+      "totalFields": 8,
+      "teamFields": 3,
+      "autoFields": 0,
+      "calcFields": 0,
+      "error": null
+    }
+  }
+}

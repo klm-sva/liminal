@@ -1,0 +1,252 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "lowEmitMtrlCalcDocs": 0,
+      "selectedOptions": [],
+      "paintsNcoatings": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        },
+        "contentEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "adhesiveNsealants": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        },
+        "contentEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "flooring": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "wallPanels": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "ceilings": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "insulation": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "furniture": {
+        "emissionEvalVOC": {
+          "percent": "",
+          "unit": ""
+        },
+        "allFurnProjScope": false
+      },
+      "compositeWood": {
+        "evalFormaldehyde": {
+          "percent": "",
+          "unit": ""
+        }
+      },
+      "lowEmitProductDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "lowEmitMtrlCalcDocs": "",
+        "lowEmitProductDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ112",
+      "shortId": "EQ112",
+      "name": "Low-Emitting Materials",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Product category calculations:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Points are calculated as follows:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select all that apply:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Paints and coatings",
+      "type": "checkbox",
+      "name": "op1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Adhesives and sealants",
+      "type": "checkbox",
+      "name": "op2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Flooring",
+      "type": "checkbox",
+      "name": "op3",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Wall panels",
+      "type": "checkbox",
+      "name": "op4",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Ceilings",
+      "type": "checkbox",
+      "name": "op5",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Insulation",
+      "type": "checkbox",
+      "name": "op6",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Furniture",
+      "type": "checkbox",
+      "name": "op7",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Composite wood",
+      "type": "checkbox",
+      "name": "op8",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "lowEmitMtrlCalcDocs",
+      "type": "text",
+      "name": "lowEmitMtrlCalcDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "checkbox-validation",
+      "type": "text",
+      "name": "checkbox-validation",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "lowEmitProductDocs",
+      "type": "text",
+      "name": "lowEmitProductDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

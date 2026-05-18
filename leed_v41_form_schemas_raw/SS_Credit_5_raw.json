@@ -1,0 +1,221 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "option1": false,
+      "nonroofAndRoof": {
+        "nonroof": {
+          "device": {
+            "row": [
+              {
+                "material": "",
+                "sr": "",
+                "age": "",
+                "area": "",
+                "weightedArea": ""
+              }
+            ]
+          },
+          "pavingMaterial": {
+            "row": [
+              {
+                "material": "",
+                "sr": "",
+                "age": "",
+                "area": "",
+                "weightedArea": ""
+              }
+            ]
+          },
+          "area": {
+            "byPlantCanopy": "",
+            "byStructures": "",
+            "byVegStructures": "",
+            "byOpenGrid": ""
+          },
+          "totalArea": {
+            "standard": "",
+            "weighted": ""
+          }
+        },
+        "roof": {
+          "row": [
+            {
+              "slope": "",
+              "material": "",
+              "sri": "",
+              "age": "",
+              "area": "",
+              "weightedArea": ""
+            }
+          ],
+          "totalArea": {
+            "standard": "",
+            "weighted": ""
+          }
+        },
+        "totalVegRoofArea": "",
+        "roofNonRoofSummary": {
+          "nonroof": {
+            "weightedArea": "",
+            "standardArea": ""
+          },
+          "roof": {
+            "weightedArea": "",
+            "standardArea": ""
+          },
+          "vegRoof": {
+            "standardArea": ""
+          },
+          "sumOfRoofAndNonRoof": {
+            "weightedArea": "",
+            "standardArea": ""
+          },
+          "totalPavingArea": {
+            "standardArea": ""
+          },
+          "totalRoofArea": {
+            "standardArea": ""
+          },
+          "sumOfPavingAndRoof": {
+            "standardArea": ""
+          },
+          "percentageNonRoofPaving": {
+            "standardArea": ""
+          },
+          "percentageVegRoof": {
+            "standardArea": ""
+          }
+        },
+        "sitePlanDocs1": 0,
+        "manufacturerDocs1": 0
+      },
+      "option2": false,
+      "parkingUnderCover": {
+        "parking": {
+          "row": [
+            {
+              "material": "",
+              "sri": "",
+              "age": "",
+              "noOfSpaces": ""
+            }
+          ],
+          "convByVegRoof": "",
+          "convByEneryGenerators": "",
+          "underground": "",
+          "noOfQualified": "",
+          "noOfSpaces": "",
+          "percentOfCompliant": ""
+        },
+        "manufacturerDocs2": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS111",
+      "shortId": "SS111",
+      "name": "Heat Island Reduction",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following:",
+      "type": "text",
+      "name": "options",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. Nonroof and Roof (2 points)",
+      "type": "text",
+      "name": "options",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Parking Under Cover (1 point)",
+      "type": "text",
+      "name": "options",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

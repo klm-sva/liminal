@@ -1,0 +1,111 @@
+{
+  "embeddedData": {
+    "data": {
+      "descriptOfConstruct": false,
+      "recommendationsFor": false,
+      "infoOfEnableTenant": false,
+      "guidelinesOfDesign": false,
+      "tenantDesignConstDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "tenantDesignConstDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS115",
+      "shortId": "SS115",
+      "name": "Tenant Design and Construction Guideline",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bCs",
+        "code": "LEED V4.1 BD+C: CS",
+        "return": "LEED v4.1 BD+C: CS",
+        "name": "LEED v4.1 BD+C: Core and Shell",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "The site master plan was developed in collaboration with the school authorities.",
+      "type": "checkbox",
+      "name": "recommendationsFor",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "The tenant design and construction guidelines will be/have been provided to all tenants prior to signing the lease.",
+      "type": "checkbox",
+      "name": "guidelinesOfDesign",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "descriptOfConstruct",
+      "type": "checkbox",
+      "name": "descriptOfConstruct",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "infoOfEnableTenant",
+      "type": "checkbox",
+      "name": "infoOfEnableTenant",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "tenantDesignConstDocs",
+      "type": "text",
+      "name": "tenantDesignConstDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

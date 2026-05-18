@@ -1,0 +1,277 @@
+{
+  "embeddedData": {
+    "data": {
+      "selectedOption": "",
+      "siteLightingPlan": 0,
+      "uplightSelected": "",
+      "bugRatingMethodU": {
+        "luminaireScheduleU": 0
+      },
+      "calculationMethodU": {
+        "row": [
+          {
+            "description": "",
+            "quantity": "",
+            "luPerLuminaire": "",
+            "luAbeHoriz": "",
+            "totalLumLu": "",
+            "totalLumLuAbeHoriz": ""
+          }
+        ],
+        "total": {
+          "totalLumLu": "",
+          "totalLumLuAbeHoriz": ""
+        },
+        "percentAbeHoriz": "",
+        "allowablePerctAbeHoriz": ""
+      },
+      "lightTrespassSelected": "",
+      "bugRatingMethodL": {
+        "luminaireScheduleL": 0
+      },
+      "calculationMethodL": {
+        "verticalIllumCalc": 0
+      },
+      "intIllumSignage": [
+        {
+          "description": "",
+          "nightTimeLum": "",
+          "dayTimeLum": ""
+        }
+      ],
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "siteLightingPlan": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS113",
+      "shortId": "SS113",
+      "name": "Light Pollution Reduction",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Classify the project under one of the following lighting zones:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "LZ0: No ambient lighting",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "LZ1: Low ambient lightings",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "LZ2: Moderate ambient lighting",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "LZ3: Moderately high ambient lighting",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "LZ4: High ambient lighting",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Uplight",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following options for uplight compliance:",
+      "type": "text",
+      "name": "uplight-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. BUG rating method",
+      "type": "text",
+      "name": "uplight-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Calculation method",
+      "type": "text",
+      "name": "uplight-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Light Trespass",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following options for light trespass compliance:",
+      "type": "text",
+      "name": "lightTrespass-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. BUG rating method",
+      "type": "text",
+      "name": "lightTrespass-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Calculation method",
+      "type": "text",
+      "name": "lightTrespass-radio",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Internally Illuminated Exterior Signage",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with internally illuminated exterior signage",
+      "type": "text",
+      "name": "intl_description0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Internally illuminated signage",
+      "type": "text",
+      "name": "intl_description0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "radio1",
+      "type": "text",
+      "name": "radio1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "siteLightingPlan",
+      "type": "text",
+      "name": "siteLightingPlan",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "uplightSelected",
+      "type": "radio",
+      "name": "uplightSelected",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "lightTrespassSelected",
+      "type": "radio",
+      "name": "lightTrespassSelected",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "intl_nightTimeLum0",
+      "type": "text",
+      "name": "intl_nightTimeLum0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "intl_dayTimeLum0",
+      "type": "text",
+      "name": "intl_dayTimeLum0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

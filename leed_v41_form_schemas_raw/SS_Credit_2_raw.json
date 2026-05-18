@@ -1,0 +1,200 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "greenfield": {
+        "totalArea": "",
+        "preservedArea": "",
+        "preservedAreaPercent": "",
+        "details": ""
+      },
+      "selectedOption": "",
+      "onSiteRestoration": {
+        "distAreaTotal": "",
+        "restoredArea": "",
+        "distAreaRestoredPercent": "",
+        "epaLevel3Docs": 0,
+        "disturbedSoilsDetails": "",
+        "sitePlanDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "epaLevel3Docs": "",
+        "sitePlanDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS105",
+      "shortId": "SS105",
+      "name": "Protect or Restore Habitat",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with greenfield area",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "On-Site Restoration",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Which threshold are you attempting?",
+      "type": "text",
+      "name": "radio1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "15% of previously disturbed area restored (1 point)",
+      "type": "text",
+      "name": "radio1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "25% of previously disturbed area restored (2 points)",
+      "type": "text",
+      "name": "radio1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Native or Adapted Vegetation",
+      "type": "text",
+      "name": "distAreaTotal",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Soil Restoration",
+      "type": "textarea",
+      "name": "editor-2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "totalArea",
+      "type": "text",
+      "name": "totalArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "preservedArea",
+      "type": "text",
+      "name": "preservedArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "restoredArea",
+      "type": "text",
+      "name": "restoredArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "epaLevel3Docs",
+      "type": "text",
+      "name": "epaLevel3Docs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "sitePlanDocs",
+      "type": "text",
+      "name": "sitePlanDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

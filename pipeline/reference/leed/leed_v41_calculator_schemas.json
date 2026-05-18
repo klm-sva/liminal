@@ -1,0 +1,850 @@
+{
+  "metadata": {
+    "generated": "2026-05-05",
+    "source": "Parsed directly from USGBC LEED v4.1 BD+C calculator Excel/XLSM files",
+    "ratingSystem": "LEED v4.1 BD+C",
+    "note": "All fields extracted from actual calculator files. Re-parse only when USGBC releases updated calculator versions. Team-provided fields require project-specific data from drawings, specs, or contractor records. Claude-retrieved fields come from named public sources.",
+    "totalCalculators": 10
+  },
+  "calculators": {
+    "precert": {
+      "id": "precert",
+      "name": "LEED v4.1 BD+C Precertification Worksheet",
+      "version": "v01",
+      "credits": [
+        "IP Credit 1"
+      ],
+      "tabs": [
+        "LEED v4.1 BD+C Precertification"
+      ],
+      "description": "Single-tab worksheet covering all credits. For each credit, teams enter a 3-5 sentence narrative describing strategies. For prerequisites, they select compliance options and confirm requirements. For project info, they enter occupancy data.",
+      "projectInfoFields": [
+        "Project ID and name",
+        "Project Rating System (dropdown: Core and Shell, NC, Schools, Retail, etc.)",
+        "Number of buildings attempting precertification",
+        "Site area within LEED project boundary (sf)",
+        "Total project gross floor area (sf)",
+        "Date of substantial completion of construction",
+        "Site context (narrative)",
+        "Site description (narrative)",
+        "Peak occupants (number)",
+        "Peak transients (number)",
+        "Total building users at peak moment (number)",
+        "Full-time equivalent (FTE) occupants (number)",
+        "Daily average transients - student/visitors (number)",
+        "Daily average transients - retail customers (number)",
+        "Total building users as daily average (number)",
+        "Total number of residents (number)",
+        "Typical number of days of operation per year (number)"
+      ],
+      "requiredUploads": [
+        "Site plan identifying LEED project boundary",
+        "Photos, renderings, or drawings (interior and exterior)",
+        "Sections/elevations",
+        "Mechanical schedules, plans and/or drawings"
+      ],
+      "perCreditInputs": {
+        "format": "For each attempted credit: 3-5 sentence narrative describing strategies. For prereqs: select compliance option from dropdown then describe compliance approach.",
+        "creditsCovered": [
+          "IP Prereq (Healthcare): health mission statement narrative addressing triple bottom line",
+          "IP Credit 1: strategy narrative",
+          "LT Credits 1-8: strategy narratives",
+          "SS Prereq 1: select EPA CGP or local standards; describe compliance",
+          "SS Prereq 2 (Schools/Healthcare): select Phase I/II ESA option",
+          "SS Credits 1-11: strategy narratives",
+          "WE Prereq 1: select Option 1 (no irrigation) or Option 2 (reduced); enter anticipated % reduction",
+          "WE Prereq 2: select prescriptive or usage-based; confirm WaterSense fixtures; enter anticipated % reduction (usage-based only)",
+          "WE Prereq 3: confirm permanent water meters and 5-year data sharing commitment",
+          "WE Credits 1-4: strategy narratives or % reduction entry",
+          "EA Prereq 1: confirm OPR/BOD and CxA tasks",
+          "EA Prereq 2: select Option 1/2/3; enter anticipated % PCI below PCIt; enter anticipated % GHG PCI below PCIt",
+          "EA Prereq 3: confirm permanent energy meters and 5-year data sharing",
+          "EA Prereq 4: confirm no CFCs; if reusing CFC equipment describe phase-out plan",
+          "EA Credits 1-6: strategy narratives",
+          "MR Prereq 1: describe recycling storage areas",
+          "MR Prereq 2 (Construction/Demolition): describe waste management plan",
+          "MR Prereq 2 (Healthcare Mercury): describe mercury handling",
+          "MR Credits 1-9: strategy narratives",
+          "EQ Prereq 1: select ASHRAE 62.1-2016 or ISO 17772-1 or Historic; describe ventilation design",
+          "EQ Prereq 2: confirm smoking prohibition; describe policy communication",
+          "EQ Prereq 3 (Schools): confirm background noise \u226440 dBA; select measurement method",
+          "EQ Credits 1-9: strategy narratives",
+          "IN Credits 1-5: strategy narratives",
+          "IN Credit 6: confirm LEED AP on team"
+        ]
+      },
+      "teamProvides": [
+        "All project info fields (occupancy counts, GFA, site area)",
+        "All credit strategy narratives (3-5 sentences per credit)",
+        "Prerequisite compliance option selections",
+        "Required uploads (site plan, photos, sections, mechanical schedules)"
+      ],
+      "claudeProduces": [
+        "Draft 3-5 sentence strategy narratives for each pursued credit based on drawing set and project data",
+        "Occupancy count calculations from architectural program",
+        "Prerequisite compliance confirmation statements",
+        "Anticipated % reduction figures (WE Prereq 1, WE Prereq 2, EA Prereq 2) from calculator outputs"
+      ]
+    },
+    "indoor_water": {
+      "id": "indoor_water",
+      "name": "Indoor Water Use Reduction Calculator",
+      "version": "v05",
+      "credits": [
+        "WE Prereq 2",
+        "WE Credit 1",
+        "WE Credit 2"
+      ],
+      "tabs": [
+        "Instructions",
+        "Group 1",
+        "Base Calc",
+        "Lowrise Indoor Water Use",
+        "Lowrise Wastewater Use",
+        "Summary D+C",
+        "Summary O+M",
+        "Summary ND"
+      ],
+      "primaryInputTabs": [
+        "Group 1",
+        "Base Calc"
+      ],
+      "projectInfoInputs": [
+        "Group name",
+        "Occupancy type breakdown: Employees (FTE), Visitors, Retail Customers, Students (K-12), Residential, Other",
+        "Gender ratio (%) \u2014 default 50/50 male/female; non-default optional",
+        "Whether project includes ADA and/or gender-neutral bathrooms (Yes/No)",
+        "Percent of males expected to use restrooms with urinals (%)",
+        "Annual days of operation (default 365)"
+      ],
+      "flushFixtureInputs": [
+        "Fixture ID (matching plumbing schedule)",
+        "Fixture Family (dropdown)",
+        "Fixture Type (dropdown: toilet, urinal, etc.)",
+        "Design Flush Rate (gpf) \u2014 from plumbing fixture schedule",
+        "Baseline Flush Rate (gpf) \u2014 auto-populated by calculator based on fixture type",
+        "Percent of each occupancy type using this fixture (%)",
+        "Uses per day \u2014 auto-calculated from defaults or user-entered",
+        "For dual-flush toilets: Low flush rate (gpf) + Full flush rate (gpf) \u2014 calculator computes LEED weighted average"
+      ],
+      "flowFixtureInputs": [
+        "Fixture ID (matching plumbing schedule)",
+        "Fixture Type (dropdown: lavatory faucet, kitchen faucet, showerhead, etc.)",
+        "Duration (seconds) \u2014 default provided; non-default optional",
+        "Design Flow Rate (gpm) \u2014 from plumbing fixture schedule",
+        "Baseline Flow Rate (gpm) \u2014 auto-populated by calculator",
+        "Percent of each occupancy type using this fixture (%)",
+        "Uses per day \u2014 auto-calculated"
+      ],
+      "calculatedOutputs": [
+        "Baseline case annual flush volume (gallons/year)",
+        "Design case annual flush volume (gallons/year)",
+        "Baseline case annual flow volume (gallons/year)",
+        "Design case annual flow volume (gallons/year)",
+        "Total percent reduction from baseline (%)"
+      ],
+      "teamProvides": [
+        "Plumbing fixture schedule: fixture ID, family, type, design flush/flow rate, manufacturer, model number for every fixture in scope",
+        "Occupancy counts (FTE, visitors, retail customers, students, residential) \u2014 must match other LEED credits",
+        "Annual days of operation",
+        "Gender ratio if non-default",
+        "Whether ADA/gender-neutral bathrooms are included",
+        "Percent of males expected to use urinals",
+        "For dual-flush toilets: both flush rates"
+      ],
+      "claudeRetrieves": [
+        "Baseline flow/flush rates by fixture type \u2014 built into calculator (from LEED v4.1 baseline tables)",
+        "EPA WaterSense certification status by fixture manufacturer and model number (epa.gov/watersense)",
+        "ENERGY STAR certification status for appliances by manufacturer and model (energystar.gov)",
+        "Default uses per day and duration values \u2014 built into calculator"
+      ],
+      "claudeProduces": [
+        "Completed calculator Group 1 tab with all fixtures populated from plumbing fixture schedule",
+        "Percent reduction from baseline calculation",
+        "WaterSense compliance confirmation table per fixture",
+        "Summary of compliance path (prescriptive vs. usage-based)"
+      ]
+    },
+    "min_energy": {
+      "id": "min_energy",
+      "name": "Minimum Energy Performance Calculator (MEPC)",
+      "version": "v4 (07/24/2023)",
+      "credits": [
+        "EA Prereq 2",
+        "EA Credit 2"
+      ],
+      "tabs": [
+        "General Information",
+        "Points_v4.1",
+        "1 - Multiple Buildings Details",
+        "2a - Schedules",
+        "3 - Multifamily Details",
+        "4 - Shading and Fenestration",
+        "5 - Opaque Assemblies",
+        "6a - Lighting Counts",
+        "6b - General Lighting",
+        "7 - Process Loads",
+        "8 - Service Water Heating",
+        "9 - General HVAC",
+        "10a - Baseline Air-Side HVAC",
+        "10b - Proposed Air-Side HVAC",
+        "11 - Water-Side HVAC",
+        "12 - Performance_Outputs_1"
+      ],
+      "generalInfoInputs": [
+        "LEED Project ID #",
+        "Project Name",
+        "Rating system (dropdown)",
+        "Unit of measurement (IP or SI)",
+        "Project has multiple buildings? (Yes/No)",
+        "Building Type(s) \u2014 dropdown: Office, Retail, School, Healthcare, etc.",
+        "New Construction Conditioned area (sq ft)",
+        "Renovation Conditioned area (sq ft)",
+        "New Construction Unconditioned area (sq ft)",
+        "Renovation Unconditioned area (sq ft)",
+        "Project has residential dwelling units? (Yes/No)",
+        "Number of floors above grade",
+        "Number of floors below grade",
+        "Energy modeler name",
+        "Energy model based on (design phase description)",
+        "Simulation program (dropdown + version number)",
+        "Energy Modeling Protocol (dropdown)",
+        "Simulation weather file",
+        "Climate zone (dropdown)",
+        "Version of ASHRAE 90.1 to exceed (reference edition)",
+        "ASHRAE 90.1 addenda used (if any)",
+        "Compliant energy simulation software confirmation (checkbox)",
+        "Compliant energy modeling methodology confirmation (checkbox)",
+        "Error or warning messages in simulation output? (Yes/No)",
+        "Connected to district or campus thermal energy system? (Yes/No)",
+        "Rating System Variation (if ID+C or Data Center)"
+      ],
+      "energyModelInputs": [
+        "Proposed building energy consumption by end use and fuel type (from energy model output) \u2014 kBtu/yr",
+        "Baseline building energy consumption by end use and fuel type \u2014 kBtu/yr",
+        "Proposed building energy cost ($) by fuel type",
+        "Baseline building energy cost ($) by fuel type",
+        "GHG emissions factors by fuel type (electric from eGRID, natural gas from EPA)",
+        "Proposed GHG emissions (metric tons CO2e/yr)",
+        "Baseline GHG emissions (metric tons CO2e/yr)",
+        "Energy utility rates by fuel type ($/kBtu or $/therm etc.)"
+      ],
+      "pointsTab": [
+        "% Cost PCI below PCIt \u2014 auto-calculated from energy model inputs",
+        "% GHG Emissions PCI below PCIt \u2014 auto-calculated",
+        "Points achieved from Table 1 (cost-based) and Table 2 (GHG-based) \u2014 auto-calculated"
+      ],
+      "teamProvides": [
+        "Certified energy model simulation files (.inp, .idf, .osm, or equivalent)",
+        "Energy model output reports (input-output reports from simulation software)",
+        "All General Information tab inputs (project name, building type, areas, floors)",
+        "Simulation program and weather file identification",
+        "Exceptional calculation documentation if applicable",
+        "District energy system description if applicable"
+      ],
+      "claudeRetrieves": [
+        "EPA eGRID subregion annual average emission factors (CO2, CH4, N2O lbs/MWh) by project address (epa.gov/egrid)",
+        "ASHRAE climate zone by project address (ASHRAE climate zone map)",
+        "Local energy utility rates by utility provider for project address",
+        "ASHRAE 90.1-2016 baseline building performance factors (BPF) by building type \u2014 built into calculator"
+      ],
+      "claudeProduces": [
+        "Completed General Information tab from project data",
+        "GHG emissions calculations using eGRID factors",
+        "Points_v4.1 tab output showing points achieved once energy model data is entered",
+        "Summary of compliance path and improvement percentages"
+      ],
+      "note": "This calculator requires energy model output files as primary input. The energy model itself must be produced by a qualified energy modeler. Claude completes all tabs once energy model output reports are provided."
+    },
+    "rainfall": {
+      "id": "rainfall",
+      "name": "Rainfall Events Calculator",
+      "version": "v02",
+      "credits": [
+        "SS Credit 4"
+      ],
+      "tabs": [
+        "Instructions",
+        "Historical Data",
+        "Strategies",
+        "Summary D+C",
+        "Summary O+M",
+        "Summary ND"
+      ],
+      "historicalDataInputs": [
+        "Date of each precipitation event (MM/DD/YYYY)",
+        "Recording time of each precipitation event",
+        "Location / Monitoring Station name",
+        "Total Precipitation (inches) for each event",
+        "Minimum 10 years of daily precipitation records required (30 years preferred)"
+      ],
+      "calculatedPercentiles": [
+        "Total rainfall from 70th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 75th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 80th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 85th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 90th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 95th percentile storm event (in) \u2014 auto-calculated",
+        "Total rainfall from 98th percentile storm event (in) \u2014 auto-calculated"
+      ],
+      "strategiesInputs": [
+        "Runoff volume required to be retained on-site (cu ft) \u2014 from hydrology report",
+        "For each LID/GI strategy: Description of strategy",
+        "For each LID/GI strategy: Runoff volume retained (cu ft)",
+        "Percent runoff volume retained (%) \u2014 auto-calculated per strategy and total"
+      ],
+      "teamProvides": [
+        "Hydrology report with pre/post runoff calculations and LID/GI strategy design retention volumes (from licensed civil engineer)",
+        "List of LID/GI strategies with retention volumes (cu ft) per strategy",
+        "BMP cut sheets for proprietary products"
+      ],
+      "claudeRetrieves": [
+        "NOAA Climate Data Online daily precipitation records \u2014 minimum 10 years from nearest COOP station to project address, including date, station name, NOAA station ID, and total precipitation (inches) per event (ncdc.noaa.gov/cdo-web)",
+        "NOAA station name and ID nearest to project coordinates"
+      ],
+      "claudeProduces": [
+        "Completed Historical Data tab populated with NOAA CDO precipitation records for project location",
+        "Percentile storm event rainfall depths (auto-calculated by calculator once data entered)",
+        "Strategies tab populated with LID/GI strategies and volumes from hydrology report",
+        "Required retention volume from hydrology report"
+      ]
+    },
+    "iaq": {
+      "id": "iaq",
+      "name": "Minimum IAQ Performance Calculator",
+      "version": "v05",
+      "credits": [
+        "EQ Prereq 1"
+      ],
+      "tabs": [
+        "Instructions",
+        "Multiple Zone",
+        "100% OA",
+        "Single Zone",
+        "Summary"
+      ],
+      "selectTab": "Use Multiple Zone tab for most projects; Single Zone for single-zone systems; 100% OA for 100% outdoor air systems",
+      "multipleZoneInputs": [
+        "System name and number",
+        "Condition analyzed (impacts Ez, Vdz, Vpz, Vps) \u2014 dropdown",
+        "Whether all zones are included in VRP calculation",
+        "For each zone: Zone Name and Number",
+        "For each zone: Occupancy Category (dropdown from ASHRAE 62.1 Table 6-1)",
+        "For each zone: Zone Floor Area \u2014 Az (sq ft)",
+        "Are you using default value for zone population? (Yes/No)",
+        "For each zone: Zone Population \u2014 Pz (people, if non-default)",
+        "System primary airflow at condition analyzed \u2014 Vps (cfm)",
+        "Outdoor air intake flow provided (measured or design) (cfm)",
+        "Which method from ASHRAE 62.1 for system ventilation efficiency Ev? (dropdown)"
+      ],
+      "autoCalculated": [
+        "People outdoor air rate \u2014 Rp (cfm/person) from ASHRAE 62.1 Table 6-1 by occupancy category",
+        "Area outdoor air rate \u2014 Ra (cfm/sq ft) from ASHRAE 62.1 Table 6-1",
+        "Breathing zone outdoor airflow \u2014 Vbz = Rp\u00d7Pz + Ra\u00d7Az",
+        "Zone air distribution effectiveness \u2014 Ez",
+        "Zone outdoor airflow \u2014 Voz = Vbz/Ez",
+        "Zone primary airflow \u2014 Vdz, Vpz",
+        "Zone outdoor air fraction \u2014 Zpz = Voz/Vpz",
+        "System ventilation efficiency \u2014 Ev",
+        "Required outdoor air intake \u2014 Vot = Vou/Ev",
+        "Occupant diversity \u2014 D",
+        "Uncorrected outdoor air intake \u2014 Vou"
+      ],
+      "singleZoneInputs": [
+        "System name and number",
+        "Condition analyzed",
+        "Occupancy Category (dropdown)",
+        "Zone Floor Area \u2014 Az (sq ft)",
+        "Zone Population \u2014 Pz (people)"
+      ],
+      "100pctOAInputs": [
+        "System name and number",
+        "Condition analyzed",
+        "For each zone: Zone Name, Occupancy Category, Floor Area (sq ft), Population (people)",
+        "Outdoor air intake flow provided (cfm)"
+      ],
+      "teamProvides": [
+        "Mechanical drawings: AHU layouts, zone assignments, design airflow rates (cfm) per zone",
+        "Architectural room schedule: room names, areas (sf), and occupancy types",
+        "System primary airflow (Vps) from mechanical equipment schedule",
+        "Outdoor air intake flow provided (from mechanical design)"
+      ],
+      "claudeRetrieves": [
+        "ASHRAE 62.1-2016 Table 6-1 Rp (cfm/person) and Ra (cfm/sq ft) values by occupancy category \u2014 built into calculator",
+        "ASHRAE 62.1-2016 Table 6-2 zone air distribution effectiveness (Ez) values \u2014 built into calculator",
+        "ASHRAE 62.1-2016 Table 6-3 system ventilation efficiency (Ev) values \u2014 built into calculator"
+      ],
+      "claudeProduces": [
+        "Completed Multiple Zone (or Single Zone or 100% OA) tab with all ventilation zones populated from mechanical drawings and room schedule",
+        "Compliance confirmation: Vot provided \u2265 Vot required",
+        "Zone-by-zone ventilation compliance summary"
+      ],
+      "validOccupancyCategoryInputs": [
+        "Art classroom ",
+        "Auditorium seating area ",
+        "Bank vault / safe deposit ",
+        "Banks or bank lobbies",
+        "Barracks sleeping areas ",
+        "Bars / cocktail lounges ",
+        "Beauty and nail salon ",
+        "Bedroom / living room ",
+        "Booking / waiting ",
+        "Bowling alley (seating)",
+        "Break rooms (general)",
+        "Breakrooms (office buildings)",
+        "Cafeteria / fast food dining ",
+        "Classrooms (age 9 plus)",
+        "Classrooms (ages 5-8)",
+        "Coffee stations",
+        "Common corridors",
+        "Computer (not printing ) ",
+        "Computer lab",
+        "Conference / meeting ",
+        "Corridors ",
+        "Courtrooms ",
+        "Daycare (through age 4)",
+        "Daycare sickroom",
+        "Disco / dance floors ",
+        "Dwelling unit",
+        "Electrical equipment rooms",
+        "Elevator machine rooms",
+        "Freezer and refrigerated spaces <50 deg F",
+        "Gambling casinos ",
+        "Game arcades ",
+        "General manufacturing (excludes heavy industrial and processes using chemicals)",
+        "Guard stations",
+        "Gym, sports arena (play area)",
+        "Health club / aerobics",
+        "Health club / weight",
+        "Kitchen (cooking)",
+        "Laundry rooms within dwelling units",
+        "Laundry rooms, central",
+        "Lecture classroom ",
+        "Lecture hall (fixed seats)",
+        "Legislative chambers ",
+        "Libraries ",
+        "Lobbies ",
+        "Lobbies / prefunction ",
+        "Main entry lobbies ",
+        "Mall common areas ",
+        "Media center ",
+        "Multi-purpose assembly ",
+        "Multi-use assembly ",
+        "Museums (children's)",
+        "Museums / galleries ",
+        "Music / theater/ dance ",
+        "Occupiable storage rooms for dry materials",
+        "Occupiable storage rooms for liquids or gels",
+        "Office space ",
+        "Pharmacy (prep, area)",
+        "Photo studios",
+        "Places of religious worship",
+        "Reception areas ",
+        "Restaurant dining rooms ",
+        "Sales ",
+        "Science laboratories",
+        "Shipping / receiving ",
+        "Sorting, packing, light assembly",
+        "Spectator areas ",
+        "Sports arena (play area)",
+        "Stages, studios ",
+        "Storage rooms ",
+        "Supermarket ",
+        "Swimming (pool & deck)",
+        "Telephone / data entry ",
+        "Telephone closets",
+        "Transportation waiting",
+        "University / college laboratories",
+        "Warehouses",
+        "Wood / metal shop "
+      ]
+    },
+    "bpdo": {
+      "id": "bpdo",
+      "name": "Building Products (BPDO) Calculator",
+      "version": "v05 (07/24/2023)",
+      "credits": [
+        "MR Credit 2",
+        "MR Credit 3",
+        "MR Credit 4"
+      ],
+      "tabs": [
+        "Instructions BD+C",
+        "Instructions ID+C",
+        "Materials",
+        "Environ. Product Declarations",
+        "Sourcing of Raw Materials",
+        "Material Ingredients",
+        "Reference",
+        "Summary"
+      ],
+      "materialsTabInputs": [
+        "Material Type or Category",
+        "CSI Division (optional)",
+        "Product Name",
+        "Description of Product",
+        "Manufacturer Name",
+        "Sustainable Material Cost ($)"
+      ],
+      "epdTabInputs": [
+        "All fields from Materials tab (auto-pulled)",
+        "GBCI Doc Verification ID (if product verified by GBCI \u2014 replaces need to upload EPD)",
+        "EPD Program Operator (e.g., UL Environment, SCS, NSF)",
+        "EPD Type (product-specific Type III, industry-wide, etc.)",
+        "EPD expiration date",
+        "Option 2 Embodied Carbon fields: Report Type, Reference Documents, Report Verification method"
+      ],
+      "sourcingTabInputs": [
+        "All fields from Materials tab (auto-pulled)",
+        "GBCI Doc Verification ID (if applicable)",
+        "Extended Producer Responsibility: closed loop/take back program name",
+        "Responsible sourcing criteria met (checkboxes): EPR, sustainability reporting, third-party verified",
+        "Sustainable Criteria Value ($) per criterion",
+        "Location valuation factor"
+      ],
+      "ingredientsTabInputs": [
+        "All fields from Materials tab (auto-pulled)",
+        "GBCI Doc Verification ID (if applicable)",
+        "Type of Reporting (HPD, Declare, Cradle to Cradle, etc.)",
+        "Third-party verified? (Yes/No)",
+        "Option 2 Optimization: report type, optimization criteria met"
+      ],
+      "teamProvides": [
+        "Product specifications: product name, manufacturer, CSI division, model number for all permanently installed products",
+        "Cost data ($) for each product \u2014 from contractor cost estimate or bid documents",
+        "For products not in public databases: HPD documents, EPD documents, Declare labels, C2C certificates (as uploads to LEED Online)"
+      ],
+      "claudeRetrieves": [
+        "EC3 (buildingtransparency.org) \u2014 EPD search by product category, manufacturer, product name; EPD type and program operator",
+        "HPD Public Repository (hpd.build) \u2014 HPD search by manufacturer and product name; disclosure level confirmation",
+        "Living Future Declare database (living-future.org/declare) \u2014 Declare label status by manufacturer/product",
+        "FSC certificate database (info.fsc.org) \u2014 chain-of-custody certificate by manufacturer name",
+        "SFI Certified Sourcing database (sfiprogram.org) \u2014 certification status by manufacturer",
+        "GBCI Verified for LEED Documentation IDs \u2014 where products have been pre-verified (eliminates need for individual EPD uploads)"
+      ],
+      "claudeProduces": [
+        "Completed Materials tab with all products from spec book and cost data",
+        "Completed EPD tab with EPD type, program operator, verification ID for each qualifying product",
+        "Completed Sourcing tab with responsible sourcing criteria and values per product",
+        "Completed Material Ingredients tab with disclosure type per product",
+        "Summary tab compliance output: weighted product counts and cost percentages"
+      ]
+    },
+    "cdwaste": {
+      "id": "cdwaste",
+      "name": "Construction and Demolition Waste Management Calculator",
+      "version": "v02 (07/24/2023)",
+      "credits": [
+        "MR Credit 9"
+      ],
+      "tabs": [
+        "Instructions",
+        "Calculator",
+        "DETAILED RECORDS",
+        "Summary D+C",
+        "Summary ND"
+      ],
+      "projectInputs": [
+        "Project gross floor area (sq ft or m\u00b2)",
+        "Unit selection: IP (lbs) or SI (kg)"
+      ],
+      "calculatorTabInputs": [
+        "Material Description (e.g., concrete, wood, drywall, metal, cardboard)",
+        "Material Type (dropdown: concrete/masonry, metal, wood, drywall, cardboard, etc.)",
+        "Demolition or Construction Phase? (dropdown)",
+        "Diverted or Not Diverted? (dropdown)",
+        "Total Waste Generated (lbs or kg) \u2014 Diverted and Not Diverted combined",
+        "Average recycling rate of sorting facility NOT including ADC (%) \u2014 for commingled only"
+      ],
+      "detailedRecordsInputs": [
+        "Date of each ticket",
+        "Ticket number",
+        "Hauler name",
+        "Total weight (lbs or kg)",
+        "For commingled: average recycling rate of sorting facility (%)",
+        "Diverted materials weight",
+        "Total waste generated weight",
+        "Notes"
+      ],
+      "calculatedOutputs": [
+        "Option 1: Total waste not diverted, Demolition & Construction",
+        "Option 1: Total waste diverted, Demolition & Construction",
+        "Option 1: Total waste generated, Demolition & Construction",
+        "Option 2: Demolition-only and construction-only breakdowns",
+        "Total number of diverted material streams",
+        "Diversion rate (%)",
+        "Points achieved"
+      ],
+      "teamProvides": [
+        "Post-construction: waste hauler diversion receipts and weight tickets by material type (date, hauler name, facility, material type, weight) \u2014 contractor provides these after construction",
+        "Recycling facility average diversion rates by facility name (from hauler documentation)",
+        "Waste management plan from Division 01 specifications (pre-construction, Claude produces draft)"
+      ],
+      "claudeRetrieves": [
+        "Local waste hauler published diversion rates by facility name for project municipality",
+        "EPA Volume-to-Weight Conversion Factors for Solid Waste by material type (epa.gov) \u2014 for converting volume to weight if needed"
+      ],
+      "claudeProduces": [
+        "Pre-construction: draft Construction Waste Management Plan from Division 01 specifications covering waste reduction strategies, diversion goals by material stream, hauler identification, and tracking protocol",
+        "Post-construction: completed Calculator tab from contractor-provided weight tickets",
+        "Completed Detailed Records tab from individual ticket data",
+        "Diversion rate calculation and points determination"
+      ],
+      "note": "Post-construction data (weight tickets, hauler receipts) must come from contractor. Cannot be automated pre-occupancy. Claude pre-generates the waste management plan and calculator template; contractor fills in actual weights."
+    },
+    "low_emit": {
+      "id": "low_emit",
+      "name": "Low-Emitting Materials Calculator",
+      "version": "v02",
+      "credits": [
+        "EQ Credit 2"
+      ],
+      "tabs": [
+        "Instructions",
+        "Paints and coatings",
+        "Adhesives and sealants",
+        "Flooring",
+        "Wall panels",
+        "Ceilings",
+        "Insulation",
+        "Furniture",
+        "Composite wood",
+        "Summary",
+        "Lookups"
+      ],
+      "commonInputsPerProduct": [
+        "Product Name",
+        "Manufacturer Name",
+        "CSI Division (optional)",
+        "Criteria Selected (dropdown: VOC emissions evaluation, VOC content evaluation, inherently nonemitting, salvaged/reused)",
+        "For VOC emissions evaluation: Reporting Type, Reporting Organization, Certification Period start date/test date, Certification Period end date, Applicable standard or regulation",
+        "Actual VOC content (g/L) \u2014 if using VOC content path"
+      ],
+      "paintsCoatingsInputs": [
+        "Compliance basis: volume or surface area",
+        "Using VOC budget approach? (Yes/No)",
+        "Product Volume (L) \u2014 from spec or manufacturer data",
+        "Product surface area (sq ft) \u2014 optional",
+        "All common product fields above"
+      ],
+      "adhesivesSealantsInputs": [
+        "Same structure as Paints and coatings tab",
+        "Product Volume (L)",
+        "Product surface area (sq ft) \u2014 optional"
+      ],
+      "flooringInputs": [
+        "Compliance basis: cost (default)",
+        "Product Cost ($)",
+        "Product surface area (sq ft) \u2014 optional",
+        "Reporting Type (dropdown: FloorScore, GreenGuard, NSF 332, CDPH, etc.)",
+        "Reporting Organization",
+        "Certification Period dates"
+      ],
+      "wallPanelsCeilingsInsulationInputs": [
+        "Same structure as Flooring tab",
+        "Product Cost ($)",
+        "Product surface area (sq ft) \u2014 optional"
+      ],
+      "furnitureInputs": [
+        "Product Name, Manufacturer Name, CSI Division",
+        "Product cost ($)",
+        "Low-emitting criteria (dropdown)",
+        "Product Certificate or meeting documentation reference"
+      ],
+      "compositeWoodInputs": [
+        "Compliance basis: surface area",
+        "Product Name, Manufacturer Name, CSI Division",
+        "Product surface area (sq ft)",
+        "Product Cost ($)",
+        "Formaldehyde emissions evaluation criteria met"
+      ],
+      "summaryOutputs": [
+        "Per category: percent meeting requirements by volume/cost/surface area",
+        "Threshold requirement per category (e.g., flooring 90% by cost)",
+        "Meets threshold: Yes/No",
+        "Meets exemplary performance: Yes/No",
+        "Total number of compliant categories"
+      ],
+      "teamProvides": [
+        "Interior finish specifications: product name, manufacturer, product type, CSI division for all interior finish products in scope (paints, adhesives, sealants, flooring, wall panels, ceilings, insulation, furniture, composite wood)",
+        "Product costs ($) from contractor cost estimate or finish schedule",
+        "Product volumes (L) from spec quantities",
+        "Product surface areas (sq ft) from finish schedule"
+      ],
+      "claudeRetrieves": [
+        "SCAQMD Rule 1168 VOC content limits by adhesive/sealant category \u2014 for compliance verification",
+        "SCAQMD Rule 1113 VOC limits by coating category",
+        "CARB SCM VOC limits for consumer products",
+        "FloorScore, GreenGuard Gold, NSF 332, CDPH 01350 \u2014 certification status by product/manufacturer from certification databases",
+        "CDPH Standard Method VOC emission test results \u2014 from public databases or manufacturer documentation by product name"
+      ],
+      "claudeProduces": [
+        "Completed calculator with all 8 product category tabs populated from finish schedule and specs",
+        "VOC compliance verification per product (emissions path vs. content path)",
+        "Certification status table per product (auto-retrieved from certification databases)",
+        "Summary tab compliance result per category and total"
+      ]
+    },
+    "daylight": {
+      "id": "daylight",
+      "name": "Daylight and Quality Views Calculator",
+      "version": "v02",
+      "credits": [
+        "EQ Credit 6",
+        "EQ Credit 7",
+        "EQ Credit 8"
+      ],
+      "tabs": [
+        "Instructions",
+        "Daylight",
+        "Quality Views",
+        "Quality Views HC",
+        "Summary D+C",
+        "Summary HC",
+        "Summary WDC"
+      ],
+      "daylightTabInputs": [
+        "Space ID",
+        "Space Description",
+        "Total Regularly Occupied Area (sq ft)",
+        "Option 1 Simulation path: sDA300/50% value (%) \u2014 from daylight simulation software",
+        "Option 1 Simulation path: ASE1000,250 value (%) \u2014 from daylight simulation software",
+        "Option 2 Prescriptive path: area with daylight illuminance levels between 300 lux and 3000 lux at first measurement (sq ft)",
+        "Option 2 Prescriptive path: area at second measurement \u2014 optional (sq ft)"
+      ],
+      "daylightCalculatedOutputs": [
+        "Is sDA300/50% value \u2265 55%? (auto)",
+        "Is ASE1000,250 value \u2264 10%? (auto)",
+        "Total regularly occupied area (sq ft)",
+        "Average sDA300/50% value (auto)",
+        "Total daylighted regularly occupied area (sq ft)",
+        "Exemplary performance check"
+      ],
+      "qualityViewsInputs": [
+        "Space ID",
+        "Space Description",
+        "Total Regularly Occupied Area (sq ft)",
+        "For Warehouses/Distribution Centers: office vs. bulk storage/sorting/distribution designation",
+        "View type(s) present in each space (checkboxes from 4 view quality types: glazing factor, multiple lines of sight, unobstructed views to distance \u226525 ft, views to nature/urban/indoors)",
+        "Count for identical view types"
+      ],
+      "qualityViewsOutputs": [
+        "Total regularly occupied area with access to views (sq ft)",
+        "Percentage of regularly occupied area with qualifying views (%)",
+        "For Warehouses: separate calculations for office and bulk storage portions"
+      ],
+      "teamProvides": [
+        "Architectural floor plans: window locations, dimensions, orientation for all occupied floors",
+        "Room use schedule: all regularly occupied spaces with areas (sq ft)",
+        "For simulation path (Option 1): daylight simulation results (sDA and ASE values) from qualified simulation software",
+        "Glazing specifications: VLT values, frit pattern openness factor",
+        "Section/elevation drawings showing glazing extent and obstructions"
+      ],
+      "claudeRetrieves": [
+        "Glazing manufacturer VLT values \u2014 from manufacturer product data sheets and NFRC database by glazing product name and model from specifications",
+        "Frit pattern openness factor \u2014 from manufacturer data by product name"
+      ],
+      "claudeProduces": [
+        "Completed Daylight tab: all regularly occupied spaces with areas, simulation results (Option 1) or prescriptive measurements (Option 2)",
+        "Completed Quality Views tab: all regularly occupied spaces with view types assessed from floor plans and sections",
+        "Compliance determination per space and overall",
+        "Summary tab output"
+      ],
+      "note": "For EQ Credit 6 (Interior Lighting), this calculator's quality views tab is also used for lighting compliance documentation."
+    },
+    "acoustic": {
+      "id": "acoustic",
+      "name": "Acoustic Performance Calculator",
+      "version": "v01",
+      "credits": [
+        "EQ Prereq 3",
+        "EQ Credit 9"
+      ],
+      "tabs": [
+        "Instructions",
+        "Assumptions",
+        "Background Noise",
+        "Sound Transmission",
+        "Sound Transmission (SCH, HC)",
+        "Reverberation Time",
+        "Noise Reduction Coefficient",
+        "Speech Privacy",
+        "Acoustical Finishes",
+        "Summary D+C",
+        "Summary SCH",
+        "Summary HC"
+      ],
+      "assumptionsTab": "Reference tables built into calculator: ASHRAE 2015 HVAC Applications background noise levels by space type; ANSI S12.60 and FGI STC requirements by adjacency type; RT60 targets by room type; NRC design coefficients by space type. No user input required on Assumptions tab \u2014 all reference data is pre-loaded.",
+      "backgroundNoiseInputs": [
+        "Space ID",
+        "Space Type (dropdown \u2014 determines maximum allowed background noise level from ASHRAE/FGI tables)",
+        "Sound Rating Method (dropdown: NC/RC or dBA or dBC or RC(N))",
+        "Background Noise Level (dBA, NC, or dBC) \u2014 measured or modeled value entered by user"
+      ],
+      "backgroundNoiseOutputs": [
+        "Maximum Allowed Background Noise Level (auto from space type)",
+        "Background Noise Compliance (Yes/No per space)",
+        "Prereq compliance: all spaces \u2264 40 dBA",
+        "Credit compliance: all spaces \u2264 35 dBA"
+      ],
+      "soundTransmissionInputs": [
+        "Room ID",
+        "Space Description",
+        "Space use and desired level of acoustic privacy (dropdown: Collaborative, Private, Confidential)",
+        "Space use and desired level of acoustic privacy for adjacent space (dropdown)",
+        "Is sound masking provided? (Yes/No)",
+        "Actual STC or NIC rating of partition assembly separating the spaces"
+      ],
+      "soundTransmissionOutputs": [
+        "Required STC/NIC rating (auto from adjacency combination table)",
+        "Sound transmission requirement met: Yes/No per space pair"
+      ],
+      "reverberationTimeInputs": [
+        "For each material: Material ID, Description, Manufacturer/Vendor Name",
+        "Sound absorption coefficients at 500 Hz, 1000 Hz, 2000 Hz",
+        "Surface Area (sq ft) of material",
+        "Material Location (ceiling, wall, floor)",
+        "For each space: Space ID, Space and Application Type (dropdown)",
+        "Room volume (cubic feet)"
+      ],
+      "reverberationTimeOutputs": [
+        "Equivalent Sound Absorption at 500, 1000, 2000 Hz (auto)",
+        "Total sound absorbing units (sabins) at each frequency (auto)",
+        "Reverberation time requirement (seconds) by space type (auto)",
+        "Reverberation time (T60 seconds) calculated (auto)",
+        "Compliance: reverberation time not exceeded (Yes/No)"
+      ],
+      "nrcInputs": [
+        "Schools projects only",
+        "Material ID, Description, Manufacturer/Vendor Name",
+        "NRC value of material",
+        "Area of material (sq ft) in each space",
+        "Total ceiling area excluding lights, diffusers, grilles (sq ft)"
+      ],
+      "teamProvides": [
+        "Reflected ceiling plans: ceiling tile product names and models, NRC ratings",
+        "Partition layout drawings with assembly designations",
+        "Wall, floor, ceiling assembly specifications with STC ratings",
+        "Mechanical specifications with NC/RC background noise levels",
+        "Acoustic consultant report if available (for complex assemblies)",
+        "Room volumes (cu ft) \u2014 calculated from architectural drawings (area \u00d7 ceiling height)",
+        "For materials: manufacturer/vendor name and product name for sound absorption coefficient lookup"
+      ],
+      "claudeRetrieves": [
+        "NRC coefficients from manufacturer data sheets by ceiling tile product name and model",
+        "STC ratings from manufacturer published assembly data by product/assembly name",
+        "Sound absorption coefficients (500/1000/2000 Hz) from manufacturer data by product name",
+        "ASHRAE 2015 HVAC Applications Table 1 maximum background noise levels by space type \u2014 built into calculator Assumptions tab",
+        "ANSI S12.60-2010 Part 1 Table 4 STC requirements by adjacency \u2014 built into calculator",
+        "FGI Guidelines STC requirements for healthcare \u2014 built into calculator"
+      ],
+      "claudeProduces": [
+        "Completed Background Noise tab for all regularly occupied spaces",
+        "Completed Sound Transmission tab for all acoustically critical partition pairs",
+        "Completed Reverberation Time tab for acoustically critical spaces",
+        "Completed NRC tab (Schools only)",
+        "Compliance determination for Prereq (\u226440 dBA) and Credit (\u226435 dBA, STC, RT)"
+      ]
+    }
+  }
+}

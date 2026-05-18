@@ -1,0 +1,128 @@
+{
+  "embeddedData": {
+    "data": {
+      "subsystems": [],
+      "submetersDetails": "",
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "WE112",
+      "shortId": "WE112",
+      "name": "Water Metering",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Select two or more. The following water subsystems are metered:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Irrigation (at least 80% of landscaped area)",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Indoor plumbing fixtures and fittings (at least 80% of fixtures and fittings)",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Domestic hot water (at least 80% of the installed domestic hot water heating capacity including both tanks and ondemand heaters)",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Boiler with aggregate projected annual water use of 100,000 gal (378,500 l) or more, or boiler of more than 500,000 BtuH (150 kW)",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Reclaimed water",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Other process water (at least 80% of expected daily water consumption for process end uses such as humidifiers, dishwashers, clothes washers, and pools)",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "subsystems",
+      "type": "text",
+      "name": "subsystems",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

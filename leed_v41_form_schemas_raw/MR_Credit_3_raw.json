@@ -1,0 +1,126 @@
+{
+  "embeddedData": {
+    "data": {
+      "bpdoCalcDocs": 0,
+      "percentOfTotalMatCost": "",
+      "responSourcingDocs": 0,
+      "reuseStrategiesInfo": "",
+      "incluUsgbcApproved": false,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "bpdoCalcDocs": "",
+        "responSourcingDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "MR114",
+      "shortId": "MR114",
+      "name": "Sourcing of Raw Materials",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V03",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Responsible Sourcing of Raw Materials",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects that include re-use",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects that include products from a USGBC-approved program",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Documentation has been provided for all products complying under a USGBC-approved program.",
+      "type": "checkbox",
+      "name": "incluUsgbcApproved",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "bpdoCalcDocs",
+      "type": "text",
+      "name": "bpdoCalcDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "percentOfTotalMatCost",
+      "type": "text",
+      "name": "percentOfTotalMatCost",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "responSourcingDocs",
+      "type": "text",
+      "name": "responSourcingDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

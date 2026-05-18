@@ -1,0 +1,294 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "biCycNetConnectsTo": "",
+      "vicinityMapDocs": 0,
+      "isLocInHistoricUrban": false,
+      "areaHistoricalInfo": "",
+      "historicSupportDocs": 0,
+      "biCycNetPlanDocs": 0,
+      "siteMapDocs": 0,
+      "selectedOption": "",
+      "commercial": {
+        "shortTerm": {
+          "row": [
+            {
+              "description": "",
+              "noOfSpaces": "",
+              "distance": ""
+            }
+          ],
+          "noOfSpacesWithIn": "",
+          "peakVisitors": "",
+          "noOfSpacesRequired": ""
+        },
+        "longTerm": {
+          "row": [
+            {
+              "description": "",
+              "noOfSpaces": "",
+              "distance": ""
+            }
+          ],
+          "noOfSpacesWithIn": "",
+          "regularOccupants": "",
+          "noOfSpacesRequired": ""
+        },
+        "showers": {
+          "regularOccupants": "",
+          "withInChaFaciProvided": "",
+          "withInChaFaciRequired": ""
+        }
+      },
+      "residential": {
+        "shortTerm": {
+          "row": [
+            {
+              "description": "",
+              "noOfSpaces": "",
+              "distance": ""
+            }
+          ],
+          "noOfSpacesWithIn": "",
+          "peakVisitors": "",
+          "noOfSpacesRequired": ""
+        },
+        "longTerm": {
+          "row": [
+            {
+              "description": "",
+              "noOfSpaces": "",
+              "distance": ""
+            }
+          ],
+          "noOfSpacesWithIn": "",
+          "regularOccupants": "",
+          "residentialUnits": "",
+          "noOfSpacesRequired": ""
+        }
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "vicinityMapDocs": "",
+        "biCycNetPlanDocs": "",
+        "siteMapDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "LT108",
+      "shortId": "LT108",
+      "name": "Bicycle Facilities",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Bicycle Network",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following.",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "At least 10 diverse uses",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "A school or employment center, if the project total floor area is 50% or more residential",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "A bus rapid transit stop, passenger, rail station, or ferry terminal",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects located in historic urban locations",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Project is located in a historic urban location",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with planned bicycle networks",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Bicycle Storage and Shower Rooms",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 1. Commercial or institutional projects",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 2. Residential projects",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 3. Mixed-use projects (both commercial and residential)",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "biCycNetConnectsTo",
+      "type": "radio",
+      "name": "biCycNetConnectsTo",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "vicinityMapDocs",
+      "type": "text",
+      "name": "vicinityMapDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "biCycNetPlanDocs",
+      "type": "text",
+      "name": "biCycNetPlanDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "siteMapDocs",
+      "type": "text",
+      "name": "siteMapDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "radio-2",
+      "type": "text",
+      "name": "radio-2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

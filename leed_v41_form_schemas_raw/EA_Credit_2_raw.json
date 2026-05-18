@@ -1,0 +1,313 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "selectedOption": "",
+      "enrgEfncyMsure": false,
+      "energyPrfmCompliance": {
+        "energyDocChoosed": "",
+        "targetFinderDocs": 0,
+        "projNoTarget": false,
+        "annualElectricity": "",
+        "annualElectricityUnits": "kWh/year",
+        "annualNaturalGas": "",
+        "annualNaturalGasUnits": "therms/year",
+        "totPropSiteEnergy": "",
+        "totPropSiteEnergyUnits": "Btu x 10⁶/year",
+        "totPCIEnergy": "",
+        "totAnnualEnrgyCost": "",
+        "totAnnualEnrgyCostUnits": "$/year",
+        "totPerceCostPCI": "",
+        "gasEmitMTCO2": "",
+        "gasEmitMTCO2Units": "kg/year",
+        "gasEmitPCIbelowPCIT": "",
+        "ghgEmissionsFactors": "",
+        "ghgEmissionsFactorsOther": ""
+      },
+      "prescriptCompliance": {
+        "climateZoneNumber": "",
+        "selectAprropriateAEDG": "",
+        "AEDGtables": 0
+      },
+      "systemOptimization": {
+        "sysOptimizeOptions": [],
+        "lightingPowerDensity": {
+          "lightPwrDensityOption": "",
+          "consistentWithASHRAE": false,
+          "lightPowerAllowTbl": {
+            "row": [
+              {
+                "spaceType": "",
+                "allowedLPD": "",
+                "grossArea": "",
+                "lightingPowerAllow": "",
+                "installedInterLightPwr": ""
+              }
+            ],
+            "totGrossArea": "",
+            "totalPowerAllow": "",
+            "totalInterPowerAllow": ""
+          },
+          "additLightPowerAllowTbl": {
+            "row": [
+              {
+                "spLightSpaceType": "",
+                "grossArea": "",
+                "additLPDallowed": "",
+                "additLightPowerAllowed": "",
+                "installAdditInterLightPwr": ""
+              }
+            ],
+            "totalAdditPowerAllow": "",
+            "totalAdditInterPowerAllow": ""
+          },
+          "extLightPowerTbl": {
+            "totlTradblSurf": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "totlNonTradSurf": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "extLightZone": {
+              "extInstaType": ""
+            },
+            "baseSitAllow": {
+              "baseSiteType": ""
+            },
+            "totalVal": {
+              "energyCode": "",
+              "installedW": ""
+            }
+          },
+          "exterLigtngPowerDocs": 0,
+          "additControlMethodTbl": {
+            "row": [
+              {
+                "additControlMethod": "",
+                "spaceType": "",
+                "controlFactor": "",
+                "lightPwrUnderControl": "",
+                "additLightPowerAllowed": ""
+              }
+            ],
+            "totalAdditLightPowerAllow": ""
+          },
+          "lightPowerSummary": {
+            "greenLightPwrAllow": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "additLightPwrDecoRetail": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "additCntrlMthdLightPwr": {
+              "energyCode": ""
+            },
+            "allTotal": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "totalExtLightPower": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "totalLightPower": {
+              "energyCode": "",
+              "installedW": ""
+            },
+            "percentPwrReduction": ""
+          },
+          "lightPwrReduc15perc": false,
+          "lightPwrReduc30perc": false,
+          "lightPwrReduc45perc": false
+        },
+        "daylightingControls": {
+          "dayLightCntrlsConnected": false,
+          "lightControlsTbl": {
+            "row": [
+              {
+                "spaceType": "",
+                "daylightSensorsLoad": ""
+              }
+            ],
+            "totConnectedLightLoad": "",
+            "allowableExclusionCon": "",
+            "totalConnectedLoad": "",
+            "connectedLightingLoad": "",
+            "percentConnectedLoad": ""
+          },
+          "projectPercentLoad": false
+        },
+        "buildingEnvelope": {
+          "buildEnvelopeSelectPts": [],
+          "buildingEnvelopeDocs": 0
+        },
+        "HVACwaterHeatEfficent": {
+          "selectReductionPower": [],
+          "selectImproveEfficiency": [],
+          "serviceOptimzeHVACDocs": 0
+        },
+        "equipmentNAppliances": {
+          "energyStarInclAppliance": false,
+          "commercEquipMeet": false,
+          "scopeOfWorkEquip": false,
+          "energyStarTbl": {
+            "row": [
+              {
+                "nonEnergyCategory": "",
+                "nonEnergyNumber": "",
+                "nonEnergyRatedPower": "",
+                "nonEnergySubTotal": "",
+                "energyMakeModel": "",
+                "energyNumber": "",
+                "energyRatedPower": "",
+                "energySubTotal": "",
+                "totalW": ""
+              }
+            ],
+            "sumOfSubtotal1": "",
+            "sumOfSubtotal2": "",
+            "allTotals": "",
+            "percentEnergyStar": ""
+          }
+        }
+      },
+      "dataCenterSysOptimze": {
+        "projMLCnELCASHRAE16": false,
+        "selectSystemValue": "",
+        "selectSystemValueDC": "",
+        "ASHRAE90CalcDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA104",
+      "shortId": "EA104",
+      "name": "Optimize Energy Performance",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V06",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. Energy Performance Compliance.\n\nASHRAE/IESNA Standard 90.1-2016 Appendix G Performance Rating Method (1-18 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Prescriptive compliance: ASHRAE Advanced Energy Design Guide (1-6 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 3. Systems Optimization (1-6 points)",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Energy efficiency measures have been analyzed during the design process and the results are accounted for in the design decision making.",
+      "type": "checkbox",
+      "name": "enrgEfncyMsure",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

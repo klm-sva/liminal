@@ -1,0 +1,370 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "waterSenseLabeled": false,
+      "fixturesAndFittings": 0,
+      "totalEmployess": "",
+      "totalStudents": "",
+      "totalResidents": "",
+      "otherValues": "",
+      "totalDailyAvgVisitors": "",
+      "totalRetailCustomer": "",
+      "selectedOption": "",
+      "prescriAchievement": {
+        "toilet": null,
+        "urinal": null,
+        "pubLavaFaucet": null,
+        "priLavaFaucet": null,
+        "kitchenFaucet": null,
+        "showerhead": null
+      },
+      "usageBasedCalc": {
+        "indWatUseCalc": "0",
+        "perctReducFrBaseline": "",
+        "annBaselineWatCons": "",
+        "annDesignWatCons": "",
+        "annNonpotableWatCons": "",
+        "perctReducFrBaselineAWS": "",
+        "altWaterInfo": 0
+      },
+      "appliances": {
+        "residClotWashers": null,
+        "commerClotWashers": null,
+        "residDishWashers": null,
+        "prerinseSprayValves": null,
+        "iceMachine": null
+      },
+      "processWater": {
+        "heatRejecAndCool": null,
+        "coolTowAndEvapCond": null
+      },
+      "processWaterRequi": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "fixturesAndFittings": "",
+        "processWaterRequi": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "WE102",
+      "shortId": "WE102",
+      "name": "Indoor Water Use Reduction",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Points are calculated as follows:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Building Water Use",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "All eligible newly installed fixtures and fittings are WaterSense labeled (or local equivalent for projects outside the U.S.).",
+      "type": "checkbox",
+      "name": "waterSenseLabeled",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Project Occupancy",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Provide the following values. For each occupancy category, include a total value that sums together the values from all tabs (Groups) of the Indoor Water Use Calculator.",
+      "type": "text",
+      "name": "pr_totalEmployess",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Regular Building Occupants",
+      "type": "text",
+      "name": "pr_totalEmployess",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Visitors",
+      "type": "text",
+      "name": "pr_totalDailyAvgVisitors",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Prescriptive achievement",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Usage-based calculation",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Appliance and Process Water Use",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Appliances",
+      "type": "radio",
+      "name": "residClotWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "residClotWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "residClotWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "commerClotWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "commerClotWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "residDishWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "residDishWashers",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "prerinseSprayValves",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "prerinseSprayValves",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "iceMachine",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "iceMachine",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Process water",
+      "type": "radio",
+      "name": "heatRejecAndCool",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "heatRejecAndCool",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "heatRejecAndCool",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Yes",
+      "type": "radio",
+      "name": "coolTowAndEvapCond",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "No",
+      "type": "radio",
+      "name": "coolTowAndEvapCond",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "fixturesAndFittings",
+      "type": "text",
+      "name": "fixturesAndFittings",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "pr_totalStudents",
+      "type": "text",
+      "name": "pr_totalStudents",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "pr_totalResidents",
+      "type": "text",
+      "name": "pr_totalResidents",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "pr_otherValues",
+      "type": "text",
+      "name": "pr_otherValues",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "pr_totalRetailCustomer",
+      "type": "text",
+      "name": "pr_totalRetailCustomer",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "processWaterRequi",
+      "type": "text",
+      "name": "processWaterRequi",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

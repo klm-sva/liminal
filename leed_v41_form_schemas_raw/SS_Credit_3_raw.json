@@ -1,0 +1,148 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "totalSiteArea": "",
+      "areaOfOpenSpace": "",
+      "percentSiteArea": "",
+      "vegetatedArea": "",
+      "percentVegetated": "",
+      "criteriaDetails": "",
+      "wetlandsIncluded": false,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS107",
+      "shortId": "SS107",
+      "name": "Open Space",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects including wetlands or naturally designed ponds",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Wetlands or naturally designed ponds included in the open space calculation above have side slope gradients of 1:4 or less and are vegetated.",
+      "type": "checkbox",
+      "name": "wetlandsIncluded",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "totalSiteArea",
+      "type": "text",
+      "name": "totalSiteArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "areaOfOpenSpace",
+      "type": "text",
+      "name": "areaOfOpenSpace",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "percentSiteArea",
+      "type": "text",
+      "name": "percentSiteArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "vegetatedArea",
+      "type": "text",
+      "name": "vegetatedArea",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "percentVegetated",
+      "type": "text",
+      "name": "percentVegetated",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

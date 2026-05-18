@@ -1,0 +1,103 @@
+{
+  "embeddedData": {
+    "data": {
+      "selectedOptions": [],
+      "o1HighPrioritySite": {
+        "selectedPaths": [],
+        "selectedLocation": [],
+        "vicinityMapDocs": 0,
+        "brownfieldRemediationDocs": 0
+      },
+      "o2EquitableDev": {
+        "selectedPaths": [],
+        "sumryOfActivitesDocs": 0,
+        "bindAgreementDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "LT103",
+      "shortId": "LT103",
+      "name": "High Priority Site",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following:",
+      "type": "text",
+      "name": "checkbox-validation",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. High Priority Site",
+      "type": "checkbox",
+      "name": "op1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Equitable Development",
+      "type": "checkbox",
+      "name": "op2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

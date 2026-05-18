@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-dm-serif: "DM Serif Display", Georgia, serif;
+    --font-dm-sans: "DM Sans", system-ui, sans-serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-dm-sans);
+    background-color: #e8e5e0;
+    color: #2b4044;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-dm-serif);
+    font-weight: 400;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-certify-blue text-white font-sans font-semibold rounded-xl px-6 py-3
+           hover:bg-certify-teal transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-certify-blue focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-certify-deep font-sans font-semibold rounded-xl px-6 py-3
+           border-2 border-certify-deep hover:bg-certify-deep hover:text-certify-white
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-certify-deep focus:ring-offset-2;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-certify-white font-sans font-medium rounded-xl px-5 py-2.5
+           border border-white/20 hover:bg-white/10 transition-all duration-200;
+  }
+
+  .section-heading {
+    @apply font-serif text-4xl md:text-5xl text-certify-deep leading-tight;
+  }
+
+  .section-subheading {
+    @apply font-sans text-lg text-certify-cool-grey leading-relaxed;
+  }
+
+  .card-surface {
+    @apply bg-white border border-certify-white rounded-2xl shadow-card;
+  }
+}

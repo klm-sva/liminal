@@ -1,0 +1,266 @@
+{
+  "embeddedData": {
+    "data": {
+      "noCfcRefrigerants": false,
+      "refriEquipments": {
+        "row": [
+          {
+            "equipmentType": "",
+            "equipmentTypeOther": "",
+            "refrigerantUsed": "",
+            "refrigerantUsedOther": "",
+            "manufacturer": "",
+            "instalDate": ""
+          }
+        ]
+      },
+      "cfcEquipUpload": 0,
+      "cfcNotCompletedReason": "",
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "cfcEquipUpload": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA109",
+      "shortId": "EA109",
+      "name": "Fundamental Refrigerant Management",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "No CFC-based refrigerants and no HCFC-based refrigerants are included in any new mechanical cooling or refrigeration equipment serving the project.",
+      "type": "checkbox",
+      "name": "noCfcRefrigerants",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects reusing existing HVAC&R equipment with CFC-based refrigerants or HCFC-based refrigerants",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Mechanical Cooling and Refrigeration Equipment",
+      "type": "select-one",
+      "name": "refriEquipments_equipmentType_0",
+      "required": false,
+      "options": [
+        {
+          "value": "Window AC or heat pump",
+          "text": "Window AC or heat pump"
+        },
+        {
+          "value": "Split AC or heat pump",
+          "text": "Split AC or heat pump"
+        },
+        {
+          "value": "Packaged AC or heat pump",
+          "text": "Packaged AC or heat pump"
+        },
+        {
+          "value": "Reciprocating compressor",
+          "text": "Reciprocating compressor"
+        },
+        {
+          "value": "Reciprocating chiller",
+          "text": "Reciprocating chiller"
+        },
+        {
+          "value": "Centrifugal chiller",
+          "text": "Centrifugal chiller"
+        },
+        {
+          "value": "Screw chiller",
+          "text": "Screw chiller"
+        },
+        {
+          "value": "Absorption chiller",
+          "text": "Absorption chiller"
+        },
+        {
+          "value": "Scroll compressor",
+          "text": "Scroll compressor"
+        },
+        {
+          "value": "VRF",
+          "text": "VRF"
+        },
+        {
+          "value": "Other",
+          "text": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "refriEquipments_refrigerantUsed_0",
+      "type": "select-one",
+      "name": "refriEquipments_refrigerantUsed_0",
+      "required": false,
+      "options": [
+        {
+          "value": "R-11",
+          "text": "R-11"
+        },
+        {
+          "value": "R-12",
+          "text": "R-12"
+        },
+        {
+          "value": "R-22",
+          "text": "R-22"
+        },
+        {
+          "value": "R-23",
+          "text": "R-23"
+        },
+        {
+          "value": "R-114",
+          "text": "R-114"
+        },
+        {
+          "value": "R-123",
+          "text": "R-123"
+        },
+        {
+          "value": "R-134a",
+          "text": "R-134a"
+        },
+        {
+          "value": "R-245fa",
+          "text": "R-245fa"
+        },
+        {
+          "value": "R-404A",
+          "text": "R-404A"
+        },
+        {
+          "value": "R-407C",
+          "text": "R-407C"
+        },
+        {
+          "value": "R-410A",
+          "text": "R-410A"
+        },
+        {
+          "value": "R-500",
+          "text": "R-500"
+        },
+        {
+          "value": "R-502",
+          "text": "R-502"
+        },
+        {
+          "value": "R-507A",
+          "text": "R-507A"
+        },
+        {
+          "value": "Carbon dioxide",
+          "text": "Carbon dioxide"
+        },
+        {
+          "value": "Ammonia (NH3)",
+          "text": "Ammonia (NH3)"
+        },
+        {
+          "value": "Propane",
+          "text": "Propane"
+        },
+        {
+          "value": "None",
+          "text": "None"
+        },
+        {
+          "value": "Other",
+          "text": "Other"
+        }
+      ]
+    },
+    {
+      "label": "refriEquipments_manufacturer_0",
+      "type": "text",
+      "name": "refriEquipments_manufacturer_0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "refriEquipments_instalDate_0",
+      "type": "select-one",
+      "name": "refriEquipments_instalDate_0",
+      "required": false,
+      "options": [
+        {
+          "value": "Existing",
+          "text": "Existing"
+        },
+        {
+          "value": "New",
+          "text": "New"
+        }
+      ]
+    },
+    {
+      "label": "cfcEquipUpload",
+      "type": "text",
+      "name": "cfcEquipUpload",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

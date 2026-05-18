@@ -1,0 +1,115 @@
+{
+  "embeddedData": {
+    "data": {
+      "isChecked": false,
+      "advancedMeters": [
+        {
+          "type": "",
+          "fuelSource": ""
+        }
+      ],
+      "advancedMeterCutSheets": 0,
+      "meteringApproachDetails": "",
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "advancedMeterCutSheets": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA118",
+      "shortId": "EA118",
+      "name": "Advanced Energy Metering",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bCs",
+        "code": "LEED V4.1 BD+C: CS",
+        "return": "LEED v4.1 BD+C: CS",
+        "name": "LEED v4.1 BD+C: Core and Shell",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "All base building energy sources used by the building are metered; All energy sources used by each tenant are independently metered with at least one meter per energy source per floor.",
+      "type": "checkbox",
+      "name": "isChecked",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Advanced meters",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "am_type0",
+      "type": "text",
+      "name": "am_type0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "am_fuelSource0",
+      "type": "text",
+      "name": "am_fuelSource0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "advancedMeterCutSheets",
+      "type": "text",
+      "name": "advancedMeterCutSheets",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

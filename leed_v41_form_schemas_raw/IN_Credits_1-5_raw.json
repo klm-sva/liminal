@@ -1,0 +1,201 @@
+{
+  "embeddedData": {
+    "data": {
+      "innovation": {
+        "total": 0,
+        "credits": [
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          }
+        ],
+        "inUploads": 0
+      },
+      "pilot": {
+        "total": 0,
+        "credits": [
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          }
+        ],
+        "piUploads": 0,
+        "piCreditRegistration": 0
+      },
+      "exemplaryPerformance": {
+        "total": 0,
+        "credits": [
+          {
+            "credit": ""
+          },
+          {
+            "credit": ""
+          }
+        ]
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "IN101",
+      "shortId": "IN101",
+      "name": "Innovation",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "For each approach that the project team is attempting, select the points pursued:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "innovationTotal",
+      "type": "select-one",
+      "name": "innovationTotal",
+      "required": false,
+      "options": [
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "1",
+          "text": "1"
+        },
+        {
+          "value": "2",
+          "text": "2"
+        },
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "4",
+          "text": "4"
+        }
+      ]
+    },
+    {
+      "label": "pilotTotal",
+      "type": "select-one",
+      "name": "pilotTotal",
+      "required": false,
+      "options": [
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "1",
+          "text": "1"
+        },
+        {
+          "value": "2",
+          "text": "2"
+        },
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "4",
+          "text": "4"
+        }
+      ]
+    },
+    {
+      "label": "exemplaryPerformanceTotal",
+      "type": "select-one",
+      "name": "exemplaryPerformanceTotal",
+      "required": false,
+      "options": [
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "1",
+          "text": "1"
+        },
+        {
+          "value": "2",
+          "text": "2"
+        }
+      ]
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

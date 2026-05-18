@@ -1,0 +1,212 @@
+LT Credit: Access to Quality Transit
+This credit applies to
+\Uf07d BD+C: New Construction (1-5 points)
+\Uf07d BD+C: Core and Shell (1-6 points)
+\Uf07d BD+C: Schools (1-4 points)
+\Uf07d BD+C: Data Centers (1-5 points)
+\Uf07d BD+C: Warehouses and Distribution Centers (1-5 points)
+\Uf07d BD+C: Hospitality (1-5 points)
+\Uf07d BD+C: Retail (1-5 points)
+\Uf07d BD+C: Healthcare (1-2 points)
+INTENT
+To encourage development in locations shown to have multimodal transportation choices or otherwise
+reduced motor vehicle use, thereby reducing greenhouse gas emissions, air pollution, and other
+environmental and public health harms associated with motor vehicle use.
+REQUIREMENTS
+NC, CS, DATA CENTERS, WAREHOUSES & DISTRIBUTION CENTERS, HOSPITALITY, RETAIL
+Path 1. Access to Public Transit Service (1 to 5 points BD+C, except Core and Shell; 1 to 6 points
+Core and Shell)
+Locate any functional entry of the project within a !-mile (400-meter) walking distance of existing or
+planned bus, streetcar, or informal transit stops, or within a "-mile (800-meter) walking distance of
+existing or planned bus rapid transit stops, passenger rail stations (i.e. light, heavy, or commuter rail) or
+commuter ferry terminals. The transit service at those stops and stations in aggregate must meet the
+minimums listed in Table 1. Planned stops and stations may count if they are sited, funded, and under
+construction by the date of the certificate of occupancy and are complete within 24 months of that
+date.
+Both weekday and weekend trip minimums must be met.
+\Uf07d For each qualifying transit route, only trips in one direction are counted towards the threshold.
+\Uf07d For weekend trips, only trips on the day with the higher number of trips are counted towards
+the threshold.
+\Uf07d If a qualifying transit route has multiple stops within the required walking distance, only trips
+from one stop are counted towards the threshold.
+\Uf07d Privately-run shuttles are only acceptable for Path 1 if the service is also made available to the
+public.
+Table 1. Minimum daily public transit service
+Weekday
+trips
+Weekend
+trips
+Points BD&C
+(except Core
+and Shell)
+Points BD&C (Core
+and shell
+72 30 1 1
+100 70 2 2
+144 108 3 3
+250 160 4 4
+360 216 5 6
+34 U.S. Green Building Council
+If existing transit service is temporarily rerouted outside the required distances for less than two years,
+the project may meet the requirements, provided the local transit agency has committed to restoring
+the routes with service at or above the prior level.
+OR
+Path 2. Access to Project-sponsored Transit Service
+Commit to providing year-round transit service (vans, shuttles, buses) for regular occupants and visitors
+that meets the minimums listed in Table 2, Service must be guaranteed for at least 3 years from the
+project\U2019s certificate of occupancy.
+Within the project boundary, provide at least one transit stop shelter at each transit stop within a !-mile
+(400-meter) walking distance from a functional entry of the project. A building lobby is allowed instead
+of shelter if the transit stop is visible from inside and located no greater than 200 feet (60 meters)
+walking distance from the transit stop.
+\Uf07d For each qualifying transit route, total trips (inbound and outbound) are counted towards the
+threshold.
+\Uf07d If a qualifying transit route has multiple stops within the required walking distance, only trips
+from one stop are counted towards the threshold.
+\Uf07d Only directly accessible trips within the specified distances are allowed. Trips available from
+connected transit facilities do not contribute to the minimum trips under Path 2.
+Table 2. Minimum daily project-sponsored transit service
+Total daily trips Points
+30 1
+45 2
+Provide a guaranteed ride home program for employees who have carpooled, taken transit, walked, or
+cycled to work but require alternative transportation home for emergencies or unscheduled overtime.
+SCHOOLS
+Option 1. Transit-Served Location (1\U20134 points)
+Locate any functional entry of the project within a !-mile (400-meter) walking distance of existing or
+planned bus, streetcar, or informal transit stops, or within a "-mile (800-meter) walking distance of
+existing or planned bus rapid transit stops, passenger rail stations, or commuter ferry terminals. The
+transit service at those stops and stations must meet the minimums listed in Tables 1 and 2. Planned
+stops and stations may count if they are sited, funded, and under construction by the date of the
+certificate of occupancy and are complete within 24 months of that date.
+\Uf07d For each qualifying transit route, only trips in one direction are counted towards the threshold.
+\Uf07d If a qualifying transit route has multiple stops within the required walking distance, only trips
+from one stop are counted towards the threshold.
+Table 1. Minimum daily transit service
+Weekday trips Points
+72 1
+35 U.S. Green Building Council
+144 2
+250 3
+360 4
+Projects served by two or more transit routes such that no one route provides more than 60% of the
+prescribed levels may earn one additional point, up to the maximum number of points.
+If existing transit service is temporarily rerouted outside the required distances for less than two years,
+the project may meet the requirements, provided the local transit agency has committed to restoring
+the routes with service at or above the prior level.
+OR
+Option 2. Pedestrian Access (1\U20134 points)
+Show that the project has an attendance boundary such that the specified percentages of dwelling units
+are within no more than a 3/4-mile (1200-meter) walking distance (for grades 8 and below, or ages 14
+and below), and 1 1/2-mile (2400-meter) walking distance (for grades 9 and above or ages 15 and
+above) of a functional entry of a school building. Points are awarded according to Table 3.
+Table 2. Points for dwelling units within walking distance
+Percentage of dwelling units in
+attendance boundary Points
+50% 1
+60% 2
+70% or more 4
+In addition, locate the project on a site that allows pedestrian access to the site from all residential areas
+in the attendance boundary.
+HEALTHCARE
+Locate any functional entry of the project within a !-mile (400-meter) walking distance of existing or
+planned bus, streetcar, or informal transit stops, or within a "-mile (800-meter) walking distance of
+existing or planned bus rapid transit stops, passenger rail stations or commuter ferry terminals. The
+transit service at those stops and stations in aggregate must meet the minimums listed in Tables 1 and 2.
+Planned stops and stations may count if they are sited, funded, and under construction by the date of
+the certificate of occupancy and are complete within 24 months of that date.
+Both weekday and weekend trip minimums must be met.
+\Uf07d For each qualifying transit route, only trips in one direction are counted towards the threshold.
+\Uf07d If a qualifying transit route has multiple stops within the required walking distance, only trips
+from one stop are counted towards the threshold.
+Table 1. Minimum daily transit service
+Weekday trips Weekend trips Points
+72 30 1
+144 108 2
+Projects served by two or more transit routes such that no one route provides more than 60% of the
+prescribed levels may earn one additional point, up to the maximum number of points.
+36 U.S. Green Building Council
+If existing transit service is temporarily rerouted outside the required distances for less than two years,
+the project may meet the requirements, provided the local transit agency has committed to restoring
+the routes with service at or above the prior level.
+GUIDANCE
+Refer to the LEED v4 reference guide, with the following additions and modifications:
+Behind the Intent
+Beta Update
+Updates to this credit recognize the challenges project teams face in meeting the pervasive limitations
+to weekend transit requirements. The weekend minimum thresholds are reduced and project teams are
+now allowed to count the weekend day with the higher number of trips rather than the weekend
+average. With newly added intermediate thresholds, projects (excluding Core and Shell) can now earn 2
+and 4 points, as well as a 3-point threshold for Schools.
+Path 2, Project-sponsored Transit Service has been added to recognize the benefits of developer- or
+employer-sponsored transit service toward reducing SOV trips and VMT impacts from the project,
+especially in areas where public transportation does not exist or does not provide high frequency
+service.
+Step-by-Step Guidance
+Follow steps in the LEED v4 reference guide, with the following modifications:
+\Uf07d Step 4. The number of transit vehicle trips on a weekend. If weekend counts are different, only
+count the weekend day with the highest number of trips.
+\Uf07d Disregard any mention of the \U201ccommuter rail or ferry only\U201d pathway. This section has been
+removed from the rating system.
+\Uf07d For Path 2, follow the steps outlined below:
+Step 1. Select private transit service provider
+Identify and hire a private transit service capable of providing transportation between the
+project site and external destinations (e.g., residential areas, public transportation stations).
+Year-round service for regular occupants and visitors at the minimum service frequency
+stipulated in credit requirements must be guaranteed for at least 3 years from the project\U2019s
+certificate of occupancy.
+Step 2. Plan private transit service
+Using a site map, show the service route and regular stops. The route must include at least one
+transit stop with shelter within a !-mile walk distance from a functional entry of the project or a
+building lobby within 200 feet walking distance of the transit stop, as indicated in the credit
+requirements. Route should be designed to reduce driving trips to the project site; destinations
+may include residential areas and/or public transportation stations. Plan for operation with
+minimum service frequency indicated in the credit requirements.
+Step 3. Plan rider facilities
+If transit stop(s) are located more than 200 feet from building lobby, provide adequate transit
+shelter(s) for riders. For a building lobby within 200 feet of transit stops that will be used as a
+qualifying waiting area, ensure adequate space is available for waiting riders.
+Step 4. Establish guaranteed ride home program
+37 U.S. Green Building Council
+Design a qualifying program that provides a guaranteed ride home for employees who have
+taken transit, carpooled, waked, or bicycled to work but require alternative transportation home
+for emergencies or unscheduled overtime. The program may utilize taxi, ridehailing service, or
+company vehicles. A guaranteed ride home policy must be maintained that specifies the
+following, at a minimum:
+o Employee eligibility
+o Trip eligibility
+o Maximum number of uses
+o Responsibility for program administration
+o Procedures for using the program, including any necessary forms for registration
+and/or reimbursement
+Source: Adapted from \U201cGuaranteed Ride Home: A Backup for Commuters Who Use Alternative
+Modes.\U201d Victoria Transportation Policy Institute (VTPI). https://vtpi.org/tdm/tdm18.htm
+Further Explanation
+Example
+\Uf07d The example provided references commuter rail, light rail, and averaged weekend trips. These
+references are no longer applicable and should be disregarded.
+Required Documentation
+For Path 2. Project-sponsored transit service, the following documentation is required:
+\Uf07d Map showing planned route, including transit stop(s) on project site with distances from
+functional entries, and off-site destinations. Include a description of off-site destinations.
+\Uf07d Schedule of year-round service, including service frequency (total trips per day)
+\Uf07d Guaranteed ride home policy
+Definitions
+Refer to the LEED v4 reference guide for additional definitions.
+\Uf07d Replace all references to rail transit with the umbrella term, \U201cpassenger rail\U201d. Replace all
+references to \U201crideshare\U201d with the term \U201cinformal transit\U201d.
+\Uf07d passenger rail a diversity of rail transit service including light, heavy, and commuter rail transit.
+Passenger rail systems are characterized by wheeled vehicles running on rails or tracks. They
+may provide long-distance intercity transit services as well as local daily commuter or intra-city
+trips. Rail transit systems may vary with respect to vehicle type, car count, operating speeds,
+right-of-way characteristics, and service schedule.
+\Uf07d informal transit a publicly available transit service that includes a fixed route service, fare
+structure, and regular operation. It does not consist of taxi, private shuttles or seasonal, on-call
+or on-demand transit.
+Connection to Ongoing Performance
+\Uf07d LEED O+M LT prerequisite Transportation Performance: Locating a project in a dense area
+served by transit and diverse uses would have a significant positive impact on the
+transportation patterns of building occupants, which is a data set that project teams are
+required to collect in order to measure building performance under the performance-based LT
+prerequisite Transportation Performance.
+38 U.S. Green Building Council

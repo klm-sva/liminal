@@ -1,0 +1,122 @@
+{
+  "embeddedData": {
+    "data": {
+      "hasPermanentWaterMeters": false,
+      "wtrUsgeData": false,
+      "selectedOption": "",
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "WE104",
+      "shortId": "WE104",
+      "name": "Building-Level Water Metering",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "The project has permanent water meters that measure the total potable water use for the building and associated grounds.",
+      "type": "checkbox",
+      "name": "hasPermanentWaterMeters",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Arc. The project owner commits to providing water consumption data to USGBC and acknowledges that USGBC will only accept the data submitted via the Arc platform.",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Third-party data source. The project owner commits to providing water consumption data to USGBC and acknowledges that USGBC will only accept the data in an approved third-party source or format.",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "wtrUsgeData",
+      "type": "checkbox",
+      "name": "wtrUsgeData",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "radio-1",
+      "type": "text",
+      "name": "radio-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "selectedOption",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "selectedOptions": [],
+      "buildAndMatReuse": {
+        "buildAreaPath2aTbl": {
+          "row": [
+            {
+              "elementType": "",
+              "elementTypeOther": "",
+              "existingArea": "",
+              "reusedArea": ""
+            }
+          ],
+          "totalExistingArea": "",
+          "totalReusedArea": "",
+          "percentBuildReuse": ""
+        },
+        "path2bConfirmReuse": false,
+        "buildAreaPath3Tbl": {
+          "row": [
+            {
+              "elementType": "",
+              "elementTypeOther": "",
+              "existingArea": "",
+              "reusedArea": ""
+            }
+          ],
+          "totalExistingArea": "",
+          "totalReusedArea": "",
+          "percentBuildReuse": ""
+        }
+      },
+      "buildLifeCyclAsesmnt": {
+        "hasLifeCycleAssessment": null,
+        "modelFlrArea": "",
+        "gsfReportedDetails": "",
+        "whoConducLCA": "",
+        "scopeOfLCAStudy": "",
+        "confirmMEPequip": false,
+        "listSystemBoundries": "",
+        "envlpeAssemDetails": "",
+        "structSystemDetails": "",
+        "listServiceLifeProposed": "",
+        "hasLifeCycleBaseline": null,
+        "listServBasebuild": "",
+        "path2ConfmBase": false,
+        "defineBaseBuild": "",
+        "baseBuildCamprSize": false,
+        "isCompliantDataSet": false,
+        "dataAsProxyInfo": "",
+        "typicalConstructInfo": "",
+        "studyDesignDetails": "",
+        "lifeCycleTbl": {
+          "globWarming": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "percentReduc": ""
+          },
+          "ozoneDeplet": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "percentReduc": ""
+          },
+          "acidiofLandWater": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "units": "",
+            "percentReduc": ""
+          },
+          "eutrophication": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "units": "",
+            "percentReduc": ""
+          },
+          "tropoOzoneForm": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "units": "",
+            "percentReduc": ""
+          },
+          "depletEnrgyResrc": {
+            "baseBuildVal": "",
+            "propBuildVal": "",
+            "percentReduc": ""
+          },
+          "numberMeasure5": "",
+          "numberMeasure10": ""
+        },
+        "impactsReuseDetails": "",
+        "designOptimizations": {
+          "aboveGrade": {
+            "summary": "",
+            "reduction": ""
+          },
+          "foundations": {
+            "summary": "",
+            "reduction": ""
+          },
+          "wallAssembly": {
+            "summary": "",
+            "reduction": ""
+          },
+          "roofAssembly": {
+            "summary": "",
+            "reduction": ""
+          },
+          "otherElement": {
+            "summary": "",
+            "reduction": ""
+          }
+        },
+        "LCAReportSumDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "MR108",
+      "shortId": "MR108",
+      "name": "Building Life-Cycle Impact Reduction",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V04",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. Building and material reuse (1-5 points)",
+      "type": "checkbox",
+      "name": "selectedOptions",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Whole building life-cycle assessment (1-4 points)",
+      "type": "checkbox",
+      "name": "selectedOptions",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

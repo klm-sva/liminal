@@ -1,0 +1,124 @@
+{
+  "embeddedData": {
+    "data": {
+      "recycStorageDetails": "",
+      "recycStorAreasSized": false,
+      "recyncStorAreasSelected": [],
+      "floorPlanDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "floorPlanDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "MR101",
+      "shortId": "MR101",
+      "name": "Storage and Collection of Recyclables",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "The recycling storage areas are sized for the following material types:\nMixed paper\nCorrugated cardboard\nGlass\nPlastics\nMetals",
+      "type": "checkbox",
+      "name": "recycStorAreasSized",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select two or more. The recycling storage areas additionally accommodate the following material types:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Batteries",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Mercury-containing lamps",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "E-waste",
+      "type": "checkbox",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "recyncStorAreasSelected",
+      "type": "text",
+      "name": "recyncStorAreasSelected",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "floorPlanDocs",
+      "type": "text",
+      "name": "floorPlanDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

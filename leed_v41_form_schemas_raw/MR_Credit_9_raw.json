@@ -1,0 +1,144 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "wasteMangPlanDetails": "",
+      "selectedOptions": [],
+      "diversion": {
+        "totalWasteGenerated": "",
+        "adcIsExcluded": false,
+        "totalWasteDiverted": "",
+        "percentOfConstWaste": "",
+        "verifyingWasteDocs": 0,
+        "utiCommRecycFacility": null,
+        "divLandfillDocs": 0,
+        "recycleWasteToEnDetails": "",
+        "wasteToEnergyDocs": 0
+      },
+      "wastePrevention": {
+        "includeDemolition": "",
+        "totalWasteGenerated2": "",
+        "adcIsExcluded2": false,
+        "totalWasteDiverted2": "",
+        "percentOfConstWaste2": "",
+        "totalWasteGenerated": "",
+        "projectGsf": "",
+        "wastePerUnit": "",
+        "wastePreveDetails": ""
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "MR123",
+      "shortId": "MR123",
+      "name": "Construction and Demolition Waste Management",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "All Projects: Waste Management Plan",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following:",
+      "type": "text",
+      "name": "checkbox-validation",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. Diversion (1 point)",
+      "type": "checkbox",
+      "name": "op1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Waste Prevention (2 points)",
+      "type": "checkbox",
+      "name": "op2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "embeddedData": {
+    "data": {
+      "daylightAndQualityViews": 0,
+      "qualityViewsPercentage": "",
+      "planViewDocs": 0,
+      "interiorElevationsDocs": 0,
+      "glazingSpecsDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "daylightAndQualityViews": "",
+        "planViewDocs": "",
+        "interiorElevationsDocs": "",
+        "glazingSpecsDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ123",
+      "shortId": "EQ123",
+      "name": "Quality Views",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Quality Views Summary",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "daylightAndQualityViews",
+      "type": "text",
+      "name": "daylightAndQualityViews",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "qualityViewsPercentage",
+      "type": "text",
+      "name": "qualityViewsPercentage",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "planViewDocs",
+      "type": "text",
+      "name": "planViewDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "interiorElevationsDocs",
+      "type": "text",
+      "name": "interiorElevationsDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "glazingSpecsDocs",
+      "type": "text",
+      "name": "glazingSpecsDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

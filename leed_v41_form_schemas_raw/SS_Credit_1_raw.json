@@ -1,0 +1,107 @@
+{
+  "embeddedData": {
+    "data": {
+      "siteSurvey": 0,
+      "siteAssesWorkSheet": 0,
+      "siteTopography": 0,
+      "siteSPFHA": 0,
+      "siteEpaLevel3Details": "",
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "siteSurvey": "",
+        "siteAssesWorkSheet": "",
+        "siteTopography": "",
+        "siteSPFHA": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "SS104",
+      "shortId": "SS104",
+      "name": "Site Assessment",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "siteSurvey",
+      "type": "text",
+      "name": "siteSurvey",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "siteAssesWorkSheet",
+      "type": "text",
+      "name": "siteAssesWorkSheet",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "siteTopography",
+      "type": "text",
+      "name": "siteTopography",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "siteSPFHA",
+      "type": "text",
+      "name": "siteSPFHA",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

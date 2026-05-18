@@ -1,0 +1,198 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "selectedOptions": [],
+      "mechanical": {
+        "standASHRAE2016": {
+          "projMeetReqASHRAE": false,
+          "exhaustVentASHRAE": false,
+          "outAirQualityDetails": "",
+          "projAreaForPM10": "",
+          "projAreaForPM25": "",
+          "projAreaForOzone": "",
+          "filtersDevicesDocs": 0,
+          "ventSysComplyASHRAEDocs": 0
+        },
+        "mechVentiControlsDocs": 0
+      },
+      "naturalSpaces": {
+        "outAirQualityDetails": "",
+        "selectedOption": "",
+        "op1ASHRAE2016": {
+          "projMeetReqASHRAE": false,
+          "op1ExhaustVentASHRAE": false,
+          "outAirOpeningDocs": 0,
+          "selectedOptions": [],
+          "anyAdditionalDetails": ""
+        },
+        "op2EngineeredSys": {
+          "projMeetReqASHRAE": false,
+          "op2ExhaustVentASHRAE": false,
+          "engrVentiModelDocs": 0,
+          "evidenceApprovDocs": 0
+        },
+        "op3HistoricBuild": {
+          "projMeetReqASHRAE": false,
+          "op3ExhaustVentASHRAE": false,
+          "outdoorASHRAEDocs": 0
+        },
+        "strategyOption": "",
+        "naturalControlsDocs": 0
+      },
+      "residentialProjectDocs": 0,
+      "totalVentArea": "",
+      "exaustVentProvided": false,
+      "loclExaustInstald": false,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "residentialProjectDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ101",
+      "shortId": "EQ101",
+      "name": "Minimum Indoor Air Quality Performance",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V03",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Project includes:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Mechanically Ventilated Spaces",
+      "type": "text",
+      "name": "selectedOptions-checkbox",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Naturally Ventilated Spaces",
+      "type": "text",
+      "name": "selectedOptions-checkbox",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For residential projects",
+      "type": "text",
+      "name": "residentialProjectDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Total Ventilation Area",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Exhaust Ventilation",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For residential projects",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Local mechanical exhaust systems are installed in each kitchen and bathroom (including half-baths) and comply with ASHRAE 62.2-2016, Sections 5 and 7 or local equivalent, whichever is more stringent.",
+      "type": "checkbox",
+      "name": "loclExaustInstald",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "exaustVentProvided",
+      "type": "checkbox",
+      "name": "exaustVentProvided",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

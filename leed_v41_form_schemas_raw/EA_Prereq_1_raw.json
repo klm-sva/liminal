@@ -1,0 +1,298 @@
+{
+  "embeddedData": {
+    "data": {
+      "commAuthoExperience": 0,
+      "ownerProjRequirements": false,
+      "basisOfDesign": false,
+      "commAuthority": false,
+      "dateOfCxAReview": {
+        "ownerProjRequirements": "",
+        "basisOfDesign": "",
+        "construcDocs": "",
+        "envelopeDesign": ""
+      },
+      "commSystemsScope": {
+        "mechanical": {
+          "equipment": null,
+          "controls": null
+        },
+        "electrical": {
+          "servAndDistribution": null,
+          "lightAndLightControls": null,
+          "daylightControls": null
+        },
+        "plumbing": {
+          "domesticHotWater": null,
+          "pumps": null,
+          "controls": null
+        },
+        "renewaEnergy": {
+          "systems": null
+        }
+      },
+      "reasonForNAInCS": "",
+      "commPlanTblOfContents": 0,
+      "funcPerformTest": 0,
+      "cfrAndOMTblOfContents": 0,
+      "commReportSummary": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "commAuthoExperience": "",
+        "commPlanTblOfContents": "",
+        "funcPerformTest": "",
+        "cfrAndOMTblOfContents": "",
+        "commReportSummary": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA101",
+      "shortId": "EA101",
+      "name": "Fundamental Commissioning and Verification",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Commissioning Authority",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Owner's Project Requirements",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Basis of Design",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Commissioning Activities",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "CxA Review",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Commissioning Scope",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Commissioning systems scope",
+      "type": "radio",
+      "name": "cs_m_equipment",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "commAuthoExperience",
+      "type": "text",
+      "name": "commAuthoExperience",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "ownerProjRequirements",
+      "type": "checkbox",
+      "name": "ownerProjRequirements",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "basisOfDesign",
+      "type": "checkbox",
+      "name": "basisOfDesign",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "commAuthority",
+      "type": "checkbox",
+      "name": "commAuthority",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "date_ownerProjRequirements",
+      "type": "text",
+      "name": "date_ownerProjRequirements",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "date_basisOfDesign",
+      "type": "text",
+      "name": "date_basisOfDesign",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "date_construcDocs",
+      "type": "text",
+      "name": "date_construcDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "date_envelopeDesign",
+      "type": "text",
+      "name": "date_envelopeDesign",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_m_controls",
+      "type": "radio",
+      "name": "cs_m_controls",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_e_servAndDistribution",
+      "type": "radio",
+      "name": "cs_e_servAndDistribution",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_e_lightAndLightControls",
+      "type": "radio",
+      "name": "cs_e_lightAndLightControls",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_e_daylightControls",
+      "type": "radio",
+      "name": "cs_e_daylightControls",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_p_domesticHotWater",
+      "type": "radio",
+      "name": "cs_p_domesticHotWater",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_p_pumps",
+      "type": "radio",
+      "name": "cs_p_pumps",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_p_controls",
+      "type": "radio",
+      "name": "cs_p_controls",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cs_r_systems",
+      "type": "radio",
+      "name": "cs_r_systems",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "commPlanTblOfContents",
+      "type": "text",
+      "name": "commPlanTblOfContents",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "funcPerformTest",
+      "type": "text",
+      "name": "funcPerformTest",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "cfrAndOMTblOfContents",
+      "type": "text",
+      "name": "cfrAndOMTblOfContents",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "commReportSummary",
+      "type": "text",
+      "name": "commReportSummary",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

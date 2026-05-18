@@ -1,0 +1,212 @@
+{
+  "embeddedData": {
+    "data": {
+      "unitTypeSelected": "IP",
+      "selectedOptions": [],
+      "strategy1": {
+        "entryWaySysFloorPlans": 0
+      },
+      "strategy2": {
+        "hazardousGasPresent": false,
+        "hazardousGasTbl": {
+          "row": [
+            {
+              "spaceName": "",
+              "areaFt": "",
+              "exaustRate": "",
+              "separtStrtegy": ""
+            }
+          ]
+        }
+      },
+      "strategy3": {
+        "filtrationDocs": 0
+      },
+      "strategy4": {
+        "mechanicalDocs": 0
+      },
+      "strategy5": {
+        "increasedbreathing": false
+      },
+      "strategy6": {
+        "increasedVentilation": false
+      },
+      "strategy7": {
+        "operableWinDocs": 0
+      },
+      "strategy8": {
+        "naturalVentilation": false
+      },
+      "strategy9": {
+        "co2MonitoringDocs": 0
+      },
+      "strategy10": {
+        "airContaEvalDetails": "",
+        "materHandlingPlan": "",
+        "monitorSystemDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ110",
+      "shortId": "EQ110",
+      "name": "Enhanced Indoor Air Quality Strategies",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V03",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Unit Type:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "IP (inch-pound)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "SI (International System of Units)",
+      "type": "radio",
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select three or more of the following:",
+      "type": "text",
+      "name": "checkbox-validation",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 1: Entryway Systems",
+      "type": "checkbox",
+      "name": "strategy1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 2: Interior Cross-Contamination Prevention",
+      "type": "checkbox",
+      "name": "strategy2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 3: Filtration of Outdoor Air",
+      "type": "checkbox",
+      "name": "strategy3",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 4: Filtration of Recirculated Air",
+      "type": "checkbox",
+      "name": "strategy4",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 5: Increased Ventilation 15%",
+      "type": "checkbox",
+      "name": "strategy5",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 6: Increased Ventilation 30%",
+      "type": "checkbox",
+      "name": "strategy6",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 7: Operable Windows",
+      "type": "checkbox",
+      "name": "strategy7",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 8: Engineered Natural Ventilation",
+      "type": "checkbox",
+      "name": "strategy8",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 9: Carbon Dioxide Monitoring",
+      "type": "checkbox",
+      "name": "strategy9",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Strategy 10: Additional Source Control and Monitoring",
+      "type": "checkbox",
+      "name": "strategy10",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

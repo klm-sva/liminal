@@ -1,0 +1,165 @@
+{
+  "embeddedData": {
+    "data": {
+      "smokingProhiInside": false,
+      "smokingProhiOutside": false,
+      "noSmokingPolicy": 0,
+      "commDetailsDocs": 0,
+      "sitePlanDocs": 0,
+      "selectedOption": "",
+      "compartSmokingAreas": {
+        "smokingUnitsMeasured": false,
+        "testSpacesConfigured": false,
+        "doorScheduleDocs": 0,
+        "diffAirPresTestReport": 0
+      },
+      "codeConflictDetails": "",
+      "codeConflictDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "noSmokingPolicy": "",
+        "commDetailsDocs": "",
+        "sitePlanDocs": "",
+        "codeConflictDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ106",
+      "shortId": "EQ106",
+      "name": "Environmental Tobacco Smoke Control",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Smoking is prohibited inside the project building(s).",
+      "type": "checkbox",
+      "name": "smokingProhiInside",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with residential units",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one of the following:",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 1. No smoking (as documented above)",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Option 2. Compartmentalization of smoking areas",
+      "type": "radio",
+      "name": "selectedOption",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with a code conflict",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "smokingProhiOutside",
+      "type": "checkbox",
+      "name": "smokingProhiOutside",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "noSmokingPolicy",
+      "type": "text",
+      "name": "noSmokingPolicy",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "commDetailsDocs",
+      "type": "text",
+      "name": "commDetailsDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "sitePlanDocs",
+      "type": "text",
+      "name": "sitePlanDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "codeConflictDocs",
+      "type": "text",
+      "name": "codeConflictDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "embeddedData": {
+    "data": {
+      "projectName": "",
+      "projectId": "",
+      "ratingSystem": "",
+      "certLevel": "",
+      "certDate": "",
+      "vicinityPlanDocs": 0,
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "vicinityPlanDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "LT101",
+      "shortId": "LT101",
+      "name": "LEED for Neighborhood Development Location",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "projectName",
+      "type": "text",
+      "name": "projectName",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "projectId",
+      "type": "text",
+      "name": "projectId",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "ratingSystem",
+      "type": "select-one",
+      "name": "ratingSystem",
+      "required": false,
+      "options": [
+        {
+          "value": "LEED-ND Pilot, Stage 2",
+          "text": "LEED-ND Pilot, Stage 2"
+        },
+        {
+          "value": "LEED-ND Pilot, Stage 3",
+          "text": "LEED-ND Pilot, Stage 3"
+        },
+        {
+          "value": "LEED-ND 2009, Stage 2",
+          "text": "LEED-ND 2009, Stage 2"
+        },
+        {
+          "value": "LEED-ND 2009, Stage 3",
+          "text": "LEED-ND 2009, Stage 3"
+        },
+        {
+          "value": "LEED-ND v4, Certified Plan",
+          "text": "LEED-ND v4, Certified Plan"
+        },
+        {
+          "value": "LEED-ND v4, Certified Built Project",
+          "text": "LEED-ND v4, Certified Built Project"
+        }
+      ]
+    },
+    {
+      "label": "certLevel",
+      "type": "select-one",
+      "name": "certLevel",
+      "required": false,
+      "options": [
+        {
+          "value": "Certified",
+          "text": "Certified"
+        },
+        {
+          "value": "Silver",
+          "text": "Silver"
+        },
+        {
+          "value": "Gold",
+          "text": "Gold"
+        },
+        {
+          "value": "Platinum",
+          "text": "Platinum"
+        }
+      ]
+    },
+    {
+      "label": "certDate",
+      "type": "text",
+      "name": "certDate",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "vicinityPlanDocs",
+      "type": "text",
+      "name": "vicinityPlanDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

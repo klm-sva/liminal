@@ -1,0 +1,130 @@
+{
+  "embeddedData": {
+    "data": {
+      "selectedOptions": [],
+      "drProgramAvailable": {
+        "buildAutoSysIsCapable": false,
+        "inclAuthorScopeOfWork": false,
+        "inclCfrAndOmp": false,
+        "compActionPlanDocsPA": 0,
+        "fullTestOfDrPlanDocsPA": 0,
+        "peakElecDemandEvidencePA": 0,
+        "drEnrollmentDocs": 0
+      },
+      "drCapableBuilding": {
+        "buildAutoSysIsCapable": false,
+        "inclAuthorScopeOfWork": false,
+        "inclCfrAndOmp": false,
+        "isTeamCntctLocalRep": false,
+        "compActionPlanDocsCB": 0,
+        "fullTestOfDrPlanDocsCB": 0,
+        "peakElecDemandEvidenceCB": 0
+      },
+      "loadFlexibility": {
+        "interRecordMetersInstalled": false,
+        "inclCfrAndOmp": false,
+        "loadFlexiAndMangeStrat": [],
+        "gridProfAnalysisDocs": 0
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EA129",
+      "shortId": "EA129",
+      "name": "Grid Harmonization",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V02",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bCs",
+        "code": "LEED V4.1 BD+C: CS",
+        "return": "LEED v4.1 BD+C: CS",
+        "name": "LEED v4.1 BD+C: Core and Shell",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following, for a total of 2 points:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 1. Demand response program available and participation (2 points)",
+      "type": "checkbox",
+      "name": "op1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 2: Demand Response Capable Building (1 point)",
+      "type": "checkbox",
+      "name": "op2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Case 3. Load Flexibility and Management Strategies (1-2 points)",
+      "type": "checkbox",
+      "name": "op3",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "checkbox-validation",
+      "type": "text",
+      "name": "checkbox-validation",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

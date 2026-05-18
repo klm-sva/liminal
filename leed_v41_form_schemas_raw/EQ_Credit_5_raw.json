@@ -1,0 +1,218 @@
+{
+  "embeddedData": {
+    "data": {
+      "selectOptions": [],
+      "designASHRAEDocs": 0,
+      "thrmlCmfrtImplDetails": "",
+      "individualOccupant": {
+        "row": [
+          {
+            "spaceType": "",
+            "controlType": "",
+            "noOfSpWithControl": ""
+          }
+        ],
+        "numOfOccupants": "",
+        "tot_noOfSpWithControl": "",
+        "percentageControl": ""
+      },
+      "patientThrmlCmfrtInfo": "",
+      "sharedMultiOccupant": {
+        "row": [
+          {
+            "spaceType": "",
+            "controlType": "",
+            "noOfSpWithControl": ""
+          }
+        ],
+        "numOfOccupants": "",
+        "tot_noOfSpWithControl": "",
+        "percentageControl": ""
+      },
+      "splCircumstances": "",
+      "splCircumstancesDocs": 0,
+      "csrf_token": "",
+      "__filesHash": {
+        "designASHRAEDocs": "",
+        "splCircumstancesDocs": ""
+      },
+      "__filesHashChanges": 0
+    },
+    "credit": {
+      "id": "EQ115",
+      "shortId": "EQ115",
+      "name": "Thermal Comfort",
+      "isEditable": true,
+      "status": "Attempted",
+      "statusCode": "C003",
+      "formVersion": "V01",
+      "formType": "html"
+    },
+    "project": {
+      "type": "INP",
+      "name": "Sample Form",
+      "ratingSystem": {
+        "key": "v4_1.bNc",
+        "code": "LEED V4.1 BD+C: NC",
+        "return": "LEED v4.1 BD+C: NC",
+        "name": "LEED v4.1 BD+C: New Construction",
+        "is": {
+          "v2009": false,
+          "v4": false,
+          "v4_1": true
+        }
+      },
+      "unitType": "IP",
+      "typeName": "Individual Project"
+    }
+  },
+  "domFields": [
+    {
+      "label": "Form ID",
+      "type": "text",
+      "name": null,
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "Note: Complete the following sections for all occupied spaces.",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Select one or more of the following:",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "The project has spaces that comply with ASHRAE Standard 55-2017, Section 5.3 Method for Determining Acceptable Thermal Conditions in Occupied Spaces.",
+      "type": "checkbox",
+      "name": "op1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "The project has spaces that comply with ASHRAE Standard 55-2017, Section 5.4 Determining Acceptable Thermal Conditions in Occupant-Controlled Naturally Conditioned Spaces.",
+      "type": "checkbox",
+      "name": "op2",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Thermal Comfort Control",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with individual occupant spaces",
+      "type": "text",
+      "name": "in_spaceType0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Individual occupant spaces",
+      "type": "text",
+      "name": "in_spaceType0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "For projects with shared multioccupant spaces",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Table: Shared multioccupant spaces",
+      "type": "text",
+      "name": "sm_spaceType0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "Special Circumstances",
+      "type": null,
+      "name": null,
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "g-recaptcha-response",
+      "type": "textarea",
+      "name": "g-recaptcha-response",
+      "required": true,
+      "options": null
+    },
+    {
+      "label": "checkbox-validation-1",
+      "type": "text",
+      "name": "checkbox-validation-1",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "designASHRAEDocs",
+      "type": "text",
+      "name": "designASHRAEDocs",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "in_controlType0",
+      "type": "text",
+      "name": "in_controlType0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "in_noOfSpWithControl0",
+      "type": "text",
+      "name": "in_noOfSpWithControl0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "in_numOfOccupants",
+      "type": "text",
+      "name": "in_numOfOccupants",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "sm_controlType0",
+      "type": "text",
+      "name": "sm_controlType0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "sm_noOfSpWithControl0",
+      "type": "text",
+      "name": "sm_noOfSpWithControl0",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "sm_numOfOccupants",
+      "type": "text",
+      "name": "sm_numOfOccupants",
+      "required": false,
+      "options": null
+    },
+    {
+      "label": "splCircumstancesDocs",
+      "type": "text",
+      "name": "splCircumstancesDocs",
+      "required": false,
+      "options": null
+    }
+  ]
+}

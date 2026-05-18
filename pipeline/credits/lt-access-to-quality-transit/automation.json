@@ -1,0 +1,15 @@
+{
+  "Credit Number": "LT Credit 5",
+  "Credit Name": "Access to Quality Transit",
+  "Pts Avail.": "1–5",
+  "Pts Auto.": "1–5",
+  "Automatable?": "YES",
+  "Documentation Tier": "Tier 1 Address Only",
+  "All Required Project Documents (Complete list per Nov 2025 Guide)": "Project address; site plan showing functional entries and pedestrian access routes to transit stops (drawing set); transit stop locations and distances from entries; trip counts for qualifying routes (weekday and weekend); for Path 2 project-sponsored transit: route map, schedule, guaranteed ride home policy",
+  " Project Team Must Upload (Only what Claude cannot retrieve)": "Site plan showing pedestrian access routes from drawing set; for Path 2 (project-sponsored transit only): route map with transit stop distances, year-round service schedule, and guaranteed ride home policy documentation",
+  " Claude Auto-Retrieves (Public databases & online sources)": "GTFS feeds (Mobility Database / transitfeeds.com) — all transit stops, routes, and trip frequencies by location; Google Maps / OpenStreetMap — walking distances from site boundary to stops; transit agency published schedules via agency websites for weekday and weekend trip counts",
+  "Claude Output (Analysis, calculations, reports generated)": "GTFS trip count table + walking distance map + points determination per Tables 1 and 2; Path 2 documentation review",
+  "GBCI Accepted Verification": "Transit schedule documentation + map + trip count table",
+  "Primary Blocker / Notes": "Path 2 project-sponsored transit requires customer-provided route map, schedule, and guaranteed ride home policy",
+  "LEED Online Form Link": "https://leedonline-api.usgbc.org/Credit/sampleForm/v4_1.bNc/V02/LT107"
+}
