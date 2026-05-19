@@ -110,8 +110,7 @@ Below is the priority order — get these right before the first deploy:
 - `CLEANUP_SECRET`
 
 **Required for file uploads:**
-- `UPLOADTHING_SECRET`
-- `UPLOADTHING_APP_ID`
+- `UPLOADTHING_TOKEN`
 
 ---
 
