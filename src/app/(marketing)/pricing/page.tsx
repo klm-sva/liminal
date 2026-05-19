@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
 import { createStaticServiceClient } from "@/lib/supabase/server";
@@ -9,6 +10,23 @@ export const metadata: Metadata = { title: "Pricing — Liminal" };
 
 // Cache the page for 1 hour; revalidates in the background on the next request after expiry.
 export const revalidate = 3600;
+
+// ─── Cached data fetch ────────────────────────────────────────────────────────
+// unstable_cache persists across requests in both dev and prod.
+// The DB is only queried once per hour regardless of how Next.js renders the route.
+const getCachedCredits = unstable_cache(
+  async (): Promise<Credit[]> => {
+    const supabase = createStaticServiceClient();
+    const { data } = await supabase
+      .from("credits")
+      .select("*")
+      .eq("is_active", true)
+      .order("credit_code");
+    return (data ?? []) as Credit[];
+  },
+  ["pricing-credits"],
+  { revalidate: 3600, tags: ["credits"] },
+);
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -224,14 +242,9 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function PricingPage() {
-  const supabase = createStaticServiceClient();
-  const { data: allCredits } = await supabase
-    .from("credits")
-    .select("*")
-    .eq("is_active", true)
-    .order("credit_code");
+  const allCredits = await getCachedCredits();
 
-  const creditsByProgram = (allCredits ?? []).reduce<Record<string, Credit[]>>((acc, c) => {
+  const creditsByProgram = allCredits.reduce<Record<string, Credit[]>>((acc, c) => {
     if (!acc[c.program]) acc[c.program] = [];
     acc[c.program].push(c as Credit);
     return acc;
