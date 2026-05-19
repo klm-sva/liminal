@@ -100,8 +100,6 @@ Below is the priority order — get these right before the first deploy:
 - `STRIPE_SECRET_KEY`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_WEBHOOK_SECRET` ← register the webhook endpoint first (Step 5)
-- `STRIPE_PRICE_STARTER_MONTHLY`
-- `STRIPE_PRICE_PROFESSIONAL_MONTHLY`
 
 **Required for pipeline (AI processing):**
 - `ANTHROPIC_API_KEY`
