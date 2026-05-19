@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
-import { createPublicClient } from "@/lib/supabase/server";
 import type { Credit } from "@/types/database";
+import creditsData from "@/data/credits.json";
 
 export const metadata: Metadata = { title: "Pricing — Liminal" };
-export const dynamic = "force-dynamic";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -221,14 +220,8 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function PricingPage() {
-  const supabase = createPublicClient();
-  const { data } = await supabase
-    .from("credits")
-    .select("*")
-    .eq("is_active", true)
-    .order("credit_code");
-  const allCredits = (data ?? []) as Credit[];
+export default function PricingPage() {
+  const allCredits = creditsData as Credit[];
 
   const creditsByProgram = allCredits.reduce<Record<string, Credit[]>>((acc, c) => {
     if (!acc[c.program]) acc[c.program] = [];
