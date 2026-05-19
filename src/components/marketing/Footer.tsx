@@ -1,31 +1,15 @@
 import Link from "next/link";
 
 const links: Record<string, { label: string; href?: string }[]> = {
-  Platform: [
-    { label: "Features" },
-    { label: "Credit Tracker" },
-    { label: "Narratives" },
-    { label: "Document Hub" },
-    { label: "Integrations" },
-    { label: "Security" },
-  ],
   Programs: [
-    { label: "LEED BD+C v4.1" },
-    { label: "WELL v2" },
-    { label: "WELL Health-Safety" },
-    { label: "Program Comparison" },
-  ],
-  Resources: [
-    { label: "Documentation" },
-    { label: "Blog" },
-    { label: "Webinars" },
-    { label: "Credit Library" },
-    { label: "Status" },
+    { label: "LEED BD+C v4.1", href: "/pricing" },
+    { label: "WELL v2",        href: "/pricing" },
+    { label: "WELL Health-Safety", href: "/pricing" },
   ],
   Company: [
-    { label: "About",   href: "/about" },
-    { label: "Pricing", href: "/pricing" },
-    { label: "Contact" },
+    { label: "About",           href: "/about" },
+    { label: "Pricing",         href: "/pricing" },
+    { label: "Contact",         href: "/signup" },
     { label: "Careers" },
     { label: "Press" },
   ],
