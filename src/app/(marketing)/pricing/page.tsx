@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
+import OrderLink from "@/components/pricing/OrderLink";
 import type { Credit } from "@/types/database";
 import creditsData from "@/data/credits.json";
 
@@ -126,7 +127,7 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
         <div
           className="grid gap-4 px-5 py-2.5"
           style={{
-            gridTemplateColumns: "110px 1fr auto 72px",
+            gridTemplateColumns: "110px 1fr auto 72px 68px",
             background: "rgba(43,64,68,0.03)",
             borderBottom: "1px solid rgba(43,64,68,0.08)",
           }}
@@ -135,6 +136,7 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
           <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(43,64,68,0.40)" }}>Credit / Feature</span>
           <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(43,64,68,0.40)" }}>Deliverables</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: "rgba(43,64,68,0.40)" }}>Price</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: "rgba(43,64,68,0.40)" }}></span>
         </div>
 
         {/* Scrollable rows */}
@@ -145,9 +147,9 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
           {credits.map((credit, i) => (
             <div
               key={credit.id}
-              className="grid gap-4 px-5 py-3.5 items-start"
+              className="grid gap-4 px-5 py-3.5 items-center"
               style={{
-                gridTemplateColumns: "110px 1fr auto 72px",
+                gridTemplateColumns: "110px 1fr auto 72px 68px",
                 borderBottom: i < credits.length - 1 ? "1px solid rgba(43,64,68,0.06)" : "none",
               }}
             >
@@ -209,6 +211,22 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
                   ${Math.round(credit.price / 100)}
                 </p>
                 <p className="text-[10px] mt-0.5" style={{ color: "#9aafb4" }}>pilot</p>
+              </div>
+
+              {/* Order */}
+              <div className="flex justify-end">
+                <OrderLink
+                  loggedInHref={`/orders/new/credit/${credit.id}?program=${credit.program}`}
+                  className="text-[11px] font-semibold px-3 py-1.5 whitespace-nowrap transition-colors"
+                  style={{
+                    borderRadius: "100px",
+                    border: "1px solid rgba(56,143,166,0.35)",
+                    color: "#1c5e70",
+                    background: "rgba(56,143,166,0.06)",
+                  }}
+                >
+                  Order
+                </OrderLink>
               </div>
             </div>
           ))}
@@ -372,8 +390,8 @@ export default function PricingPage() {
                         Delivered<br />within 48 hrs
                       </p>
                     </div>
-                    <Link
-                      href="/signup"
+                    <OrderLink
+                      loggedInHref={ga.href}
                       className="block text-center text-xs font-semibold transition-opacity hover:opacity-90 px-4 py-2.5 w-full"
                       style={{
                         borderRadius: "100px",
@@ -382,7 +400,7 @@ export default function PricingPage() {
                       }}
                     >
                       {ga.ctaLabel}
-                    </Link>
+                    </OrderLink>
                   </div>
                 </div>
               ))}
@@ -450,8 +468,8 @@ export default function PricingPage() {
             >
               Lock in pilot pricing and get your first credit at introductory pricing.
             </p>
-            <Link
-              href="/signup"
+            <OrderLink
+              loggedInHref="/orders/new/program"
               className="inline-flex items-center gap-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 px-8 py-3.5"
               style={{
                 borderRadius: "100px",
@@ -460,7 +478,7 @@ export default function PricingPage() {
               }}
             >
               Lock in pilot pricing
-            </Link>
+            </OrderLink>
           </div>
         </section>
 

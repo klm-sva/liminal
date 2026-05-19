@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <div className="sticky top-0 z-50">
@@ -83,17 +97,39 @@ export default function Navbar() {
             </div>
 
             {/* Desktop CTA */}
-            <div className="hidden lg:block">
-              <Link
-                href="/signup"
-                className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{
-                  background: "linear-gradient(135deg, #388fa6, #1c5e70)",
-                  borderRadius: "100px",
-                }}
-              >
-                Join the pilot
-              </Link>
+            <div className="hidden lg:flex items-center gap-3">
+              {loggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  style={{
+                    background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                    borderRadius: "100px",
+                  }}
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="px-4 py-2 text-sm font-medium rounded-lg transition-colors hover:text-certify-deep"
+                    style={{ color: "rgba(43,64,68,0.65)" }}
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{
+                      background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                      borderRadius: "100px",
+                    }}
+                  >
+                    Join the pilot
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile toggle */}
@@ -138,17 +174,42 @@ export default function Navbar() {
             >
               Pricing
             </Link>
-            <div className="pt-3 border-t" style={{ borderColor: "rgba(43,64,68,0.08)" }}>
-              <Link
-                href="/signup"
-                className="block text-center text-sm font-semibold text-white px-5 py-2.5 transition-opacity hover:opacity-90"
-                style={{
-                  background: "linear-gradient(135deg, #388fa6, #1c5e70)",
-                  borderRadius: "100px",
-                }}
-              >
-                Join the pilot
-              </Link>
+            <div className="pt-3 border-t space-y-2" style={{ borderColor: "rgba(43,64,68,0.08)" }}>
+              {loggedIn ? (
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="block text-center text-sm font-semibold text-white px-5 py-2.5 transition-opacity hover:opacity-90"
+                  style={{
+                    background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                    borderRadius: "100px",
+                  }}
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="block text-center text-sm font-medium px-5 py-2.5 rounded-full transition-colors"
+                    style={{ color: "rgba(43,64,68,0.70)", border: "1px solid rgba(43,64,68,0.14)" }}
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileOpen(false)}
+                    className="block text-center text-sm font-semibold text-white px-5 py-2.5 transition-opacity hover:opacity-90"
+                    style={{
+                      background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                      borderRadius: "100px",
+                    }}
+                  >
+                    Join the pilot
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
