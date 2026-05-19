@@ -27,6 +27,18 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 }
 
 /**
+ * Cookie-free anon client for public read queries (e.g. credits catalog on pricing page).
+ * Uses NEXT_PUBLIC_ vars so it works at Railway build time without service role key.
+ * Only reads data that RLS allows unauthenticated access to.
+ */
+export function createPublicClient(): SupabaseClient<Database> {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  ) as unknown as SupabaseClient<Database>;
+}
+
+/**
  * Cookie-free service client for public/static data (no user session needed).
  * Use this on pages that should be statically cached — it won't force dynamic rendering.
  */

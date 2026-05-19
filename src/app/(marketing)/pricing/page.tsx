@@ -3,7 +3,7 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
-import { createStaticServiceClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { Credit } from "@/types/database";
 
 export const metadata: Metadata = { title: "Pricing — Liminal" };
@@ -16,7 +16,7 @@ export const revalidate = 3600;
 // The DB is only queried once per hour regardless of how Next.js renders the route.
 const getCachedCredits = unstable_cache(
   async (): Promise<Credit[]> => {
-    const supabase = createStaticServiceClient();
+    const supabase = createPublicClient();
     const { data } = await supabase
       .from("credits")
       .select("*")
