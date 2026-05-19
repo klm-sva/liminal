@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, PenLine, X } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { createClient } from "@/lib/supabase/client";
+import type { ProgramType } from "@/types/database";
 
 const PROGRAMS = [
   { id: "leed_bdc_v41", label: "LEED BD+C v4.1", desc: "Building Design + Construction" },
@@ -27,6 +29,7 @@ export default function NewProjectPage() {
   const [dragOver,    setDragOver]    = useState(false);
   const [fileName,    setFileName]    = useState<string | null>(null);
   const [submitting,  setSubmitting]  = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
 
   // Manual fields
   const [name,              setName]              = useState("");
@@ -47,12 +50,77 @@ export default function NewProjectPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    // Simulate processing
-    await new Promise((r) => setTimeout(r, 1500));
-    if (method === "upload") {
-      router.push("/projects/proj_river/created");
-    } else {
-      router.push("/projects/proj_river");
+    setError(null);
+    try {
+      const supabase = createClient();
+      if (!supabase) throw new Error("Auth service not configured");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const projectName = method === "manual" ? name : (fileName ?? "New Project");
+
+      const isManual = method === "manual";
+      const { data: project, error: insertError } = await supabase
+        .from("projects")
+        .insert({
+          customer_id:             user.id,
+          name:                    projectName,
+          programs:                programs as ProgramType[],
+          certification_target:    target || null,
+          address:                 isManual ? (address || null) : null,
+          gross_sqft:              isManual && sqft ? parseInt(sqft, 10) : null,
+          stories:                 isManual && stories ? parseInt(stories, 10) : null,
+          building_type:           isManual ? (bldgType || null) : null,
+          occupancy:               isManual ? (occupancy || null) : null,
+          regular_occupants:       isManual && regularOccupants ? parseInt(regularOccupants, 10) : null,
+          peak_visitors:           isManual && peakVisitors ? parseInt(peakVisitors, 10) : null,
+          // remaining nullable fields — provided explicitly to satisfy ProjectInsert
+          net_sqft:                null,
+          stories_below_grade:     null,
+          primary_occupancy:       null,
+          secondary_occupancies:   null,
+          description:             null,
+          total_parking:           null,
+          accessible_parking:      null,
+          bicycle_parking:         null,
+          site_area_sqft:          null,
+          landscaping_sqft:        null,
+          impervious_sqft:         null,
+          building_footprint_sqft: null,
+          dwelling_units:          null,
+          occupant_load:           null,
+          floor_to_floor_ft:       null,
+          floor_to_ceiling_ft:     null,
+          window_wall_ratio:       null,
+          plumbing_fixtures:       null,
+          entrance_count:          null,
+          main_entry_description:  null,
+          hvac_type:               null,
+          lighting_type:           null,
+          has_renewable_energy:    null,
+          has_water_reuse:         null,
+          stormwater_features:     null,
+          building_orientation:    null,
+          sustainability_notes:    null,
+          drawing_data:            null,
+          drawings_analyzed_at:    null,
+          specs_extracted:         false,
+          doc_profiles_extracted:  {},
+        })
+        .select("id")
+        .single();
+
+      if (insertError) throw insertError;
+
+      if (method === "upload") {
+        router.push(`/projects/${project.id}/created`);
+      } else {
+        router.push(`/projects/${project.id}`);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+      setSubmitting(false);
     }
   }
 
@@ -261,6 +329,12 @@ export default function NewProjectPage() {
                 <option value="">Select target level…</option>
                 {availableTargets.map((t) => <option key={t}>{t}</option>)}
               </select>
+            </div>
+          )}
+
+          {error && (
+            <div className="px-4 py-3 text-sm rounded-xl bg-red-50 border border-red-200 text-red-700">
+              {error}
             </div>
           )}
 

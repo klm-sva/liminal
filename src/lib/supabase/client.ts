@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 const url  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? "";
@@ -9,7 +10,7 @@ function isConfigured() {
   catch { return false; }
 }
 
-export function createClient() {
+export function createClient(): SupabaseClient<Database> | null {
   if (!isConfigured()) return null;
-  return createBrowserClient<Database>(url, key);
+  return createBrowserClient<Database>(url, key) as unknown as SupabaseClient<Database>;
 }

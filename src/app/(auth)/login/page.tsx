@@ -43,10 +43,11 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       if (!supabase) throw new Error("Auth service not configured — add Supabase credentials to .env.local");
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
       const { error: authError } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+          emailRedirectTo: `${appUrl}/auth/callback`,
         },
       });
       if (authError) throw authError;
