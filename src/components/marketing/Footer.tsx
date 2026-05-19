@@ -1,33 +1,33 @@
 import Link from "next/link";
 
-const links = {
+const links: Record<string, { label: string; href?: string }[]> = {
   Platform: [
-    { label: "Features",      href: "/platform" },
-    { label: "Credit Tracker",href: "/platform#credit-tracker" },
-    { label: "Narratives",    href: "/platform#narratives" },
-    { label: "Document Hub",  href: "/platform#documents" },
-    { label: "Integrations",  href: "/integrations" },
-    { label: "Security",      href: "/security" },
+    { label: "Features" },
+    { label: "Credit Tracker" },
+    { label: "Narratives" },
+    { label: "Document Hub" },
+    { label: "Integrations" },
+    { label: "Security" },
   ],
   Programs: [
-    { label: "LEED BD+C v4.1",       href: "/programs/leed-bdc" },
-    { label: "WELL v2",               href: "/programs/well-v2" },
-    { label: "WELL Health-Safety",    href: "/programs/well-health-safety" },
-    { label: "Program Comparison",    href: "/programs" },
+    { label: "LEED BD+C v4.1" },
+    { label: "WELL v2" },
+    { label: "WELL Health-Safety" },
+    { label: "Program Comparison" },
   ],
   Resources: [
-    { label: "Documentation",    href: "/docs" },
-    { label: "Blog",             href: "/blog" },
-    { label: "Webinars",         href: "/webinars" },
-    { label: "Credit Library",   href: "/library" },
-    { label: "Status",           href: "/status" },
+    { label: "Documentation" },
+    { label: "Blog" },
+    { label: "Webinars" },
+    { label: "Credit Library" },
+    { label: "Status" },
   ],
   Company: [
     { label: "About",   href: "/about" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Contact", href: "/contact" },
-    { label: "Careers", href: "/careers" },
-    { label: "Press",   href: "/press" },
+    { label: "Contact" },
+    { label: "Careers" },
+    { label: "Press" },
   ],
 };
 
@@ -101,12 +101,16 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {items.map((item) => (
                   <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="text-sm text-white/55 hover:text-white transition-colors"
-                    >
-                      {item.label}
-                    </Link>
+                    {item.href ? (
+                      <Link
+                        href={item.href}
+                        className="text-sm text-white/55 hover:text-white transition-colors"
+                      >
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-white/30">{item.label}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -120,19 +124,9 @@ export default function Footer() {
             © {new Date().getFullYear()} Liminal. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            {[
-              { label: "Privacy Policy", href: "/privacy" },
-              { label: "Terms of Service", href: "/terms" },
-              { label: "Cookie Policy", href: "/cookies" },
-            ].map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="text-xs text-white/35 hover:text-white/60 transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
+            <Link href="/privacy" className="text-xs text-white/35 hover:text-white/60 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="text-xs text-white/35 hover:text-white/60 transition-colors">Terms of Service</Link>
+            <span className="text-xs text-white/20">Cookie Policy</span>
           </div>
         </div>
       </div>
