@@ -51,7 +51,7 @@ export default function SignupPage() {
         email,
         options: {
           data: { full_name: name, organization: org },
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (authError) throw authError;
