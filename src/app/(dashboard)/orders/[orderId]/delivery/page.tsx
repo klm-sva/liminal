@@ -1,14 +1,24 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Download, FileText, FileSpreadsheet, ClipboardList, CheckCircle2, Mail, AlertTriangle } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
-import { MOCK_ORDERS, MOCK_CREDITS } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export default async function DeliveryPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
 
-  const order  = MOCK_ORDERS.find((o) => o.id === orderId) ?? MOCK_ORDERS[0];
-  const credit = MOCK_CREDITS.find((c) => c.credit_code === order.credit_code) ?? MOCK_CREDITS[0];
+  const supabase = await createServiceClient();
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, credits(credit_code, credit_name, has_calculator, has_leed_form)")
+    .eq("id", orderId)
+    .single();
 
+  if (!order) notFound();
+
+  type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; has_calculator: boolean; has_leed_form: boolean } | null };
+  const credit = (order as unknown as OrderWithCredit)?.credits;
+  if (!credit) notFound();
 
   return (
     <div className="min-h-screen bg-certify-white">

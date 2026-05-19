@@ -3,28 +3,78 @@ import Link from "next/link";
 import { Plus, FolderOpen, ShoppingBag } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { MOCK_PROJECTS, MOCK_ORDERS, ORDER_STATUS_CONFIG } from "@/lib/mock-data";
+import { ORDER_STATUS_CONFIG } from "@/lib/constants";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import type { OrderStatus } from "@/types/database";
 
 export const metadata: Metadata = { title: "My Dashboard" };
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demo?: string }>;
+  searchParams: Promise<{ demo?: string; payment_success?: string }>;
 }) {
   const { demo } = await searchParams;
-  // demo=empty shows the empty state for preview purposes
-  const hasProjects = demo !== "empty";
-  const projects    = MOCK_PROJECTS;
 
-  const totalOrders    = MOCK_ORDERS.length;
-  const deliveredOrders = MOCK_ORDERS.filter((o) => o.status === "delivered").length;
-  const pendingOrders  = MOCK_ORDERS.filter((o) => o.status !== "delivered").length;
+  // Get authenticated user
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  const supabase = await createServiceClient();
+
+  // demo=empty forces the empty state
+  const forceEmpty = demo === "empty";
+
+  let projects: Array<{
+    id: string;
+    name: string;
+    address: string | null;
+    programs: string[];
+    certification_target: string | null;
+    gross_sqft: number | null;
+  }> = [];
+
+  const ordersByProject: Record<string, Array<{
+    id: string;
+    status: OrderStatus;
+    credits: { credit_code: string; program: string } | null;
+  }>> = {};
+
+  if (user && !forceEmpty) {
+    const { data: projectData } = await supabase
+      .from("projects")
+      .select("id, name, address, programs, certification_target, gross_sqft")
+      .eq("customer_id", user.id)
+      .order("created_at", { ascending: false });
+
+    projects = (projectData ?? []) as typeof projects;
+
+    if (projects.length > 0) {
+      const projectIds = projects.map((p) => p.id);
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("id, project_id, status, credits(credit_code, program)")
+        .in("project_id", projectIds)
+        .order("created_at", { ascending: false });
+
+      type OrderWithCredit = { id: string; project_id: string; status: OrderStatus; credits: { credit_code: string; program: string } | null };
+      for (const order of (orderData ?? []) as unknown as OrderWithCredit[]) {
+        const pid = order.project_id;
+        if (!ordersByProject[pid]) ordersByProject[pid] = [];
+        ordersByProject[pid].push(order);
+      }
+    }
+  }
+
+  const hasProjects = !forceEmpty && projects.length > 0;
+
+  const allOrders = Object.values(ordersByProject).flat();
+  const totalOrders    = allOrders.length;
+  const deliveredOrders = allOrders.filter((o) => o.status === "delivered" || o.status === "complete").length;
+  const pendingOrders  = totalOrders - deliveredOrders;
 
   if (!hasProjects) {
     return (
       <>
-        {/* ── Empty state ──────────────────────────────────────── */}
         <DashboardHeader title="My Dashboard" subtitle="Welcome to Liminal" />
 
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
@@ -37,7 +87,6 @@ export default async function DashboardPage({
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            {/* Option 1 */}
             <Link
               href="/projects/new"
               className="group bg-white border-2 border-certify-blue/20 hover:border-certify-blue rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-glass"
@@ -51,7 +100,6 @@ export default async function DashboardPage({
               </p>
             </Link>
 
-            {/* Option 2 */}
             <Link
               href="/orders/new/select-project"
               className="group bg-white border-2 border-certify-sage/30 hover:border-certify-sage rounded-2xl p-6 text-left transition-all duration-200 hover:shadow-glass"
@@ -74,17 +122,16 @@ export default async function DashboardPage({
     );
   }
 
-  /* ── With projects ───────────────────────────────────────── */
   return (
     <>
       <DashboardHeader
         title="My Dashboard"
         subtitle="All your certification projects in one place"
         metrics={[
-          { label: "Projects",          value: projects.length              },
-          { label: "Credits Ordered",    value: totalOrders                 },
-          { label: "Delivered",         value: deliveredOrders,  sub: "completed" },
-          { label: "In Progress",       value: pendingOrders,    sub: "active"    },
+          { label: "Projects",        value: projects.length   },
+          { label: "Credits Ordered", value: totalOrders       },
+          { label: "Delivered",       value: deliveredOrders, sub: "completed" },
+          { label: "In Progress",     value: pendingOrders,   sub: "active"    },
         ]}
         actions={
           <>
@@ -108,10 +155,12 @@ export default async function DashboardPage({
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {projects.map((project) => {
-            const progress = project.orders_count > 0
-              ? Math.round((project.orders_complete / project.orders_count) * 100)
+            const projectOrders = ordersByProject[project.id] ?? [];
+            const ordersComplete = projectOrders.filter((o) => o.status === "delivered" || o.status === "complete").length;
+            const progress = projectOrders.length > 0
+              ? Math.round((ordersComplete / projectOrders.length) * 100)
               : 0;
-            const projectOrders = MOCK_ORDERS.filter((o) => o.project_id === project.id);
+            const programs = project.programs as string[];
 
             return (
               <Link
@@ -123,9 +172,9 @@ export default async function DashboardPage({
                 <div
                   className="h-1.5"
                   style={{
-                    background: project.programs.includes("leed_bdc_v41")
+                    background: programs.includes("leed_bdc_v41")
                       ? "linear-gradient(90deg, #388fa6, #1c5e70)"
-                      : project.programs.includes("well_v2")
+                      : programs.includes("well_v2")
                       ? "linear-gradient(90deg, #5fa8bb, #388fa6)"
                       : "linear-gradient(90deg, #edc299, #5fa8bb)",
                   }}
@@ -139,27 +188,23 @@ export default async function DashboardPage({
                       </h3>
                       <p className="text-xs text-certify-cool-grey mt-0.5 truncate">{project.address}</p>
                     </div>
-                    {project.has_gap_analysis && project.gap_analysis_score !== null && (
-                      <div className="shrink-0 bg-certify-teal/10 border border-certify-teal/20 rounded-xl px-2.5 py-1.5 text-center">
-                        <p className="text-certify-teal font-bold text-lg leading-none">{project.gap_analysis_score}</p>
-                        <p className="text-certify-teal/60 text-[9px] font-semibold uppercase tracking-wide mt-0.5">Gap Score</p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Program chips */}
                   <div className="flex flex-wrap gap-1.5 mb-4">
-                    {project.programs.map((p) => <ProgramChip key={p} program={p} />)}
-                    <span className="text-[10px] font-medium px-2.5 py-1 rounded-lg bg-certify-beige text-certify-dark-grey border border-certify-sand/30">
-                      Target: {project.certification_target}
-                    </span>
+                    {programs.map((p) => <ProgramChip key={p} program={p as import("@/types/database").ProgramType} />)}
+                    {project.certification_target && (
+                      <span className="text-[10px] font-medium px-2.5 py-1 rounded-lg bg-certify-beige text-certify-dark-grey border border-certify-sand/30">
+                        Target: {project.certification_target}
+                      </span>
+                    )}
                   </div>
 
                   {/* Progress */}
                   <div className="mb-4">
                     <div className="flex justify-between text-xs text-certify-cool-grey mb-1.5">
                       <span>Complete</span>
-                      <span className="font-semibold text-certify-deep">{project.orders_complete}/{project.orders_count}</span>
+                      <span className="font-semibold text-certify-deep">{ordersComplete}/{projectOrders.length}</span>
                     </div>
                     <div className="h-2 bg-certify-white rounded-full overflow-hidden">
                       <div
@@ -179,7 +224,7 @@ export default async function DashboardPage({
                           className="text-[10px] font-medium px-2 py-0.5 rounded"
                           style={{ color: cfg.color, backgroundColor: cfg.bg }}
                         >
-                          {order.credit_code}
+                          {order.credits?.credit_code ?? "—"}
                         </span>
                       );
                     })}

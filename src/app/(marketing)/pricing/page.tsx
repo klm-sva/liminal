@@ -2,14 +2,74 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
-import { MOCK_CREDITS } from "@/lib/mock-data";
-import type { MockCredit } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
+import type { Credit } from "@/types/database";
 
 export const metadata: Metadata = { title: "Pricing — Liminal" };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const PILOT_PRICE_GAP = 499;
+
+const GAP_ANALYSIS_CONFIG = [
+  {
+    key:      "leed_bdc_v41",
+    label:    "LEED BD+C v4.1",
+    headline: "LEED Gap Analysis",
+    gradient: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)",
+    accentColor: "rgba(163,212,224,0.75)",
+    description:
+      "A scored baseline for your project. Every applicable credit inventoried, current points estimated, gap to your certification target calculated, and a prioritised credit shortlist delivered.",
+    includes: [
+      "Scored inventory of every applicable credit",
+      "Points estimate vs. your certification target",
+      "Category-by-category gap breakdown",
+      "Prioritised credit shortlist by effort / impact",
+      "Automation classification for each credit",
+      "Downloadable report (editable output)",
+    ],
+    ctaLabel: "Order LEED gap analysis",
+    href:     "/orders/gap-analysis",
+  },
+  {
+    key:      "well_v2",
+    label:    "WELL v2",
+    headline: "WELL v2 Gap Analysis",
+    gradient: "linear-gradient(135deg, #5fa8bb 0%, #388fa6 100%)",
+    accentColor: "rgba(163,212,224,0.75)",
+    description:
+      "A complete readiness assessment for WELL v2 certification. Every applicable feature inventoried, current points estimated, gap to your certification level calculated, and a prioritised feature shortlist delivered.",
+    includes: [
+      "Scored inventory of every applicable feature",
+      "Points estimate vs. Silver / Gold / Platinum target",
+      "Concept-by-concept gap breakdown",
+      "Prioritised feature shortlist by effort / impact",
+      "Automation classification for each feature",
+      "Downloadable report (editable output)",
+    ],
+    ctaLabel: "Order WELL v2 gap analysis",
+    href:     "/orders/gap-analysis-well-v2",
+  },
+  {
+    key:      "well_hsr",
+    label:    "WELL Health-Safety",
+    headline: "WELL HSR Gap Analysis",
+    gradient: "linear-gradient(135deg, #c4a882 0%, #a8895e 100%)",
+    accentColor: "rgba(237,194,153,0.80)",
+    description:
+      "A clear-eyed assessment of your WELL Health-Safety Rating readiness. All applicable features evaluated, gap to the rating threshold identified, and a targeted action plan to close it.",
+    includes: [
+      "All applicable features assessed against the standard",
+      "Points estimate vs. rating threshold",
+      "Concept-by-concept gap breakdown",
+      "Prioritised action list with effort / impact ratings",
+      "Automation classification for each feature",
+      "Downloadable report (editable output)",
+    ],
+    ctaLabel: "Order WELL HSR gap analysis",
+    href:     "/orders/gap-analysis-well-hsr",
+  },
+];
 
 const PROGRAM_CONFIG: Record<string, { label: string; chip: string }> = {
   leed_bdc_v41: { label: "LEED BD+C v4.1",       chip: "#388fa6" },
@@ -19,7 +79,7 @@ const PROGRAM_CONFIG: Record<string, { label: string; chip: string }> = {
 
 const PROGRAM_ORDER = ["leed_bdc_v41", "well_v2", "well_hsr"];
 
-function deliverableTags(credit: MockCredit): string[] {
+function deliverableTags(credit: Credit): string[] {
   const tags: string[] = [];
   if (credit.program === "leed_bdc_v41") {
     tags.push("Narrative");
@@ -27,7 +87,6 @@ function deliverableTags(credit: MockCredit): string[] {
     if (credit.has_calculator) tags.push("Calculator");
   } else {
     tags.push("Documentation pkg");
-    if (credit.has_policy)     tags.push("Policy draft");
     if (credit.has_calculator) tags.push("Calculator");
   }
   return tags;
@@ -35,9 +94,8 @@ function deliverableTags(credit: MockCredit): string[] {
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
-function ProgramWindow({ programKey }: { programKey: string }) {
-  const config   = PROGRAM_CONFIG[programKey];
-  const credits  = MOCK_CREDITS.filter((c) => c.program === programKey);
+function ProgramWindow({ programKey, credits }: { programKey: string; credits: Credit[] }) {
+  const config = PROGRAM_CONFIG[programKey];
 
   return (
     <div className="mb-10">
@@ -162,7 +220,20 @@ function ProgramWindow({ programKey }: { programKey: string }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const supabase = await createServiceClient();
+  const { data: allCredits } = await supabase
+    .from("credits")
+    .select("*")
+    .eq("is_active", true)
+    .order("credit_code");
+
+  const creditsByProgram = (allCredits ?? []).reduce<Record<string, Credit[]>>((acc, c) => {
+    if (!acc[c.program]) acc[c.program] = [];
+    acc[c.program].push(c as Credit);
+    return acc;
+  }, {});
+
   return (
     <>
       <Navbar />
@@ -219,9 +290,9 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ── LEED Gap Analysis ───────────────────────────────────── */}
+        {/* ── Gap Analysis ────────────────────────────────────────── */}
         <section className="py-16" style={{ background: "#ffffff" }}>
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
             <p
               className="text-xs font-bold uppercase tracking-widest mb-8"
@@ -230,103 +301,96 @@ export default function PricingPage() {
               Start here
             </p>
 
-            <div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center p-8"
-              style={{
-                borderRadius: "16px",
-                background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)",
-              }}
-            >
-              {/* Copy */}
-              <div>
-                <p
-                  className="text-xs font-bold uppercase tracking-widest mb-3"
-                  style={{ color: "rgba(163,212,224,0.75)", letterSpacing: "0.14em" }}
-                >
-                  Recommended first step
-                </p>
-                <h2
-                  className="mb-4 leading-tight"
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {GAP_ANALYSIS_CONFIG.map((ga) => (
+                <div
+                  key={ga.key}
+                  className="flex flex-col p-7"
                   style={{
-                    fontFamily: "var(--font-dm-serif)",
-                    fontSize: "clamp(22px, 3vw, 30px)",
-                    color: "#ffffff",
+                    borderRadius: "16px",
+                    background: ga.gradient,
                   }}
                 >
-                  LEED Gap Analysis
-                </h2>
-                <p
-                  className="text-sm leading-relaxed mb-6"
-                  style={{ color: "rgba(255,255,255,0.70)" }}
-                >
-                  A scored baseline for your project. Every applicable credit inventoried, current points estimated, gap to your certification target calculated, and a prioritised credit shortlist delivered.
-                </p>
+                  {/* Program chip */}
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-widest mb-4"
+                    style={{ color: ga.accentColor, letterSpacing: "0.14em" }}
+                  >
+                    {ga.label}
+                  </p>
 
-                {/* What's included */}
-                <ul className="space-y-2 mb-6">
-                  {[
-                    "Scored inventory of every applicable credit",
-                    "Points estimate vs. your certification target",
-                    "Category-by-category gap breakdown",
-                    "Prioritised credit shortlist by effort / impact",
-                    "Automation classification for each credit",
-                    "Downloadable report (editable output)",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2.5 text-xs" style={{ color: "rgba(255,255,255,0.80)" }}>
-                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0 mt-0.5" aria-hidden="true">
-                        <circle cx="6.5" cy="6.5" r="6.5" fill="rgba(255,255,255,0.15)" />
-                        <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                  {/* Headline */}
+                  <h2
+                    className="mb-3 leading-tight"
+                    style={{
+                      fontFamily: "var(--font-dm-serif)",
+                      fontSize: "clamp(18px, 2vw, 22px)",
+                      color: "#ffffff",
+                    }}
+                  >
+                    {ga.headline}
+                  </h2>
 
-                <Link
-                  href="/signup"
-                  className="inline-flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-90 px-6 py-3"
-                  style={{
-                    borderRadius: "100px",
-                    background: "#ffffff",
-                    color: "#1c5e70",
-                  }}
-                >
-                  Order LEED gap analysis
-                </Link>
-              </div>
+                  {/* Description */}
+                  <p
+                    className="text-xs leading-relaxed mb-5"
+                    style={{ color: "rgba(255,255,255,0.68)" }}
+                  >
+                    {ga.description}
+                  </p>
 
-              {/* Price card */}
-              <div
-                className="flex flex-col items-center justify-center text-center p-8"
-                style={{
-                  borderRadius: "14px",
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.20)",
-                }}
-              >
-                <p
-                  className="text-xs font-bold uppercase tracking-widest mb-3"
-                  style={{ color: "rgba(163,212,224,0.75)", letterSpacing: "0.14em" }}
-                >
-                  One-time fee
-                </p>
-                <p
-                  className="leading-none mb-2"
-                  style={{
-                    fontFamily: "var(--font-dm-serif)",
-                    fontSize: "64px",
-                    color: "#ffffff",
-                  }}
-                >
-                  ${PILOT_PRICE_GAP}
-                </p>
-                <p className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.60)" }}>
-                  introductory pilot pricing
-                </p>
-                <p className="text-xs" style={{ color: "rgba(163,212,224,0.65)" }}>
-                  Delivered within 48 hours
-                </p>
-              </div>
+                  {/* Included list */}
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {ga.includes.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-xs" style={{ color: "rgba(255,255,255,0.82)" }}>
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0 mt-0.5" aria-hidden="true">
+                          <circle cx="6.5" cy="6.5" r="6.5" fill="rgba(255,255,255,0.15)" />
+                          <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Price + CTA */}
+                  <div
+                    className="pt-5 mt-auto"
+                    style={{ borderTop: "1px solid rgba(255,255,255,0.18)" }}
+                  >
+                    <div className="flex items-end justify-between mb-4">
+                      <div>
+                        <p
+                          className="leading-none"
+                          style={{
+                            fontFamily: "var(--font-dm-serif)",
+                            fontSize: "40px",
+                            color: "#ffffff",
+                          }}
+                        >
+                          ${PILOT_PRICE_GAP}
+                        </p>
+                        <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.50)" }}>
+                          introductory pilot · one-time fee
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-right" style={{ color: ga.accentColor }}>
+                        Delivered<br />within 48 hrs
+                      </p>
+                    </div>
+                    <Link
+                      href="/signup"
+                      className="block text-center text-xs font-semibold transition-opacity hover:opacity-90 px-4 py-2.5 w-full"
+                      style={{
+                        borderRadius: "100px",
+                        background: "#ffffff",
+                        color: "#1c5e70",
+                      }}
+                    >
+                      {ga.ctaLabel}
+                    </Link>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -363,7 +427,7 @@ export default function PricingPage() {
 
             {/* One scrollable window per program */}
             {PROGRAM_ORDER.map((key) => (
-              <ProgramWindow key={key} programKey={key} />
+              <ProgramWindow key={key} programKey={key} credits={creditsByProgram[key] ?? []} />
             ))}
 
           </div>

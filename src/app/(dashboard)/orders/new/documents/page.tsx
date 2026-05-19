@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, FileText, Info } from "lucide-react";
+import { notFound } from "next/navigation";
+import { ArrowRight, CheckCircle2, FileText } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
-import { MOCK_CREDITS } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Documents Needed" };
 
@@ -14,7 +15,17 @@ export default async function DocumentsNeededPage({
   searchParams: Promise<{ credit_id?: string; project_id?: string }>;
 }) {
   const { credit_id, project_id } = await searchParams;
-  const credit = MOCK_CREDITS.find((c) => c.id === credit_id) ?? MOCK_CREDITS[0];
+
+  if (!credit_id) notFound();
+
+  const supabase = await createServiceClient();
+  const { data: credit } = await supabase
+    .from("credits")
+    .select("id, credit_code, credit_name, required_customer_documents")
+    .eq("id", credit_id)
+    .single();
+
+  if (!credit) notFound();
 
   const continueHref = `/orders/new/payment?credit_id=${credit.id}${project_id ? `&project_id=${project_id}` : ""}`;
 
@@ -46,20 +57,12 @@ export default async function DocumentsNeededPage({
             <h3 className="font-semibold text-certify-deep text-sm">Required documents: {credit.credit_code}</h3>
           </div>
           <ul className="space-y-3">
-            {credit.required_customer_documents.map((doc, i) => (
+            {(credit.required_customer_documents ?? []).map((doc, i) => (
               <li key={i} className="flex items-start gap-3">
                 <div className="w-6 h-6 rounded-lg bg-certify-blue/10 flex items-center justify-center text-certify-blue text-xs font-bold shrink-0 mt-0.5">
                   {i + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-certify-dark-grey leading-relaxed">{doc.text}</p>
-                  {doc.condition && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Info size={11} className="text-certify-sand shrink-0" />
-                      <span className="text-xs text-certify-sand">{doc.condition}</span>
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-certify-dark-grey leading-relaxed flex-1">{doc}</p>
               </li>
             ))}
           </ul>

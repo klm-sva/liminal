@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, ArrowRight, Info } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { MOCK_CREDITS } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Credit Details" };
 
@@ -20,7 +20,13 @@ export default async function CreditDetailPage({
   const { creditId }  = await params;
   const { project_id } = await searchParams;
 
-  const credit = MOCK_CREDITS.find((c) => c.id === creditId);
+  const supabase = await createServiceClient();
+  const { data: credit } = await supabase
+    .from("credits")
+    .select("*")
+    .eq("id", creditId)
+    .single();
+
   if (!credit) notFound();
 
   const continueHref = `/orders/new/documents?credit_id=${credit.id}${project_id ? `&project_id=${project_id}` : ""}`;
@@ -87,7 +93,6 @@ export default async function CreditDetailPage({
               "Compliance narrative (editable output)",
               ...(credit.has_leed_form  ? ["Pre-filled sample online form"] : []),
               ...(credit.has_calculator ? ["Calculator inputs provided (.xlsx)"] : []),
-              ...(credit.has_policy     ? ["Policy document — reviewed for compliance gaps if you upload one, or a complete draft generated if not"] : []),
             ].map((item) => (
               <li key={item} className="flex items-center gap-2 text-sm text-certify-dark-grey">
                 <CheckCircle2 size={14} className="text-certify-teal shrink-0" />
@@ -96,7 +101,6 @@ export default async function CreditDetailPage({
             ))}
           </ul>
         </div>
-
 
         {/* Price + CTA */}
         <div className="flex items-center justify-between bg-certify-beige border border-certify-sand/40 rounded-xl px-5 py-4 mb-4">

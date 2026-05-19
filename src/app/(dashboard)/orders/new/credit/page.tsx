@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { MOCK_CREDITS } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
 import type { ProgramType } from "@/types/database";
 
 const GAP_ANALYSIS_CONFIG: Record<ProgramType, { href: string; description: string }> = {
@@ -40,9 +40,19 @@ export default async function ChooseCreditPage({
   const program   = (programParam ?? "leed_bdc_v41") as ProgramType;
   const categories = CATEGORIES[program] ?? CATEGORIES.leed_bdc_v41;
 
-  const credits = MOCK_CREDITS.filter(
-    (c) => c.program === program && (filter && filter !== categories[0] ? c.category === filter : true)
-  );
+  const supabase = await createServiceClient();
+  let query = supabase
+    .from("credits")
+    .select("id, credit_code, credit_name, category, program, points_available, price")
+    .eq("program", program)
+    .eq("is_active", true)
+    .order("credit_code");
+
+  if (filter && filter !== categories[0]) {
+    query = query.eq("category", filter);
+  }
+
+  const { data: credits } = await query;
 
   return (
     <div className="min-h-screen bg-certify-white">
@@ -117,7 +127,7 @@ export default async function ChooseCreditPage({
           Or choose an individual credit
         </p>
         <div className="space-y-3 mb-8">
-          {credits.map((credit) => (
+          {(credits ?? []).map((credit) => (
             <Link
               key={credit.id}
               href={`/orders/new/credit/${credit.id}?program=${program}${project_id ? `&project_id=${project_id}` : ""}`}

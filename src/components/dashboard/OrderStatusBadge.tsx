@@ -1,5 +1,5 @@
 import type { OrderStatus } from "@/types/database";
-import { ORDER_STATUS_CONFIG } from "@/lib/mock-data";
+import { ORDER_STATUS_CONFIG } from "@/lib/constants";
 
 export default function OrderStatusBadge({ status }: { status: OrderStatus }) {
   const cfg = ORDER_STATUS_CONFIG[status];

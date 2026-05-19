@@ -3,11 +3,24 @@ import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import type { ProgramType } from "@/types/database";
 
 export const metadata: Metadata = { title: "Select Project" };
 
-export default function SelectProjectPage() {
+export default async function SelectProjectPage() {
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  const supabase = await createServiceClient();
+
+  const { data: projects } = user
+    ? await supabase
+        .from("projects")
+        .select("id, name, address, programs")
+        .eq("customer_id", user.id)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+
   return (
     <>
       <DashboardHeader
@@ -23,7 +36,7 @@ export default function SelectProjectPage() {
         </p>
 
         <div className="space-y-3 mb-4">
-          {MOCK_PROJECTS.map((project) => (
+          {(projects ?? []).map((project) => (
             <Link
               key={project.id}
               href={`/projects/${project.id}/add-service`}
@@ -42,7 +55,7 @@ export default function SelectProjectPage() {
                 </p>
                 <p className="text-xs text-certify-cool-grey truncate mt-0.5">{project.address}</p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {project.programs.map((p) => <ProgramChip key={p} program={p} />)}
+                  {(project.programs as ProgramType[]).map((p) => <ProgramChip key={p} program={p} />)}
                 </div>
               </div>
 

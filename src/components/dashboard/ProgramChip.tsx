@@ -1,5 +1,5 @@
 import type { ProgramType } from "@/types/database";
-import { PROGRAM_SHORT, PROGRAM_COLORS } from "@/lib/mock-data";
+import { PROGRAM_SHORT, PROGRAM_COLORS } from "@/lib/constants";
 
 export default function ProgramChip({ program }: { program: ProgramType }) {
   const label  = PROGRAM_SHORT[program];

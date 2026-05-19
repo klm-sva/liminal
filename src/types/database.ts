@@ -54,6 +54,8 @@ export type Credit = {
   partial_notes:               string | null;
   price:                       number;
   is_active:                   boolean;
+  stripe_product_id:           string | null;
+  stripe_price_id:             string | null;
   created_at:                  string;
   updated_at:                  string;
 };

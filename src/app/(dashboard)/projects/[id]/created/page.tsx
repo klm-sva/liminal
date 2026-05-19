@@ -1,14 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowRight } from "lucide-react";
-import { MOCK_PROJECTS } from "@/lib/mock-data";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Project Created" };
 
 export default async function ProjectCreatedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const project = MOCK_PROJECTS.find((p) => p.id === id) ?? MOCK_PROJECTS[0];
-  const flagged = project.flagged_fields;
+
+  const supabase = await createServiceClient();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, name, flagged_fields")
+    .eq("id", id)
+    .single();
+
+  if (!project) notFound();
+
+  const flagged = (project.flagged_fields ?? []) as string[];
 
   return (
     <div className="min-h-screen bg-certify-beige flex flex-col items-center justify-center px-4 py-20">
