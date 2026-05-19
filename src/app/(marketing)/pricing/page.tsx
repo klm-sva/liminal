@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createStaticServiceClient } from "@/lib/supabase/server";
 import type { Credit } from "@/types/database";
 
 export const metadata: Metadata = { title: "Pricing — Liminal" };
+
+// Cache the page for 1 hour; revalidates in the background on the next request after expiry.
+export const revalidate = 3600;
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -221,7 +224,7 @@ function ProgramWindow({ programKey, credits }: { programKey: string; credits: C
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function PricingPage() {
-  const supabase = await createServiceClient();
+  const supabase = createStaticServiceClient();
   const { data: allCredits } = await supabase
     .from("credits")
     .select("*")

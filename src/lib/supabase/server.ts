@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -22,6 +23,17 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
         },
       },
     }
+  ) as unknown as SupabaseClient<Database>;
+}
+
+/**
+ * Cookie-free service client for public/static data (no user session needed).
+ * Use this on pages that should be statically cached — it won't force dynamic rendering.
+ */
+export function createStaticServiceClient(): SupabaseClient<Database> {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   ) as unknown as SupabaseClient<Database>;
 }
 
