@@ -38,7 +38,7 @@ export default function AddServiceClient({ project, creditsByProgram, allProgram
   return (
     <>
       <DashboardHeader
-        title="Run a Credit or Feature"
+        title="Run a Gap Analysis, Credit or Feature"
         subtitle={project.name}
         backHref={`/projects/${project.id}`}
         backLabel="Project"
@@ -61,7 +61,7 @@ export default function AddServiceClient({ project, creditsByProgram, allProgram
             }}
           />
           <div className="relative">
-            <p className="text-xs font-bold tracking-widest text-white/50 uppercase mb-2">Start here</p>
+            <p className="text-xs font-bold tracking-widest text-white/50 uppercase mb-2">Start here — Recommended (optional, or choose a credit or feature below)</p>
             <h3 className="font-serif text-2xl text-white mb-2">Gap Analysis</h3>
             <p className="text-white/65 text-sm leading-relaxed mb-4">
               Before ordering individual credits, run a gap analysis to get a scored baseline and a prioritized list of credits that will move you toward your certification threshold most efficiently.
@@ -76,14 +76,14 @@ export default function AddServiceClient({ project, creditsByProgram, allProgram
             <div className="flex flex-wrap gap-3">
               {(
                 [
-                  { program: "leed_bdc_v41", label: "LEED BD+C v4.1" },
-                  { program: "well_v2",      label: "WELL v2" },
-                  { program: "well_hsr",     label: "WELL Health-Safety" },
+                  { href: "/orders/gap-analysis",          label: "LEED BD+C v4.1" },
+                  { href: "/orders/gap-analysis-well-v2",  label: "WELL v2" },
+                  { href: "/orders/gap-analysis-well-hsr", label: "WELL Health-Safety" },
                 ] as const
-              ).map(({ program, label }) => (
+              ).map(({ href, label }) => (
                 <Link
-                  key={program}
-                  href={`/orders/gap-analysis?program=${program}`}
+                  key={href}
+                  href={href}
                   className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm group"
                 >
                   {label} <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />

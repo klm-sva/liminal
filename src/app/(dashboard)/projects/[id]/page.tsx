@@ -22,16 +22,6 @@ type OrderRow = {
   } | null;
 };
 
-const WELL_GAP_DESCRIPTIONS: Record<string, string> = {
-  well_v2:  "Get a scored WELL Feature inventory, identify your points gap to your target certification level, and receive a prioritized implementation roadmap.",
-  well_hsr: "Assess your facility against WELL Health-Safety Rating requirements and get a clear action plan to achieve the rating.",
-};
-
-const WELL_GAP_LABELS: Record<string, string> = {
-  well_v2:  "WELL v2 Gap Analysis",
-  well_hsr: "WELL Health-Safety Gap Analysis",
-};
-
 export default async function ProjectPage({
   params,
 }: {
@@ -62,7 +52,6 @@ export default async function ProjectPage({
   const orders = (orderData ?? []) as unknown as OrderRow[];
   const delivered = orders.filter((o) => o.status === "delivered" || o.status === "complete").length;
   const programs = (project.programs ?? []) as ProgramType[];
-  const wellPrograms = programs.filter((p) => p === "well_v2" || p === "well_hsr");
 
   return (
     <>
@@ -97,6 +86,36 @@ export default async function ProjectPage({
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
 
+        {/* Gap analysis card */}
+        <div
+          className="relative overflow-hidden rounded-2xl px-5 py-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+          <div className="relative flex-1">
+            <p className="font-semibold text-white text-sm mb-1">Gap Analysis</p>
+            <p className="text-white/65 text-xs leading-relaxed">
+              Understand where your project stands before you begin. A gap analysis reviews your project against certification requirements, identifies your strongest credits and features, and gives you a recommended pursuit strategy. It is the recommended first step for any certification project.
+            </p>
+          </div>
+          <div className="relative shrink-0">
+            <Link
+              href={`/projects/${project.id}/add-service`}
+              className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-4 py-2 rounded-xl transition-colors text-sm group"
+            >
+              Learn more <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+
         {/* Interactive program pills + orders list */}
         <ProjectClient
           projectId={project.id}
@@ -104,44 +123,6 @@ export default async function ProjectPage({
           certificationTarget={project.certification_target ?? null}
           orders={orders}
         />
-
-        {/* WELL gap analysis cards */}
-        {wellPrograms.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#388fa6", letterSpacing: "0.14em" }}>
-              Gap Analysis Available
-            </p>
-            {wellPrograms.map((prog) => (
-              <div
-                key={prog}
-                className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
-                style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
-              >
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 opacity-[0.04]"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
-                    backgroundSize: "40px 40px",
-                  }}
-                />
-                <div className="relative flex-1">
-                  <p className="font-semibold text-white text-sm mb-1">{WELL_GAP_LABELS[prog]}</p>
-                  <p className="text-white/65 text-xs leading-relaxed">{WELL_GAP_DESCRIPTIONS[prog]}</p>
-                </div>
-                <div className="relative shrink-0">
-                  <Link
-                    href={`/orders/gap-analysis?program=${prog}&project_id=${project.id}`}
-                    className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-4 py-2 rounded-xl transition-colors text-sm group"
-                  >
-                    Learn more <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Pilot feedback link */}
         <div className="flex justify-end">
