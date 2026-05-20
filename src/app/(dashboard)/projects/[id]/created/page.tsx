@@ -12,13 +12,14 @@ export default async function ProjectCreatedPage({ params }: { params: Promise<{
   const supabase = await createServiceClient();
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, flagged_fields")
+    .select("id, name, flagged_fields, auto_extracted")
     .eq("id", id)
     .single();
 
   if (!project) notFound();
 
   const flagged = (project.flagged_fields ?? []) as string[];
+  const extracted = project.auto_extracted === true;
 
   return (
     <div className="min-h-screen bg-certify-beige flex flex-col items-center justify-center px-4 py-20">
@@ -35,23 +36,29 @@ export default async function ProjectCreatedPage({ params }: { params: Promise<{
 
         <h1 className="font-serif text-3xl text-certify-deep mb-2">Project created</h1>
         <p className="text-certify-cool-grey leading-relaxed mb-6">
-          <strong>{project.name}</strong> was automatically created from your uploaded drawings.
+          <strong>{project.name}</strong> has been added to your dashboard.
         </p>
 
-        {/* Extracted fields note */}
-        <div className="text-left bg-white/70 border border-certify-white rounded-xl px-4 py-3 mb-4">
-          <p className="text-xs font-semibold text-certify-teal uppercase tracking-wider mb-2">
-            ✓ Successfully extracted
-          </p>
-          <ul className="space-y-1">
-            {["Project name", "Building address", "Gross square footage", "Number of stories", "Building type"].map((f) => (
-              <li key={f} className="text-xs text-certify-dark-grey flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-certify-sage inline-block" />
-                {f}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Extraction result */}
+        {extracted ? (
+          <div className="text-left bg-white/70 border border-certify-white rounded-xl px-4 py-3 mb-4">
+            <p className="text-xs font-semibold text-certify-teal uppercase tracking-wider mb-2">
+              ✓ Successfully extracted from drawings
+            </p>
+            <p className="text-xs text-certify-dark-grey">
+              Project details were read from your uploaded drawing set. Review them below to confirm accuracy.
+            </p>
+          </div>
+        ) : (
+          <div className="text-left bg-certify-beige border border-certify-sand/30 rounded-xl px-4 py-3 mb-4">
+            <p className="text-xs font-semibold text-certify-cool-grey uppercase tracking-wider mb-1">
+              Project details not yet extracted
+            </p>
+            <p className="text-xs text-certify-dark-grey">
+              No drawing analysis has run for this project. Review the project info and fill in any missing fields.
+            </p>
+          </div>
+        )}
 
         {/* Flagged fields */}
         {flagged.length > 0 && (

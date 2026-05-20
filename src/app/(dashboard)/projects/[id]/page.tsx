@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Plus, Edit, MessageSquare, FileText } from "lucide-react";
+import { Plus, Edit, MessageSquare, ArrowRight } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import ProgramChip from "@/components/dashboard/ProgramChip";
-import OrderStatusBadge from "@/components/dashboard/OrderStatusBadge";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import type { OrderStatus, ProgramType } from "@/types/database";
+import ProjectClient from "./_project-client";
 
 export const metadata: Metadata = { title: "Project Dashboard" };
 
@@ -21,6 +20,16 @@ type OrderRow = {
     has_calculator: boolean;
     has_leed_form: boolean;
   } | null;
+};
+
+const WELL_GAP_DESCRIPTIONS: Record<string, string> = {
+  well_v2:  "Get a scored WELL Feature inventory, identify your points gap to your target certification level, and receive a prioritized implementation roadmap.",
+  well_hsr: "Assess your facility against WELL Health-Safety Rating requirements and get a clear action plan to achieve the rating.",
+};
+
+const WELL_GAP_LABELS: Record<string, string> = {
+  well_v2:  "WELL v2 Gap Analysis",
+  well_hsr: "WELL Health-Safety Gap Analysis",
 };
 
 export default async function ProjectPage({
@@ -42,7 +51,6 @@ export default async function ProjectPage({
 
   if (!project) notFound();
 
-  // Only the owner can view
   if (user && project.customer_id !== user.id) notFound();
 
   const { data: orderData } = await supabase
@@ -54,8 +62,7 @@ export default async function ProjectPage({
   const orders = (orderData ?? []) as unknown as OrderRow[];
   const delivered = orders.filter((o) => o.status === "delivered" || o.status === "complete").length;
   const programs = (project.programs ?? []) as ProgramType[];
-  const hasLeed = programs.includes("leed_bdc_v41");
-  const isWellOnly = !hasLeed;
+  const wellPrograms = programs.filter((p) => p === "well_v2" || p === "well_hsr");
 
   return (
     <>
@@ -65,8 +72,8 @@ export default async function ProjectPage({
         backHref="/dashboard"
         backLabel="Dashboard"
         metrics={[
-          { label: "Credits Ordered", value: orders.length            },
-          { label: "Delivered",       value: delivered                },
+          { label: "Credits Ordered", value: orders.length             },
+          { label: "Delivered",       value: delivered                 },
           { label: "In Progress",     value: orders.length - delivered },
           { label: "Sq Ft",           value: project.gross_sqft?.toLocaleString() ?? "—" },
         ]}
@@ -89,79 +96,52 @@ export default async function ProjectPage({
       />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-        {/* Program chips row */}
-        <div className="flex flex-wrap items-center gap-2">
-          {programs.map((p) => <ProgramChip key={p} program={p} />)}
-          {project.certification_target && (
-            <span className="text-xs text-certify-cool-grey">
-              Target: <strong className="text-certify-deep">{project.certification_target}</strong>
-            </span>
-          )}
-        </div>
 
-        {/* Gap analysis — WELL under development notice */}
-        {isWellOnly && (
-          <div className="bg-certify-beige border border-certify-sand/40 rounded-2xl px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-certify-sand mb-1">Gap Analysis</p>
-            <p className="text-sm text-certify-dark-grey">The WELL gap analysis is currently under development and will be available soon.</p>
+        {/* Interactive program pills + orders list */}
+        <ProjectClient
+          projectId={project.id}
+          initialPrograms={programs}
+          certificationTarget={project.certification_target ?? null}
+          orders={orders}
+        />
+
+        {/* WELL gap analysis cards */}
+        {wellPrograms.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#388fa6", letterSpacing: "0.14em" }}>
+              Gap Analysis Available
+            </p>
+            {wellPrograms.map((prog) => (
+              <div
+                key={prog}
+                className="relative overflow-hidden rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
+              >
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 opacity-[0.04]"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+                    backgroundSize: "40px 40px",
+                  }}
+                />
+                <div className="relative flex-1">
+                  <p className="font-semibold text-white text-sm mb-1">{WELL_GAP_LABELS[prog]}</p>
+                  <p className="text-white/65 text-xs leading-relaxed">{WELL_GAP_DESCRIPTIONS[prog]}</p>
+                </div>
+                <div className="relative shrink-0">
+                  <Link
+                    href={`/orders/gap-analysis?program=${prog}&project_id=${project.id}`}
+                    className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-4 py-2 rounded-xl transition-colors text-sm group"
+                  >
+                    Learn more <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Orders list */}
-        <div className="bg-white rounded-2xl border border-certify-white shadow-card overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-certify-white">
-            <h2 className="font-serif text-lg text-certify-deep">Credits and Features</h2>
-            <Link href={`/projects/${project.id}/add-service`} className="text-sm font-semibold text-certify-blue hover:text-certify-teal flex items-center gap-1 transition-colors">
-              <Plus size={14} /> Add a credit or feature
-            </Link>
-          </div>
-
-          {orders.length === 0 ? (
-            <div className="py-16 text-center">
-              <FileText size={32} className="text-certify-cool-grey/40 mx-auto mb-3" />
-              <p className="text-certify-cool-grey text-sm">No credits or features ordered yet</p>
-              <Link href={`/projects/${project.id}/add-service`} className="text-certify-blue text-sm hover:underline mt-1 inline-block">
-                Browse available credits and features →
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-certify-white">
-              {orders.map((order) => (
-                <div key={order.id} className="flex items-center gap-4 px-6 py-4 hover:bg-certify-white/50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-bold text-certify-cool-grey">{order.credits?.credit_code ?? "—"}</span>
-                      <span className="font-medium text-certify-deep text-sm truncate">{order.credits?.credit_name ?? "—"}</span>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      {order.credits?.program && <ProgramChip program={order.credits.program} />}
-                      <span className="text-xs text-certify-cool-grey">{new Date(order.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <OrderStatusBadge status={order.status} />
-                    {(order.status === "delivered" || order.status === "complete") && (
-                      <Link href={`/orders/${order.id}/delivery`} className="text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                        View →
-                      </Link>
-                    )}
-                    {(order.status === "pending_upload" || order.status === "awaiting_upload") && (
-                      <Link href={`/orders/${order.id}/upload`} className="text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                        Upload →
-                      </Link>
-                    )}
-                    {order.status === "processing" && (
-                      <Link href={`/orders/${order.id}/processing`} className="text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                        View →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Pilot feedback link */}
         <div className="flex justify-end">

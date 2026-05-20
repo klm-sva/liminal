@@ -47,46 +47,51 @@ export default function AddServiceClient({ project, creditsByProgram, allProgram
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
 
         {/* Gap analysis promo */}
-        {!project.gap_analysis_purchased && (
+        <div
+          className="relative overflow-hidden rounded-2xl p-6"
+          style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
+        >
           <div
-            className="relative overflow-hidden rounded-2xl p-6"
-            style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
-          >
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 opacity-[0.04]"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            />
-            <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
-              <div className="flex-1">
-                <p className="text-xs font-bold tracking-widest text-white/50 uppercase mb-2">Start here</p>
-                <h3 className="font-serif text-2xl text-white mb-2">Gap Analysis</h3>
-                <p className="text-white/65 text-sm leading-relaxed mb-4">
-                  Before ordering individual credits, run a gap analysis to get a scored baseline and a prioritized list of credits that will move you toward your certification threshold most efficiently.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {["Scored credit inventory", "Points gap to target", "Recommended credit shortlist", "Automation breakdown"].map((item) => (
-                    <span key={item} className="flex items-center gap-1 text-xs text-certify-sage font-medium">
-                      <CheckCircle2 size={11} /> {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="shrink-0">
+            aria-hidden="true"
+            className="absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+          <div className="relative">
+            <p className="text-xs font-bold tracking-widest text-white/50 uppercase mb-2">Start here</p>
+            <h3 className="font-serif text-2xl text-white mb-2">Gap Analysis</h3>
+            <p className="text-white/65 text-sm leading-relaxed mb-4">
+              Before ordering individual credits, run a gap analysis to get a scored baseline and a prioritized list of credits that will move you toward your certification threshold most efficiently.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["Scored credit inventory", "Points gap to target", "Recommended credit shortlist", "Automation breakdown"].map((item) => (
+                <span key={item} className="flex items-center gap-1 text-xs text-certify-sage font-medium">
+                  <CheckCircle2 size={11} /> {item}
+                </span>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {(
+                [
+                  { program: "leed_bdc_v41", label: "LEED BD+C v4.1" },
+                  { program: "well_v2",      label: "WELL v2" },
+                  { program: "well_hsr",     label: "WELL Health-Safety" },
+                ] as const
+              ).map(({ program, label }) => (
                 <Link
-                  href="/orders/gap-analysis"
-                  className="inline-flex items-center gap-2 bg-white text-certify-teal font-semibold px-5 py-3 rounded-xl hover:bg-certify-light transition-colors shadow-lg text-sm group"
+                  key={program}
+                  href={`/orders/gap-analysis?program=${program}`}
+                  className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-4 py-2.5 rounded-xl transition-colors text-sm group"
                 >
-                  Learn more <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  {label} <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
-              </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Program selector */}
         <div>
