@@ -65,7 +65,9 @@ if (fs.existsSync(envPath)) {
 
 const REQUIREMENTS_BUCKET = "credit-requirements";
 const UPLOADS_BUCKET      = "customer-uploads";
-const LEED_REF_DIR        = path.resolve(__dirname, "reference/leed");
+// Use process.cwd() (project root) so the path is stable in both local Node.js
+// and Vercel serverless environments where __dirname points to .next/server/.
+const LEED_REF_DIR = path.join(process.cwd(), "pipeline", "reference", "leed");
 
 // ─── Program detection ────────────────────────────────────────────────────────
 // LEED credit codes match pattern: 2-letter prefix + c/p + digit(s) (e.g. LTc5, EAp2)
@@ -667,6 +669,82 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
   const part1Html = scrubNarration(part1TextBlock?.text ?? "").cleaned;
   console.log(`    Part 1 complete — ${part1Response.usage.output_tokens} output tokens`);
 
+  // ── Step 15.7: Extract locations from Part 1 output for map generation ──────
+  // Uses Claude Haiku (fast/cheap) to pull named locations from the HTML text.
+  // Falls back to creditData.claudeRetrieves if extraction fails or returns empty.
+  let locationsForMap: Array<{ address: string; label: string }> = [];
+  if (requiredMapType && project.address) {
+    console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
+    try {
+      const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
+      const locExtract = await (client.messages.create as any)({
+        model:      "claude-haiku-4-5-20251001",
+        max_tokens: 512,
+        messages:   [{
+          role:    "user",
+          content: `Extract up to 5 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below. Return ONLY a valid JSON array of strings. If none found return [].
+
+${plainText}`,
+        }],
+      });
+      const locText  = locExtract.content[0]?.text ?? "[]";
+      const jsonMatch = locText.match(/\[[\s\S]*?\]/);
+      if (jsonMatch) {
+        const raw: unknown[] = JSON.parse(jsonMatch[0]);
+        locationsForMap = raw
+          .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
+          .slice(0, 5)
+          .map((addr, i) => ({ address: addr, label: String(i + 1) }));
+      }
+      console.log(`    Extracted ${locationsForMap.length} location(s) from Part 1`);
+    } catch (err) {
+      console.warn(`  Step 15.7: Location extraction failed: ${(err as Error).message} — using claudeRetrieves fallback`);
+    }
+
+    // Fallback: use claudeRetrieves from XLSX (broader keyword filter than original)
+    if (locationsForMap.length === 0) {
+      locationsForMap = creditData.claudeRetrieves
+        .slice(0, 5)
+        .map((r, i) => ({ address: r, label: String(i + 1) }));
+      console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
+    }
+  }
+
+  // ── Step 15.8: Generate map before Part 2 so it can be embedded in output ──
+  let mapBuffer: Buffer | null = null;
+  let mapBase64: string | null = null;
+  if (requiredMapType && project.address && locationsForMap.length > 0) {
+    console.log(`  Step 15.8: Generating ${requiredMapType} map (${locationsForMap.length} destination(s))...`);
+    try {
+      const mapResult = await generateMap({
+        originAddress: project.address,
+        destinations:  locationsForMap,
+        mapType:       requiredMapType,
+      });
+      mapBuffer = mapResult.pngBuffer;
+      mapBase64 = mapBuffer.toString("base64");
+      console.log(`  Step 15.8: ✓ Map generated — ${mapBuffer.length} bytes`);
+    } catch (e) {
+      console.warn(`  Step 15.8: Map generation failed: ${(e as Error).message} — continuing without map`);
+    }
+  } else if (requiredMapType) {
+    console.log(`  Step 15.8: Map required but no destinations found — skipping`);
+  } else {
+    console.log(`  Step 15.8: No map required`);
+  }
+
+  // Build optional map blocks to include in Part 2 prompt
+  const mapContentBlocks: any[] = mapBase64 ? [
+    {
+      type: "text",
+      text: "A walking-distance map has been generated for this project (image below). In Part 2, place exactly one <img data-map-insert='1'> element at the most relevant location (walking distances section, transit access section, or site context section). The system will replace this placeholder with the actual map image.",
+    },
+    {
+      type:   "image",
+      source: { type: "base64", media_type: "image/png", data: mapBase64 },
+    },
+  ] : [];
+
   const part2Response = await (client.messages.create as any)({
     model:       "claude-sonnet-4-6",
     max_tokens:  64000,
@@ -678,6 +756,7 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
       content: [
         ...refBlock,
         { type: "text", text: `PART 1 OUTPUT (completed — do not regenerate):\n${part1Html}` },
+        ...mapContentBlocks,
         reqDocBlock,
         ...uploadDocBlocks,
         { type: "text", text: userPromptPart2 },
@@ -696,6 +775,15 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
     fullHtml = fullHtml.slice(0, bodyCloseIdx) + "\n" + part2Html + "\n</body></html>";
   } else {
     fullHtml += "\n" + part2Html;
+  }
+
+  // Replace map placeholder injected by Part 2 with actual base64 data URI
+  if (mapBuffer) {
+    const mapDataUri = `data:image/png;base64,${mapBuffer.toString("base64")}`;
+    fullHtml = fullHtml.replace(
+      /<img\s+data-map-insert[^>]*\/?>/gi,
+      `<img src="${mapDataUri}" alt="Walking distance map" style="max-width:100%;height:auto;border-radius:8px;margin:16px 0;display:block;">`,
+    );
   }
 
   // ── Step 15.5: Generate Calculator Input Guide if required ───────────────────
@@ -906,26 +994,7 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
       : fullHtml + policySection;
   }
 
-  // ── Step 16: Generate map if required ─────────────────────────────────────
-  let mapBuffer: Buffer | null = null;
-  if (requiredMapType && project.address) {
-    console.log(`  Step 16: Generating ${requiredMapType} map...`);
-    try {
-      const mapResult = await generateMap({
-        originAddress: project.address,
-        destinations:  creditData.claudeRetrieves
-          .filter((r) => r.toLowerCase().includes("stop") || r.toLowerCase().includes("station"))
-          .slice(0, 5)
-          .map((r, i) => ({ address: r, label: String(i + 1) })),
-        mapType: requiredMapType,
-      });
-      mapBuffer = mapResult.pngBuffer;
-    } catch (e) {
-      console.warn(`    Map generation failed: ${(e as Error).message} — continuing without map`);
-    }
-  } else {
-    console.log(`  Step 16: No map required`);
-  }
+  // Step 16: Map already generated at Step 15.8 — no action needed here.
 
   // ── Step 16.5: Validate all deliverables before delivery ─────────────────
   // Hard gate — nothing is delivered if required outputs are missing.

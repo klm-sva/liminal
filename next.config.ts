@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
     "@anthropic-ai/sdk",
     "@googlemaps/google-maps-services-js",
   ],
+  // Explicitly include pipeline reference files in Vercel serverless bundles
+  // so they are available at process.cwd()/pipeline/reference at runtime.
+  outputFileTracingIncludes: {
+    "/api/**": ["./pipeline/reference/**"],
+  },
 };
 
 export default nextConfig;

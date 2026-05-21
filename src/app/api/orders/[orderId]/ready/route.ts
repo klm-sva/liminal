@@ -99,6 +99,13 @@ export async function POST(
   const customerName  = customerRes.data?.name ?? "there";
   const creditName    = creditRes.data?.credit_name ?? "your credit";
 
+  // Notify customer that processing has started
+  await sendProcessingStartedEmail({
+    to:         customerEmail,
+    name:       customerName,
+    creditName,
+  }).catch((e) => console.error("[ready] sendProcessingStartedEmail failed:", e));
+
   // Run the pipeline — this is synchronous in development; in production this
   // should be handed off to a background worker / Edge Function.
   // We intentionally do not await here if you use a queue; for simplicity we
