@@ -81,74 +81,70 @@ const PROGRAM_REF_SUBDIR: Record<string, string> = {
 
 // ─── Local credit requirements PDF lookup ────────────────────────────────────
 // Searches pipeline/reference/[program]/[category]/[filename].pdf
-// using case-insensitive matching, falling back to fuzzy match on credit code
-// and credit name when the exact constructed filename is not found.
+// Two strategies only — no guessing:
+//   1. Exact case-insensitive filename match against the constructed expected name
+//   2. Any PDF in the correct category folder whose name contains the exact credit code
+// Returns null if neither matches; caller is responsible for logging and failing.
+
+export function buildExpectedPdfName(program: string, creditCode: string, creditName: string): string {
+  if (program === "leed_bdc_v41") {
+    const m = creditCode.match(/^([A-Z]+)(c|p)\d+$/i);
+    const catAbbrev = m ? m[1].toUpperCase() : creditCode.replace(/[^A-Z]/gi, "").toUpperCase();
+    return `LEED_${catAbbrev}_${creditName}.pdf`;
+  }
+  if (program === "well_v2")  return `WELL_V2_${creditCode}_${creditName}.pdf`;
+  return `WELL_HSR_${creditCode}_${creditName}.pdf`;
+}
 
 function findCreditPdfBuffer(
   program:    string,
   category:   string,
   creditCode: string,
   creditName: string,
-): { buffer: Buffer; resolvedPath: string } | null {
+): { buffer: Buffer; resolvedPath: string } | { found: false; searchedDir: string; filesFound: string[] } {
   const subdir = PROGRAM_REF_SUBDIR[program];
-  if (!subdir) return null;
+  if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
 
   const programDir = path.join(REF_BASE, subdir);
-  if (!fs.existsSync(programDir)) return null;
 
-  // ── 1. Find category folder (case-insensitive, then partial match) ──────────
-  const allDirs = fs.readdirSync(programDir).filter((d) => {
-    try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
-  });
+  // Find category folder — exact case-insensitive match, then alphanumeric-normalised match
+  const allDirs = fs.existsSync(programDir)
+    ? fs.readdirSync(programDir).filter((d) => {
+        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
+      })
+    : [];
 
   const categoryLower = category.toLowerCase();
   const categoryDir   =
     allDirs.find((d) => d.toLowerCase() === categoryLower) ??
-    allDirs.find((d) => d.toLowerCase().replace(/[^a-z0-9]/g, "") === categoryLower.replace(/[^a-z0-9]/g, "")) ??
-    allDirs.find((d) => d.toLowerCase().startsWith(categoryLower.slice(0, 5)));
+    allDirs.find((d) => d.toLowerCase().replace(/[^a-z0-9]/g, "") === categoryLower.replace(/[^a-z0-9]/g, ""));
 
-  if (!categoryDir) return null;
+  const searchedDir = categoryDir
+    ? path.join(programDir, categoryDir).replace(process.cwd() + path.sep, "")
+    : path.join(`pipeline/reference/${subdir}`, category);
+
+  if (!categoryDir) return { found: false, searchedDir, filesFound: [] };
 
   const folderPath = path.join(programDir, categoryDir);
   const allFiles   = fs.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
 
-  // ── 2. Build expected filename ───────────────────────────────────────────────
-  let expectedName: string;
-  if (program === "leed_bdc_v41") {
-    const m = creditCode.match(/^([A-Z]+)(c|p)\d+$/i);
-    const catAbbrev = m ? m[1].toUpperCase() : creditCode.replace(/[^A-Z]/gi, "").toUpperCase();
-    expectedName = `LEED_${catAbbrev}_${creditName}.pdf`;
-  } else if (program === "well_v2") {
-    expectedName = `WELL_V2_${creditCode}_${creditName}.pdf`;
-  } else {
-    expectedName = `WELL_HSR_${creditCode}_${creditName}.pdf`;
-  }
-
-  // ── 3. Exact case-insensitive match ──────────────────────────────────────────
+  // 1. Exact case-insensitive match against constructed filename
+  const expectedName = buildExpectedPdfName(program, creditCode, creditName);
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
     const resolved = path.join(folderPath, exact);
     return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
   }
 
-  // ── 4. Fuzzy: file contains the credit code ───────────────────────────────────
-  const byCode = allFiles.find((f) => f.toLowerCase().includes(creditCode.toLowerCase()));
+  // 2. Any PDF whose filename contains the exact credit code string
+  const byCode = allFiles.find((f) => f.includes(creditCode));
   if (byCode) {
     const resolved = path.join(folderPath, byCode);
     return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
   }
 
-  // ── 5. Fuzzy: file contains first significant word of credit name ─────────────
-  const firstWord = creditName.split(/\s+/).find((w) => w.length > 3)?.toLowerCase() ?? "";
-  if (firstWord) {
-    const byName = allFiles.find((f) => f.toLowerCase().includes(firstWord));
-    if (byName) {
-      const resolved = path.join(folderPath, byName);
-      return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
-    }
-  }
-
-  return null;
+  // Neither matched — return search context for the caller to log
+  return { found: false, searchedDir, filesFound: allFiles };
 }
 
 // ─── Program detection ────────────────────────────────────────────────────────
@@ -649,39 +645,28 @@ export async function processOrder(
     credit.credit_name,
   );
 
-  if (!pdfLookup) {
-    const subdir      = PROGRAM_REF_SUBDIR[credit.program] ?? credit.program;
-    const expectedDir = `pipeline/reference/${subdir}/${credit.category}/`;
-    const m           = credit.credit_code.match(/^([A-Z]+)(c|p)\d+$/i);
-    const catAbbrev   = m ? m[1].toUpperCase() : credit.credit_code;
-    const expectedFile = credit.program === "leed_bdc_v41"
-      ? `LEED_${catAbbrev}_${credit.credit_name}.pdf`
-      : credit.program === "well_v2"
-        ? `WELL_V2_${credit.credit_code}_${credit.credit_name}.pdf`
-        : `WELL_HSR_${credit.credit_code}_${credit.credit_name}.pdf`;
-
+  if ("found" in pdfLookup) {
+    const expectedName = buildExpectedPdfName(credit.program, credit.credit_code, credit.credit_name);
     console.error(`  Step 12: ✗ Requirements PDF not found`);
-    console.error(`    Expected directory : ${expectedDir}`);
-    console.error(`    Expected filename  : ${expectedFile}`);
-    console.error(`    Add this file to pipeline/reference/ and re-run.`);
+    console.error(`    Directory searched : ${pdfLookup.searchedDir}`);
+    console.error(`    Expected filename  : ${expectedName}`);
+    console.error(`    Files present      : ${pdfLookup.filesFound.length === 0 ? "(none)" : pdfLookup.filesFound.join(", ")}`);
+    console.error(`    Add the correct PDF to pipeline/reference/ and re-run.`);
+
+    const errMsg = `Requirements PDF not found — searched: ${pdfLookup.searchedDir} — expected: ${expectedName}`;
 
     await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
     await supabase.from("runs").update({
       status:        "failed",
-      error_message: `Requirements PDF not found — expected: ${expectedDir}${expectedFile}`,
+      error_message: errMsg,
       completed_at:  new Date().toISOString(),
     }).eq("id", runId);
 
-    return {
-      orderId,
-      runId,
-      status: "failed",
-      issues: [`Requirements PDF not found. Expected: ${expectedDir}${expectedFile}`],
-    };
+    return { orderId, runId, status: "failed", issues: [errMsg] };
   }
 
   const reqPdfBuffer = pdfLookup.buffer;
-  console.log(`    ✓ Found: ${pdfLookup.resolvedPath.replace(process.cwd(), "")}`);
+  console.log(`    ✓ Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path.sep, "")}`);
 
   // ── Step 12.5: Load reference files ──────────────────────────────────────
   let referenceDataBlock = "";
