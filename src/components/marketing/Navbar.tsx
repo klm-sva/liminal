@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function Navbar() {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -20,6 +22,13 @@ export default function Navbar() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    router.push("/");
+  }
 
   return (
     <div className="sticky top-0 z-50">
@@ -99,16 +108,25 @@ export default function Navbar() {
             {/* Desktop CTA */}
             <div className="hidden lg:flex items-center gap-3">
               {loggedIn ? (
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                  style={{
-                    background: "linear-gradient(135deg, #388fa6, #1c5e70)",
-                    borderRadius: "100px",
-                  }}
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <button
+                    onClick={handleSignOut}
+                    className="px-4 py-2 text-sm font-medium rounded-lg transition-colors hover:text-certify-deep"
+                    style={{ color: "rgba(43,64,68,0.50)" }}
+                  >
+                    Sign out
+                  </button>
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{
+                      background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                      borderRadius: "100px",
+                    }}
+                  >
+                    Dashboard
+                  </Link>
+                </>
               ) : (
                 <>
                   <Link
@@ -176,17 +194,26 @@ export default function Navbar() {
             </Link>
             <div className="pt-3 border-t space-y-2" style={{ borderColor: "rgba(43,64,68,0.08)" }}>
               {loggedIn ? (
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileOpen(false)}
-                  className="block text-center text-sm font-semibold text-white px-5 py-2.5 transition-opacity hover:opacity-90"
-                  style={{
-                    background: "linear-gradient(135deg, #388fa6, #1c5e70)",
-                    borderRadius: "100px",
-                  }}
-                >
-                  Dashboard
-                </Link>
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileOpen(false)}
+                    className="block text-center text-sm font-semibold text-white px-5 py-2.5 transition-opacity hover:opacity-90"
+                    style={{
+                      background: "linear-gradient(135deg, #388fa6, #1c5e70)",
+                      borderRadius: "100px",
+                    }}
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={() => { setMobileOpen(false); handleSignOut(); }}
+                    className="block w-full text-center text-sm font-medium px-5 py-2.5 rounded-full transition-colors"
+                    style={{ color: "rgba(43,64,68,0.55)", border: "1px solid rgba(43,64,68,0.10)" }}
+                  >
+                    Sign out
+                  </button>
+                </>
               ) : (
                 <>
                   <Link
