@@ -184,6 +184,120 @@ export async function sendDeletionWarningEmail({
   });
 }
 
+// ─── 7. QA review notification (internal) ─────────────────────────────────────
+
+export async function sendQAReviewEmail({
+  customerName,
+  customerEmail,
+  creditName,
+  projectName,
+  orderId,
+  generatedAt,
+  deliveryScheduledAt,
+  standardHtmlUrl,
+  editableHtmlUrl,
+  approveUrl,
+  requestChangesUrl,
+  isRegeneration = false,
+  changeInstructions,
+}: {
+  customerName: string;
+  customerEmail: string;
+  creditName: string;
+  projectName: string;
+  orderId: string;
+  generatedAt: string;
+  deliveryScheduledAt: string;
+  standardHtmlUrl: string;
+  editableHtmlUrl: string;
+  approveUrl: string;
+  requestChangesUrl: string;
+  isRegeneration?: boolean;
+  changeInstructions?: string;
+}) {
+  const delivery = new Date(deliveryScheduledAt);
+  const now      = new Date(generatedAt);
+  const msLeft   = delivery.getTime() - now.getTime();
+  const hLeft    = Math.floor(msLeft / 3600000);
+  const mLeft    = Math.floor((msLeft % 3600000) / 60000);
+  const shortId  = orderId.slice(0, 8).toUpperCase();
+
+  const regenerationNote = isRegeneration
+    ? `<div style="background:#fff8e1;border-left:3px solid #f5a623;padding:12px 16px;margin-bottom:16px;font-size:14px;">
+        <strong>REGENERATED OUTPUT</strong> — Changes were requested and the pipeline has re-run.
+        ${changeInstructions ? `<br><br><strong>Instructions applied:</strong><br><pre style="margin:8px 0 0;white-space:pre-wrap;font-size:13px;">${changeInstructions}</pre>` : ""}
+       </div>`
+    : "";
+
+  return getResend().emails.send({
+    from:    FROM(),
+    to:      "reviews@liminalsva.com",
+    subject: `QA Review Required — ${creditName} — ${projectName} — Order #${shortId}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
+        <h2 style="margin-bottom:4px;">QA Review Required</h2>
+        <p style="color:#666;margin-top:0;">${isRegeneration ? "Regenerated output ready for re-review." : "New output ready for review."}</p>
+
+        ${regenerationNote}
+
+        <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:24px;">
+          <tr><td style="padding:6px 12px 6px 0;color:#888;width:140px;">Customer</td><td style="padding:6px 0;">${customerName} &lt;${customerEmail}&gt;</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Credit</td><td style="padding:6px 0;">${creditName}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Project</td><td style="padding:6px 0;">${projectName}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Order ID</td><td style="padding:6px 0;font-family:monospace;">${orderId}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Generated</td><td style="padding:6px 0;">${new Date(generatedAt).toLocaleString("en-US", { timeZone: "America/New_York" })} ET</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Auto-delivers</td><td style="padding:6px 0;">${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET <span style="color:#c0392b;font-weight:600;">(${hLeft}h ${mLeft}m remaining)</span></td></tr>
+        </table>
+
+        <h3 style="margin-bottom:8px;">Output Files</h3>
+        <ul style="padding-left:20px;font-size:14px;line-height:2;">
+          <li><a href="${standardHtmlUrl}" style="color:#388fa6;">Standard HTML Output</a> — submission.html</li>
+          <li><a href="${editableHtmlUrl}" style="color:#388fa6;">Editable HTML Output</a> — submission-editable.html</li>
+        </ul>
+
+        <h3 style="margin-top:24px;margin-bottom:12px;">Actions</h3>
+        <table style="border-collapse:collapse;">
+          <tr>
+            <td style="padding-right:12px;">
+              <a href="${approveUrl}" style="display:inline-block;padding:12px 24px;background:#27ae60;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">APPROVE</a>
+            </td>
+            <td>
+              <a href="${requestChangesUrl}" style="display:inline-block;padding:12px 24px;background:#e67e22;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">REQUEST CHANGES</a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;color:#aaa;margin-top:32px;">
+          If no action is taken, output delivers automatically at ${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET.
+          If changes were requested and not approved before that time, the customer receives a delay notice.
+        </p>
+      </div>
+    `,
+  });
+}
+
+// ─── 8. Customer delay notification ───────────────────────────────────────────
+
+export async function sendCustomerDelayEmail({
+  to,
+  name,
+  creditName,
+}: {
+  to: string;
+  name: string;
+  creditName: string;
+}) {
+  return getResend().emails.send({
+    from:    FROM(),
+    to,
+    subject: `Your output for ${creditName} is being reviewed`,
+    html: `
+      <p>Hi ${name},</p>
+      <p>We are completing a final review of your output before delivery. You will receive your files as soon as the review is complete. We apologize for any delay and appreciate your patience.</p>
+    `,
+  });
+}
+
 // ─── Legacy emails (kept for compatibility) ───────────────────────────────────
 
 export async function sendProjectInviteEmail({

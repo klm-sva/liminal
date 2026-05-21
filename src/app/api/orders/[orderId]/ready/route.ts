@@ -17,7 +17,6 @@ import { createServiceClient } from "@/lib/supabase/server";
 import {
   sendDocumentsRequestedEmail,
   sendProcessingStartedEmail,
-  sendOutputDeliveryEmail,
 } from "@/lib/resend";
 
 const READY_STATUSES = new Set([
@@ -130,13 +129,8 @@ export async function POST(
     }
 
     if (result.status === "complete") {
-      await sendOutputDeliveryEmail({
-        to:          customerEmail,
-        name:        customerName,
-        creditName,
-        orderId,
-        outputPaths: result.outputPaths ?? [],
-      });
+      // Output is held for QA review — delivery email sent by the 47h cron.
+      // QA review email already sent inside processOrder (Step 18.5).
       return NextResponse.json({
         status:       "complete",
         run_id:       run.id,

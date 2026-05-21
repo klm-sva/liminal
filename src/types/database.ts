@@ -10,6 +10,7 @@ export type Json =
 
 export type ProgramType    = "leed_bdc_v41" | "well_v2" | "well_hsr";
 export type AutomationType = "full" | "partial" | "none";
+export type QAStatus       = "pending_review" | "approved" | "changes_requested";
 export type OrderStatus =
   | "awaiting_upload"
   | "awaiting_ready"
@@ -111,17 +112,23 @@ export type Project = {
 };
 
 export type Order = {
-  id:                     string;
-  project_id:             string;
-  customer_id:            string;
-  credit_id:              string;
-  status:                 OrderStatus;
-  runs_used:              number;
-  runs_remaining:         number;
-  payment_id:             string | null;
-  created_at:             string;
-  delivered_at:           string | null;
-  deletion_warning_sent:  boolean;
+  id:                       string;
+  project_id:               string;
+  customer_id:              string;
+  credit_id:                string;
+  status:                   OrderStatus;
+  runs_used:                number;
+  runs_remaining:           number;
+  payment_id:               string | null;
+  created_at:               string;
+  delivered_at:             string | null;
+  deletion_warning_sent:    boolean;
+  qa_status:                QAStatus;
+  qa_approved_at:           string | null;
+  qa_changes_requested_at:  string | null;
+  qa_instructions:          string | null;
+  delivery_scheduled_at:    string | null;
+  delay_email_sent:         boolean;
 };
 
 export type Run = {
@@ -171,7 +178,7 @@ export type CreditInsert = Omit<Credit, "id" | "created_at" | "updated_at">;
 export type ProjectInsert = Omit<Project, "id" | "auto_extracted" | "flagged_fields" | "created_at" | "updated_at">
   & Partial<Pick<Project, "auto_extracted" | "flagged_fields">>;
 
-export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent">
+export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent">
   & Partial<Pick<Order, "status">>;
 
 export type RunInsert = Omit<
@@ -214,7 +221,7 @@ export interface Database {
       orders: {
         Row:           Order;
         Insert:        OrderInsert;
-        Update:        Partial<OrderInsert> & Partial<Pick<Order, "status" | "delivered_at" | "deletion_warning_sent">>;
+        Update:        Partial<OrderInsert> & Partial<Pick<Order, "status" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent">>;
         Relationships: [];
       };
       runs: {
@@ -244,6 +251,7 @@ export interface Database {
       automation_type: AutomationType;
       order_status:    OrderStatus;
       run_status:      RunStatus;
+      qa_status:       QAStatus;
     };
   };
 }

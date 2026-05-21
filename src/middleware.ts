@@ -32,6 +32,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Protect admin routes — only reviews@liminalsva.com
+  if (pathname.startsWith("/admin")) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (user.email !== "reviews@liminalsva.com") {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    return supabaseResponse;
+  }
+
   // Protect all authenticated routes: unauthenticated → login
   const isProtected =
     pathname.startsWith("/dashboard") ||
@@ -52,5 +63,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/signup", "/login", "/dashboard/:path*", "/orders/:path*", "/projects/:path*", "/feedback/:path*"],
+  matcher: ["/signup", "/login", "/dashboard/:path*", "/orders/:path*", "/projects/:path*", "/feedback/:path*", "/admin/:path*"],
 };

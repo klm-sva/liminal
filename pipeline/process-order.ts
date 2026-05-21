@@ -47,6 +47,8 @@ import { extractSpecs, loadSpecsProfile, formatSpecsProfileForContext } from "./
 import { extractDocument, loadAllDocumentProfiles, formatAllDocumentProfilesForContext } from "./lib/document-extract";
 import { extractPdfContentFromBuffer } from "./lib/pdf-extract";
 import { CREDIT_SUBMISSION_PROMPT } from "./prompts/credit-submission";
+import { sendQAReviewEmail } from "../src/lib/resend";
+import { signQaToken } from "../src/lib/qa-token";
 import { validateNoUnnecessaryCustomerRequests, validateAllOutputsProduced, validateCalculatorGuidePresent } from "./lib/validate-output";
 import { withTimeout, StepLogger } from "./lib/pipeline-utils";
 import { scrubNarration, containsNarration, writeCleanFile } from "./lib/output-cleaner";
@@ -293,7 +295,11 @@ export interface ProcessOrderResult {
   issues?: string[];
 }
 
-export async function processOrder(orderId: string, runId: string): Promise<ProcessOrderResult> {
+export async function processOrder(
+  orderId: string,
+  runId: string,
+  additionalInstructions?: string,
+): Promise<ProcessOrderResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
@@ -632,6 +638,11 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
     "Generate PART 2 — SUPPORTING DOCUMENTATION SECTION for this credit as instructed.",
   ].join("\n");
 
+  // Dynamic system prompt — append QA instructions when regenerating after review
+  const systemPrompt = additionalInstructions
+    ? `${CREDIT_SUBMISSION_PROMPT}\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`
+    : CREDIT_SUBMISSION_PROMPT;
+
   // Build content blocks for each API call
   const reqDocBlock = preparePdfDocument(reqPdfBuffer, `Requirements: ${credit.credit_code}`);
 
@@ -652,7 +663,7 @@ export async function processOrder(orderId: string, runId: string): Promise<Proc
     model:       "claude-sonnet-4-6",
     max_tokens:  64000,
     temperature: 0,
-    system:      CREDIT_SUBMISSION_PROMPT,
+    system:      systemPrompt,
     tools:       [WEB_SEARCH_TOOL],
     messages:    [{
       role:    "user",
@@ -749,7 +760,7 @@ ${plainText}`,
     model:       "claude-sonnet-4-6",
     max_tokens:  64000,
     temperature: 0,
-    system:      CREDIT_SUBMISSION_PROMPT,
+    system:      systemPrompt,
     tools:       [WEB_SEARCH_TOOL],
     messages:    [{
       role:    "user",
@@ -851,7 +862,7 @@ ${plainText}`,
       model:       "claude-sonnet-4-6",
       max_tokens:  64000,
       temperature: 0,
-      system:      CREDIT_SUBMISSION_PROMPT,
+      system:      systemPrompt,
       tools:       [WEB_SEARCH_TOOL],
       messages:    [{
         role:    "user",
@@ -900,7 +911,7 @@ ${plainText}`,
       model:       "claude-sonnet-4-6",
       max_tokens:  64000,
       temperature: 0,
-      system:      CREDIT_SUBMISSION_PROMPT,
+      system:      systemPrompt,
       tools:       [WEB_SEARCH_TOOL],
       messages:    [{
         role:    "user",
@@ -1096,8 +1107,12 @@ ${plainText}`,
     }
   }
 
-  // ── Step 18: Mark complete, send delivery email, schedule cleanup ──────────
+  // ── Step 18: Mark complete, send QA review email, schedule cleanup ──────────
   console.log(`  Step 18: Marking order complete...`);
+
+  const deliveryScheduledAt = new Date(
+    new Date(order.created_at).getTime() + 47 * 60 * 60 * 1000,
+  );
 
   await supabase.from("runs").update({
     status:           "completed",
@@ -1106,8 +1121,9 @@ ${plainText}`,
   }).eq("id", runId);
 
   await supabase.from("orders").update({
-    status:       "complete",
-    delivered_at: new Date().toISOString(),
+    status:               "complete",
+    delivery_scheduled_at: deliveryScheduledAt.toISOString(),
+    qa_status:             "pending_review",
   }).eq("id", orderId);
 
   // Schedule cleanup for attempt folder (48h delay, never outputs/)
@@ -1117,6 +1133,36 @@ ${plainText}`,
       order_id:   orderId,
       file_paths: attemptFilePaths,
     });
+  }
+
+  // ── Step 18.5: Send QA review email ─────────────────────────────────────
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
+    const token  = signQaToken(orderId);
+
+    const [standardUrlRes, editableUrlRes] = await Promise.all([
+      supabase.storage.from(UPLOADS_BUCKET).createSignedUrl(htmlPath, 7 * 24 * 3600),
+      supabase.storage.from(UPLOADS_BUCKET).createSignedUrl(editablePath, 7 * 24 * 3600),
+    ]);
+
+    await sendQAReviewEmail({
+      customerName:        customer.name ?? "Customer",
+      customerEmail:       customer.email,
+      creditName:          credit.credit_name,
+      projectName:         project.name,
+      orderId,
+      generatedAt:         new Date().toISOString(),
+      deliveryScheduledAt: deliveryScheduledAt.toISOString(),
+      standardHtmlUrl:     standardUrlRes.data?.signedUrl ?? `${appUrl}/orders/${orderId}`,
+      editableHtmlUrl:     editableUrlRes.data?.signedUrl ?? `${appUrl}/orders/${orderId}`,
+      approveUrl:          `${appUrl}/api/admin/orders/${orderId}/approve?token=${token}`,
+      requestChangesUrl:   `${appUrl}/admin/orders/${orderId}/review?token=${token}`,
+      isRegeneration:      !!additionalInstructions,
+      changeInstructions:  additionalInstructions,
+    });
+    console.log(`  Step 18.5: ✓ QA review email sent`);
+  } catch (e) {
+    console.error(`  Step 18.5: QA review email failed: ${(e as Error).message}`);
   }
 
   // Audit log
