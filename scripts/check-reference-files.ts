@@ -41,13 +41,15 @@ const PROGRAM_REF_SUBDIR: Record<string, string> = {
 };
 
 function buildExpectedPdfName(program: string, creditCode: string, creditName: string): string {
+  const code = creditCode.replace(/β/g, "beta");
+  const name = creditName.replace(/β/g, "beta");
   if (program === "leed_bdc_v41") {
-    const m = creditCode.match(/^([A-Z]+)(c|p)\d+$/i);
-    const catAbbrev = m ? m[1].toUpperCase() : creditCode.replace(/[^A-Z]/gi, "").toUpperCase();
-    return `LEED_${catAbbrev}_${creditName}.pdf`;
+    const m = code.match(/^([A-Z]+)(c|p)\d+$/i);
+    const catAbbrev = m ? m[1].toUpperCase() : code.replace(/[^A-Z]/gi, "").toUpperCase();
+    return `LEED_${catAbbrev}_${name}.pdf`;
   }
-  if (program === "well_v2")  return `WELL_V2_${creditCode}_${creditName}.pdf`;
-  return `WELL_HSR_${creditCode}_${creditName}.pdf`;
+  if (program === "well_v2")  return `WELL_V2_${code}_${name}.pdf`;
+  return `WELL_HSR_${code}_${name}.pdf`;
 }
 
 // Mirrors findCategoryFolder() in pipeline/process-order.ts exactly.
