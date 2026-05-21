@@ -80,11 +80,21 @@ const PROGRAM_REF_SUBDIR: Record<string, string> = {
 };
 
 // ─── Local credit requirements PDF lookup ────────────────────────────────────
-// Searches pipeline/reference/[program]/[category]/[filename].pdf
-// Two strategies only — no guessing:
+// Searches pipeline/reference/[program]/[category-folder]/[filename].pdf
+//
+// Folder discovery (three strategies, tried in order):
+//   1. Exact case-insensitive name match  ("Air" == "Air")
+//   2. Alphanumeric-normalised match       ("Air & Water Quality" ≈ "airwaterquality")
+//   3. Credit code prefix word match       "LTc5" → prefix "LT" → found in "LT files "
+//      Handles abbreviated folder names (EA files, LT files, IN RP files, IP files…)
+//
+// File matching (two strategies, no guessing):
 //   1. Exact case-insensitive filename match against the constructed expected name
-//   2. Any PDF in the correct category folder whose name contains the exact credit code
-// Returns null if neither matches; caller is responsible for logging and failing.
+//   2. Any PDF in the folder containing the exact credit code string (e.g. A01, SC1)
+//      OR containing the full credit name as a verbatim substring (handles LEED actual
+//      filenames like "leed bd+c v4.1 - LT Credit - Access to Quality Transit.pdf")
+//
+// Returns a miss object with search context when nothing matches; caller logs and fails.
 
 export function buildExpectedPdfName(program: string, creditCode: string, creditName: string): string {
   if (program === "leed_bdc_v41") {
@@ -96,6 +106,40 @@ export function buildExpectedPdfName(program: string, creditCode: string, credit
   return `WELL_HSR_${creditCode}_${creditName}.pdf`;
 }
 
+function findCategoryFolder(programDir: string, category: string, creditCode: string): string | undefined {
+  const allDirs = fs.existsSync(programDir)
+    ? fs.readdirSync(programDir).filter((d) => {
+        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
+      })
+    : [];
+
+  const categoryLower = category.toLowerCase();
+
+  // Strategy 1: exact case-insensitive
+  const exact = allDirs.find((d) => d.toLowerCase() === categoryLower);
+  if (exact) return exact;
+
+  // Strategy 2: alphanumeric-normalised (strips spaces, punctuation)
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalised = allDirs.find((d) => norm(d) === norm(category));
+  if (normalised) return normalised;
+
+  // Strategy 3: credit code prefix word match
+  // Extract the letter prefix from codes like "LTc5" → "LT", "EAp1" → "EA", "A01" → "A"
+  const prefixMatch = creditCode.match(/^([A-Z]+)/i);
+  const prefix = prefixMatch ? prefixMatch[1].toUpperCase() : null;
+  if (prefix) {
+    const byPrefix = allDirs.find((d) => {
+      // Split on whitespace so "LT files " → ["LT","files"], "IN RP files" → ["IN","RP","files"]
+      const words = d.trim().toUpperCase().split(/\s+/);
+      return words.includes(prefix);
+    });
+    if (byPrefix) return byPrefix;
+  }
+
+  return undefined;
+}
+
 function findCreditPdfBuffer(
   program:    string,
   category:   string,
@@ -105,19 +149,8 @@ function findCreditPdfBuffer(
   const subdir = PROGRAM_REF_SUBDIR[program];
   if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
 
-  const programDir = path.join(REF_BASE, subdir);
-
-  // Find category folder — exact case-insensitive match, then alphanumeric-normalised match
-  const allDirs = fs.existsSync(programDir)
-    ? fs.readdirSync(programDir).filter((d) => {
-        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
-      })
-    : [];
-
-  const categoryLower = category.toLowerCase();
-  const categoryDir   =
-    allDirs.find((d) => d.toLowerCase() === categoryLower) ??
-    allDirs.find((d) => d.toLowerCase().replace(/[^a-z0-9]/g, "") === categoryLower.replace(/[^a-z0-9]/g, ""));
+  const programDir  = path.join(REF_BASE, subdir);
+  const categoryDir = findCategoryFolder(programDir, category, creditCode);
 
   const searchedDir = categoryDir
     ? path.join(programDir, categoryDir).replace(process.cwd() + path.sep, "")
@@ -136,15 +169,75 @@ function findCreditPdfBuffer(
     return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
   }
 
-  // 2. Any PDF whose filename contains the exact credit code string
-  const byCode = allFiles.find((f) => f.includes(creditCode));
-  if (byCode) {
-    const resolved = path.join(folderPath, byCode);
+  // 2. Exact credit code substring (e.g. A01, SC1 in WELL filenames)
+  //    OR full credit name as verbatim substring (handles actual LEED filename format)
+  const creditNameLower = creditName.toLowerCase();
+  const match =
+    allFiles.find((f) => f.includes(creditCode)) ??
+    allFiles.find((f) => f.toLowerCase().includes(creditNameLower));
+
+  if (match) {
+    const resolved = path.join(folderPath, match);
     return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
   }
 
-  // Neither matched — return search context for the caller to log
+  // Neither strategy matched
   return { found: false, searchedDir, filesFound: allFiles };
+}
+
+// ─── LEED appendix helpers ────────────────────────────────────────────────────
+// Requirements PDFs for some LEED credits reference supplementary appendix
+// documents by number (e.g. "See Appendix 2"). These appendix files live at
+// the root of pipeline/reference/leed/ and should be passed to Claude as
+// additional context for those credits only.
+
+function scanPdfForAppendixRefs(buffer: Buffer): number[] {
+  // PDF streams are often partially readable as latin1 text. This catches
+  // "Appendix 2", "appendix 3", etc. in uncompressed or lightly-compressed streams.
+  const text = buffer.toString("latin1");
+  const nums = new Set<number>();
+  const re   = /appendix\s+(\d+)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (n >= 1 && n <= 20) nums.add(n);
+  }
+  return [...nums].sort((a, b) => a - b);
+}
+
+function loadLeedAppendices(
+  referencedNums: number[],
+): Array<{ num: number; buffer: Buffer; filename: string }> {
+  const leedRoot = path.join(REF_BASE, "leed");
+  if (!fs.existsSync(leedRoot)) return [];
+
+  const appendixFiles = fs.readdirSync(leedRoot).filter((f) => {
+    const fl = f.toLowerCase();
+    return fl.startsWith("appendix") && fl.endsWith(".pdf") &&
+      !fs.statSync(path.join(leedRoot, f)).isDirectory();
+  });
+
+  const results: Array<{ num: number; buffer: Buffer; filename: string }> = [];
+
+  for (const num of referencedNums) {
+    // Match "appendix 2 " (with trailing space/period) to avoid "appendix 21" matching "2"
+    const match = appendixFiles.find((f) => {
+      const fl = f.toLowerCase();
+      return fl.includes(`appendix ${num} `) || fl.includes(`appendix ${num}.`);
+    });
+
+    if (match) {
+      results.push({
+        num,
+        buffer:   fs.readFileSync(path.join(leedRoot, match)),
+        filename: match,
+      });
+    } else {
+      console.warn(`  Step 12.7: Appendix ${num} referenced in requirements but not found in pipeline/reference/leed/`);
+    }
+  }
+
+  return results;
 }
 
 // ─── Program detection ────────────────────────────────────────────────────────
@@ -668,6 +761,28 @@ export async function processOrder(
   const reqPdfBuffer = pdfLookup.buffer;
   console.log(`    ✓ Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path.sep, "")}`);
 
+  // ── Step 12.7: Scan requirements PDF for LEED appendix references ────────
+  // Looks for "Appendix N" patterns in the PDF text and loads any matching
+  // files from pipeline/reference/leed/ root to pass alongside the requirements PDF.
+  const appendixDocBlocks: ReturnType<typeof preparePdfDocument>[] = [];
+
+  if (isLeed(credit.credit_code)) {
+    const appendixNums = scanPdfForAppendixRefs(reqPdfBuffer);
+    if (appendixNums.length > 0) {
+      console.log(`  Step 12.7: Found references to appendix/appendices: ${appendixNums.join(", ")}`);
+      const appendices = loadLeedAppendices(appendixNums);
+      for (const ap of appendices) {
+        appendixDocBlocks.push(preparePdfDocument(ap.buffer, `LEED v4.1 BD+C Guide — Appendix ${ap.num}`));
+        console.log(`    ✓ Loaded: ${ap.filename}`);
+      }
+      if (appendices.length === 0) {
+        console.log(`    No matching appendix files found in pipeline/reference/leed/`);
+      }
+    } else {
+      console.log(`  Step 12.7: No appendix references found in requirements PDF`);
+    }
+  }
+
   // ── Step 12.5: Load reference files ──────────────────────────────────────
   let referenceDataBlock = "";
 
@@ -767,6 +882,7 @@ export async function processOrder(
       content: [
         ...refBlock,
         reqDocBlock,
+        ...appendixDocBlocks,
         ...uploadDocBlocks,
         { type: "text", text: userPromptPart1 },
       ],
@@ -866,6 +982,7 @@ ${plainText}`,
         { type: "text", text: `PART 1 OUTPUT (completed — do not regenerate):\n${part1Html}` },
         ...mapContentBlocks,
         reqDocBlock,
+        ...appendixDocBlocks,
         ...uploadDocBlocks,
         { type: "text", text: userPromptPart2 },
       ],

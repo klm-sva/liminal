@@ -50,6 +50,36 @@ function buildExpectedPdfName(program: string, creditCode: string, creditName: s
   return `WELL_HSR_${creditCode}_${creditName}.pdf`;
 }
 
+// Mirrors findCategoryFolder() in pipeline/process-order.ts exactly.
+function findCategoryFolder(programDir: string, category: string, creditCode: string): string | undefined {
+  const allDirs = fs.existsSync(programDir)
+    ? fs.readdirSync(programDir).filter((d) => {
+        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
+      })
+    : [];
+
+  const categoryLower = category.toLowerCase();
+
+  const exact = allDirs.find((d) => d.toLowerCase() === categoryLower);
+  if (exact) return exact;
+
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalised = allDirs.find((d) => norm(d) === norm(category));
+  if (normalised) return normalised;
+
+  const prefixMatch = creditCode.match(/^([A-Z]+)/i);
+  const prefix = prefixMatch ? prefixMatch[1].toUpperCase() : null;
+  if (prefix) {
+    const byPrefix = allDirs.find((d) => {
+      const words = d.trim().toUpperCase().split(/\s+/);
+      return words.includes(prefix);
+    });
+    if (byPrefix) return byPrefix;
+  }
+
+  return undefined;
+}
+
 interface CheckResult {
   program:      string;
   category:     string;
@@ -69,14 +99,14 @@ function checkCredit(credit: {
   credit_name: string;
 }): CheckResult {
   const { program, category, credit_code, credit_name } = credit;
-  const subdir      = PROGRAM_REF_SUBDIR[program];
+  const subdir       = PROGRAM_REF_SUBDIR[program];
   const expectedName = buildExpectedPdfName(program, credit_code, credit_name);
 
   const base: Omit<CheckResult, "found" | "resolvedFile" | "filesPresent" | "searchedDir"> = {
     program,
     category,
-    creditCode:   credit_code,
-    creditName:   credit_name,
+    creditCode:  credit_code,
+    creditName:  credit_name,
     expectedName,
   };
 
@@ -84,19 +114,8 @@ function checkCredit(credit: {
     return { ...base, found: false, searchedDir: "(unknown program)", resolvedFile: null, filesPresent: [] };
   }
 
-  const programDir = path.join(REF_BASE, subdir);
-
-  // Find category folder
-  const allDirs = fs.existsSync(programDir)
-    ? fs.readdirSync(programDir).filter((d) => {
-        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
-      })
-    : [];
-
-  const categoryLower = category.toLowerCase();
-  const categoryDir   =
-    allDirs.find((d) => d.toLowerCase() === categoryLower) ??
-    allDirs.find((d) => d.toLowerCase().replace(/[^a-z0-9]/g, "") === categoryLower.replace(/[^a-z0-9]/g, ""));
+  const programDir  = path.join(REF_BASE, subdir);
+  const categoryDir = findCategoryFolder(programDir, category, credit_code);
 
   const searchedDir = categoryDir
     ? path.join(`pipeline/reference/${subdir}`, categoryDir)
@@ -106,19 +125,23 @@ function checkCredit(credit: {
     return { ...base, found: false, searchedDir, resolvedFile: null, filesPresent: [] };
   }
 
-  const folderPath  = path.join(programDir, categoryDir);
-  const allFiles    = fs.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
+  const folderPath = path.join(programDir, categoryDir);
+  const allFiles   = fs.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
 
-  // Strategy 1: exact case-insensitive name match
+  // Strategy 1: exact case-insensitive filename match
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
     return { ...base, found: true, searchedDir, resolvedFile: path.join(searchedDir, exact), filesPresent: allFiles };
   }
 
-  // Strategy 2: filename contains exact credit code
-  const byCode = allFiles.find((f) => f.includes(credit_code));
-  if (byCode) {
-    return { ...base, found: true, searchedDir, resolvedFile: path.join(searchedDir, byCode), filesPresent: allFiles };
+  // Strategy 2: exact credit code substring OR full credit name substring
+  const creditNameLower = credit_name.toLowerCase();
+  const match =
+    allFiles.find((f) => f.includes(credit_code)) ??
+    allFiles.find((f) => f.toLowerCase().includes(creditNameLower));
+
+  if (match) {
+    return { ...base, found: true, searchedDir, resolvedFile: path.join(searchedDir, match), filesPresent: allFiles };
   }
 
   return { ...base, found: false, searchedDir, resolvedFile: null, filesPresent: allFiles };
