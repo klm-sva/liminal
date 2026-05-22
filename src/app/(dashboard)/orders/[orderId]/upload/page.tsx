@@ -24,17 +24,35 @@ export default async function UploadPage({
   const supabase = await createServiceClient();
   const { data: order } = await supabase
     .from("orders")
-    .select("id, credit_id, credits(credit_code, credit_name, required_customer_documents)")
+    .select("id, project_id, credit_id, credits(credit_code, credit_name, required_customer_documents)")
     .eq("id", orderId)
     .single();
 
   if (!order && !isGapAnalysis) notFound();
 
-  type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; required_customer_documents: string[] } | null };
-  const credit = (order as unknown as OrderWithCredit)?.credits ?? null;
+  type OrderWithCredit = {
+    id: string;
+    project_id: string | null;
+    credits?: { credit_code: string; credit_name: string; required_customer_documents: string[] } | null;
+  };
+  const typedOrder = order as unknown as OrderWithCredit;
+  const credit = typedOrder?.credits ?? null;
   const requiredDocs = isGapAnalysis
     ? GAP_ANALYSIS_DOCS
     : (credit?.required_customer_documents ?? []);
+
+  // Check whether any previous completed orders exist for the same project
+  let hasPreviousOrders = false;
+  if (typedOrder?.project_id) {
+    const { data: prev } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("project_id", typedOrder.project_id)
+      .eq("status", "complete")
+      .neq("id", orderId)
+      .limit(1);
+    hasPreviousOrders = (prev?.length ?? 0) > 0;
+  }
 
   return (
     <UploadClient
@@ -43,6 +61,7 @@ export default async function UploadPage({
       creditName={credit?.credit_name}
       requiredDocs={requiredDocs}
       isGapAnalysis={isGapAnalysis}
+      hasPreviousOrders={hasPreviousOrders}
     />
   );
 }

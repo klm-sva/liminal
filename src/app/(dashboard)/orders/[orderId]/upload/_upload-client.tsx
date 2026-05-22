@@ -6,16 +6,17 @@ import { Upload, X, CheckCircle2, FileText, Info } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 
 interface Props {
-  orderId:       string;
-  creditCode?:   string;
-  creditName?:   string;
-  requiredDocs:  string[];
-  isGapAnalysis: boolean;
+  orderId:            string;
+  creditCode?:        string;
+  creditName?:        string;
+  requiredDocs:       string[];
+  isGapAnalysis:      boolean;
+  hasPreviousOrders?: boolean;
 }
 
 interface UploadedFile { name: string; size: string }
 
-export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, isGapAnalysis }: Props) {
+export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, isGapAnalysis, hasPreviousOrders }: Props) {
   const router = useRouter();
   const [files,      setFiles]      = useState<UploadedFile[]>([]);
   const [dragOver,   setDragOver]   = useState(false);
@@ -103,6 +104,16 @@ export default function UploadClient({ orderId, creditCode, creditName, required
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Previous orders note */}
+        {hasPreviousOrders && !isGapAnalysis && (
+          <div className="flex items-start gap-2.5 bg-certify-blue/5 border border-certify-blue/15 rounded-xl px-4 py-3 mb-5">
+            <Info size={14} className="text-certify-blue shrink-0 mt-0.5" />
+            <p className="text-xs text-certify-deep leading-relaxed">
+              <span className="font-semibold">Previous orders on this project</span> — Documents submitted for earlier credits on this project may already be available. Upload only the documents required for this specific credit.
+            </p>
           </div>
         )}
 

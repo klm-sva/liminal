@@ -12,7 +12,12 @@ const INCLUDED = [
   "Downloadable report with your path to certification",
 ];
 
-export default function WellV2GapAnalysisPage() {
+export default async function WellV2GapAnalysisPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project_id?: string }>;
+}) {
+  const { project_id: projectId } = await searchParams;
   return (
     <div className="min-h-screen bg-certify-white">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -77,7 +82,7 @@ export default function WellV2GapAnalysisPage() {
             <p className="text-xs text-certify-cool-grey mt-0.5">One-time fee · delivered within 48 hours</p>
           </div>
           <Link
-            href="/orders/gap-analysis-well-v2/questionnaire"
+            href={`/orders/gap-analysis-well-v2/questionnaire${projectId ? `?project_id=${projectId}` : ""}`}
             className="inline-flex items-center gap-1.5 bg-certify-blue hover:bg-certify-teal text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm group"
           >
             Continue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />

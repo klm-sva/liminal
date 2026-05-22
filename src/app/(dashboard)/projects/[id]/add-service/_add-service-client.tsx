@@ -76,10 +76,10 @@ export default function AddServiceClient({ project, creditsByProgram, allProgram
             <div className="flex flex-wrap gap-3">
               {(
                 [
-                  { href: "/orders/gap-analysis",          label: "LEED BD+C v4.1" },
-                  { href: "/orders/gap-analysis-well-v2",  label: "WELL v2" },
-                  { href: "/orders/gap-analysis-well-hsr", label: "WELL Health-Safety" },
-                ] as const
+                  { href: `/orders/gap-analysis?project_id=${project.id}`,          label: "LEED BD+C v4.1" },
+                  { href: `/orders/gap-analysis-well-v2?project_id=${project.id}`,  label: "WELL v2" },
+                  { href: `/orders/gap-analysis-well-hsr?project_id=${project.id}`, label: "WELL Health-Safety" },
+                ]
               ).map(({ href, label }) => (
                 <Link
                   key={href}
