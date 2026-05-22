@@ -32,7 +32,11 @@ export default function PaymentClient({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credit_id: creditId, project_id: projectId }),
+        body: JSON.stringify({
+          credit_id:       isGapAnalysis ? undefined : creditId,
+          is_gap_analysis: isGapAnalysis || undefined,
+          project_id:      projectId,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create checkout session");
