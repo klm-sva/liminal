@@ -42,13 +42,67 @@ export async function POST(request: Request) {
 
       if (customer_id && (credit_id || is_gap_analysis === "true")) {
         const supabase = getServiceClient();
-        await supabase.from("orders").insert({
-          credit_id: credit_id ?? null,
-          customer_id,
-          project_id: project_id ?? null,
-          status: "awaiting_upload",
-          payment_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
-        });
+
+        // Determine whether the credit requires customer document uploads
+        let requiresUploads = true; // default: upload flow
+        if (credit_id && is_gap_analysis !== "true") {
+          const { data: credit } = await supabase
+            .from("credits")
+            .select("required_customer_documents")
+            .eq("id", credit_id)
+            .single();
+          const docs = credit?.required_customer_documents as string[] | null;
+          requiresUploads = Array.isArray(docs) && docs.length > 0;
+        }
+
+        const initialStatus = requiresUploads ? "awaiting_upload" : "processing";
+
+        const { data: order } = await supabase
+          .from("orders")
+          .insert({
+            credit_id:  credit_id ?? null,
+            customer_id,
+            project_id: project_id ?? null,
+            status:     initialStatus,
+            payment_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+          })
+          .select("id")
+          .single();
+
+        // No uploads required — create the first run and trigger the pipeline
+        if (!requiresUploads && order?.id) {
+          const { data: run } = await supabase
+            .from("runs")
+            .insert({
+              order_id:              order.id,
+              run_number:            1,
+              attempt_number:        1,
+              status:                "pending",
+              customer_upload_paths: [],
+            })
+            .select("id")
+            .single();
+
+          if (run?.id) {
+            const baseUrl =
+              process.env.NODE_ENV === "development"
+                ? "http://localhost:3000"
+                : process.env.VERCEL_URL
+                  ? `https://${process.env.VERCEL_URL}`
+                  : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+
+            fetch(`${baseUrl}/api/internal/process-order`, {
+              method:  "POST",
+              headers: {
+                "Content-Type":     "application/json",
+                "x-webhook-secret": process.env.WEBHOOK_SECRET ?? "",
+              },
+              body: JSON.stringify({ orderId: order.id, runId: run.id }),
+            }).catch((err) => {
+              console.error("[stripe-webhook] auto-process trigger failed:", (err as Error).message);
+            });
+          }
+        }
       }
       break;
     }

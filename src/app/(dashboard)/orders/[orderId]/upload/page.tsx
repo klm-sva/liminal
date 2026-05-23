@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
 import UploadClient from "./_upload-client";
 
@@ -40,6 +40,11 @@ export default async function UploadPage({
   const requiredDocs = isGapAnalysis
     ? GAP_ANALYSIS_DOCS
     : (credit?.required_customer_documents ?? []);
+
+  // Credit requires no uploads — skip straight to processing
+  if (!isGapAnalysis && requiredDocs.length === 0) {
+    redirect(`/orders/${orderId}/processing`);
+  }
 
   // Check whether any previous completed orders exist for the same project
   let hasPreviousOrders = false;
