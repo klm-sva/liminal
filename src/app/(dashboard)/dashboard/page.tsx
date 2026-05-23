@@ -39,6 +39,9 @@ export default async function DashboardPage({
     credits: { credit_code: string; program: string } | null;
   }>> = {};
 
+  type GapOrder = { id: string; status: OrderStatus; credits: { credit_code: string; program: string } | null };
+  let gapOrders: GapOrder[] = [];
+
   if (user && !forceEmpty) {
     const { data: projectData } = await supabase
       .from("projects")
@@ -63,13 +66,22 @@ export default async function DashboardPage({
         ordersByProject[pid].push(order);
       }
     }
+
+    const { data: gapData } = await supabase
+      .from("orders")
+      .select("id, status, credits(credit_code, program)")
+      .eq("customer_id", user.id)
+      .is("project_id", null)
+      .order("created_at", { ascending: false });
+
+    gapOrders = (gapData ?? []) as unknown as GapOrder[];
   }
 
   const hasProjects = !forceEmpty && projects.length > 0;
 
   const allOrders = Object.values(ordersByProject).flat();
-  const totalOrders    = allOrders.length;
-  const deliveredOrders = allOrders.filter((o) => o.status === "delivered" || o.status === "complete").length;
+  const totalOrders    = allOrders.length + gapOrders.length;
+  const deliveredOrders = [...allOrders, ...gapOrders].filter((o) => o.status === "delivered" || o.status === "complete").length;
   const pendingOrders  = totalOrders - deliveredOrders;
 
   if (!hasProjects) {
@@ -253,6 +265,49 @@ export default async function DashboardPage({
             </div>
           </Link>
         </div>
+
+        {/* Gap Analysis Orders */}
+        {gapOrders.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="font-serif text-xl text-certify-deep">Gap Analysis Orders</h2>
+                <p className="text-xs text-certify-cool-grey mt-0.5">Orders not associated with a specific project</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {gapOrders.map((order) => {
+                const cfg = ORDER_STATUS_CONFIG[order.status];
+                return (
+                  <Link
+                    key={order.id}
+                    href={`/orders/${order.id}`}
+                    className="group bg-white rounded-2xl border border-certify-white shadow-card hover:shadow-glass hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  >
+                    <div className="h-1.5" style={{ background: "linear-gradient(90deg, #edc299, #5fa8bb)" }} />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-certify-cool-grey font-medium uppercase tracking-wider mb-1">Gap Analysis</p>
+                          <p className="text-sm font-medium text-certify-deep">Order #{order.id.slice(-6).toUpperCase()}</p>
+                        </div>
+                        <span
+                          className="text-[10px] font-semibold px-2.5 py-1 rounded-lg shrink-0"
+                          style={{ color: cfg.color, backgroundColor: cfg.bg }}
+                        >
+                          {cfg.label}
+                        </span>
+                      </div>
+                      {order.credits && (
+                        <p className="text-xs text-certify-cool-grey">{order.credits.credit_code}</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
