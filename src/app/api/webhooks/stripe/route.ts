@@ -38,12 +38,12 @@ export async function POST(request: Request) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      const { credit_id, customer_id, project_id } = session.metadata ?? {};
+      const { credit_id, customer_id, project_id, is_gap_analysis } = session.metadata ?? {};
 
-      if (credit_id && customer_id) {
+      if (customer_id && (credit_id || is_gap_analysis === "true")) {
         const supabase = getServiceClient();
         await supabase.from("orders").insert({
-          credit_id,
+          credit_id: credit_id ?? null,
           customer_id,
           project_id: project_id ?? null,
           status: "awaiting_upload",
