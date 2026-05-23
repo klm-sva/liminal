@@ -16,10 +16,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const supabase = await createServiceClient();
 
     // Gap analysis — no DB credit record; charge a one-off $499 via price_data
     if (is_gap_analysis) {
+      // Pre-create the order so we can embed the orderId in the success_url
+      const { data: newOrder, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          credit_id:  null,
+          customer_id: user.id,
+          project_id: project_id ?? null,
+          status:     "awaiting_upload",
+        })
+        .select("id")
+        .single();
+
+      if (orderError || !newOrder?.id) {
+        console.error("[checkout] gap-analysis order creation failed:", orderError?.message);
+        return NextResponse.json({ error: "Could not create order. Please try again." }, { status: 500 });
+      }
+
       const cancelParams = new URLSearchParams({ type: "gap-analysis" });
       if (project_id) cancelParams.set("project_id", project_id);
 
@@ -34,11 +52,12 @@ export async function POST(req: Request) {
           },
           quantity: 1,
         }],
-        success_url: `${appUrl}/dashboard?payment_success=1`,
+        success_url: `${appUrl}/orders/${newOrder.id}/upload?type=gap-analysis`,
         cancel_url:  `${appUrl}/orders/new/payment?${cancelParams.toString()}`,
         metadata: {
           is_gap_analysis: "true",
-          customer_id: user.id,
+          customer_id:     user.id,
+          order_id:        newOrder.id,
           ...(project_id ? { project_id } : {}),
         },
         allow_promotion_codes: true,
@@ -48,7 +67,6 @@ export async function POST(req: Request) {
     }
 
     // Individual credit order — look up the Stripe price ID from the credits table
-    const supabase = await createServiceClient();
     const { data: credit } = await supabase
       .from("credits")
       .select("id, credit_name, credit_code, stripe_price_id, price")
@@ -60,6 +78,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Credit not found or not configured for checkout" }, { status: 404 });
     }
 
+    // Pre-create the order so we can embed the orderId in the success_url
+    const { data: newOrder, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        credit_id:   credit.id,
+        customer_id: user.id,
+        project_id:  project_id ?? null,
+        status:      "awaiting_upload",
+      })
+      .select("id")
+      .single();
+
+    if (orderError || !newOrder?.id) {
+      console.error("[checkout] credit order creation failed:", orderError?.message);
+      return NextResponse.json({ error: "Could not create order. Please try again." }, { status: 500 });
+    }
+
     const cancelParams = new URLSearchParams({ credit_id });
     if (project_id) cancelParams.set("project_id", project_id);
 
@@ -67,11 +102,12 @@ export async function POST(req: Request) {
       mode: "payment",
       payment_method_types: ["card"],
       line_items: [{ price: credit.stripe_price_id, quantity: 1 }],
-      success_url: `${appUrl}/dashboard?payment_success=1`,
+      success_url: `${appUrl}/orders/${newOrder.id}/upload`,
       cancel_url:  `${appUrl}/orders/new/payment?${cancelParams.toString()}`,
       metadata: {
-        credit_id: credit.id,
+        credit_id:   credit.id,
         customer_id: user.id,
+        order_id:    newOrder.id,
         ...(project_id ? { project_id } : {}),
       },
       allow_promotion_codes: true,

@@ -44,8 +44,14 @@ export default function UploadClient({ orderId, creditCode, creditName, required
   }
 
   async function handleSubmit() {
-    if (files.length === 0 || isUploading) return;
+    if (isUploading) return;
     setError(null);
+
+    if (files.length === 0) {
+      router.push(`/orders/${orderId}/processing`);
+      return;
+    }
+
     setProgress(0);
     await startUpload(files);
   }
@@ -189,7 +195,7 @@ export default function UploadClient({ orderId, creditCode, creditName, required
 
         <button
           onClick={handleSubmit}
-          disabled={files.length === 0 || isUploading}
+          disabled={isUploading}
           className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
         >
           {isUploading ? (
@@ -200,11 +206,11 @@ export default function UploadClient({ orderId, creditCode, creditName, required
               </svg>
               Uploading {progress}%…
             </>
-          ) : `Submit ${files.length} file${files.length !== 1 ? "s" : ""} for processing`}
+          ) : files.length === 0
+            ? "Proceed to processing"
+            : `Submit ${files.length} file${files.length !== 1 ? "s" : ""} for processing`
+          }
         </button>
-        {files.length === 0 && !isUploading && (
-          <p className="text-center text-xs text-certify-cool-grey mt-2">Upload at least one file to continue</p>
-        )}
       </div>
     </div>
   );

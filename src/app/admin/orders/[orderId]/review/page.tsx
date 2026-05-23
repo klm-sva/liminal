@@ -32,8 +32,8 @@ export default async function AdminReviewPage({
 
   const [customerRes, creditRes, projectRes, runRes] = await Promise.all([
     supabase.from("customers").select("name, email").eq("id", order.customer_id).single(),
-    supabase.from("credits").select("credit_name, credit_code").eq("id", order.credit_id).single(),
-    supabase.from("projects").select("name").eq("id", order.project_id).single(),
+    supabase.from("credits").select("credit_name, credit_code").eq("id", order.credit_id!).single(),
+    supabase.from("projects").select("name").eq("id", order.project_id!).single(),
     supabase
       .from("runs")
       .select("id, output_html_path, completed_at, run_number")

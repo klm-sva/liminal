@@ -491,8 +491,8 @@ export async function processOrder(
   const order = orderRes.data;
 
   const [projectRes, creditRes, customerRes] = await Promise.all([
-    dbCall(supabase.from("projects").select("*").eq("id", order.project_id).single(),  "fetch project"),
-    dbCall(supabase.from("credits").select("*").eq("id", order.credit_id).single(),    "fetch credit"),
+    dbCall(supabase.from("projects").select("*").eq("id", order.project_id!).single(),  "fetch project"),
+    dbCall(supabase.from("credits").select("*").eq("id", order.credit_id!).single(),    "fetch credit"),
     dbCall(supabase.from("customers").select("*").eq("id", order.customer_id).single(), "fetch customer"),
   ]);
   if (projectRes.error)  throw new Error(`Project not found: ${projectRes.error.message}`);
@@ -510,7 +510,7 @@ export async function processOrder(
 
   // ── Step 3: Determine attempt number and storage paths ────────────────────
   const attemptNumber = run.attempt_number ?? run.run_number ?? 1;
-  const orderBase     = orderFolderPath(order.customer_id, order.project_id, orderId, credit.credit_code);
+  const orderBase     = orderFolderPath(order.customer_id, order.project_id!, orderId, credit.credit_code);
   const attemptFolder = attemptPath(orderBase, attemptNumber);
   const outputsFolder = outputsPath(orderBase);
 
@@ -611,17 +611,17 @@ export async function processOrder(
   console.log(`  Step 10: Checking drawing analysis status...`);
   if (!project.auto_extracted) {
     const { data: drawingFiles } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET).list(drawingsPath(order.customer_id, order.project_id)),
+      supabase.storage.from(UPLOADS_BUCKET).list(drawingsPath(order.customer_id, order.project_id!)),
       "list drawings",
     );
 
     const drawingPaths = (drawingFiles ?? [])
       .filter((f) => f.name?.endsWith(".pdf"))
-      .map((f) => `${drawingsPath(order.customer_id, order.project_id)}/${f.name}`);
+      .map((f) => `${drawingsPath(order.customer_id, order.project_id!)}/${f.name}`);
 
     if (drawingPaths.length > 0) {
       console.log(`    Running drawing analysis on ${drawingPaths.length} drawing(s)...`);
-      await analyzeDrawings(order.project_id, order.customer_id, drawingPaths);
+      await analyzeDrawings(order.project_id!, order.customer_id, drawingPaths);
     } else {
       console.log(`    No drawings uploaded — skipping drawing analysis`);
     }
@@ -647,7 +647,7 @@ export async function processOrder(
   if (!(project as any).specs_extracted && specFiles.length > 0) {
     console.log(`    Running specs extraction on ${specFiles.length} document(s)...`);
     try {
-      const specsProfile = await extractSpecs(order.project_id, order.customer_id, specFiles);
+      const specsProfile = await extractSpecs(order.project_id!, order.customer_id, specFiles);
       specsProfileBlock  = formatSpecsProfileForContext(specsProfile);
       console.log(`    ✓ Specs extracted — ${specsProfile.product_count} products`);
     } catch (err) {
@@ -656,7 +656,7 @@ export async function processOrder(
   } else if ((project as any).specs_extracted) {
     console.log(`    Specs already extracted — loading stored profile...`);
     try {
-      const specsProfile = await loadSpecsProfile(order.customer_id, order.project_id);
+      const specsProfile = await loadSpecsProfile(order.customer_id, order.project_id!);
       if (specsProfile) {
         specsProfileBlock = formatSpecsProfileForContext(specsProfile);
         console.log(`    ✓ Specs profile loaded — ${specsProfile.product_count} products`);
@@ -691,7 +691,7 @@ export async function processOrder(
   if (docFiles.length > 0) {
     for (const file of docFiles) {
       try {
-        const profile = await extractDocument(order.project_id, order.customer_id, {
+        const profile = await extractDocument(order.project_id!, order.customer_id, {
           filename: file.filename,
           buffer:   file.buffer,
           mimeType: file.mimeType,
@@ -706,7 +706,7 @@ export async function processOrder(
 
   // Always load all stored profiles (covers current + previously-extracted)
   try {
-    const storedProfiles = await loadAllDocumentProfiles(order.customer_id, order.project_id);
+    const storedProfiles = await loadAllDocumentProfiles(order.customer_id, order.project_id!);
     if (storedProfiles.length > 0) {
       docProfilesBlock = formatAllDocumentProfilesForContext(storedProfiles);
       console.log(`    ✓ ${storedProfiles.length} document profile(s) loaded for context`);
@@ -717,7 +717,7 @@ export async function processOrder(
 
   // ── Step 11: Load project profile ────────────────────────────────────────
   console.log(`  Step 11: Loading project profile...`);
-  const profilePath = `${order.customer_id}/${order.project_id}/project-profile.json`;
+  const profilePath = `${order.customer_id}/${order.project_id!}/project-profile.json`;
   let projectProfile: Record<string, unknown> = {};
   const { data: profileData } = await dbCall(
     supabase.storage.from(UPLOADS_BUCKET).download(profilePath),

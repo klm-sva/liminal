@@ -54,7 +54,7 @@ export const ourFileRouter = {
             const creditRes = await serviceClient
               .from("credits")
               .select("credit_name")
-              .eq("id", orderRes.data.credit_id)
+              .eq("id", orderRes.data.credit_id!)
               .single();
 
             if (creditRes.data) {

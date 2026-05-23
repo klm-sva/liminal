@@ -113,9 +113,9 @@ export type Project = {
 
 export type Order = {
   id:                       string;
-  project_id:               string;
+  project_id:               string | null;
   customer_id:              string;
-  credit_id:                string;
+  credit_id:                string | null;
   status:                   OrderStatus;
   runs_used:                number;
   runs_remaining:           number;
@@ -178,8 +178,8 @@ export type CreditInsert = Omit<Credit, "id" | "created_at" | "updated_at">;
 export type ProjectInsert = Omit<Project, "id" | "auto_extracted" | "flagged_fields" | "created_at" | "updated_at">
   & Partial<Pick<Project, "auto_extracted" | "flagged_fields">>;
 
-export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent">
-  & Partial<Pick<Order, "status">>;
+export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent" | "payment_id">
+  & Partial<Pick<Order, "status" | "payment_id">>;
 
 export type RunInsert = Omit<
   Run,

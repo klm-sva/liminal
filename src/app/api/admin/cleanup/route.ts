@@ -39,7 +39,7 @@ async function runCleanupTasks(orderId?: string) {
 
       const [customerRes, creditRes] = await Promise.all([
         serviceClient.from("customers").select("email, name").eq("id", order.customer_id).single(),
-        serviceClient.from("credits").select("credit_name").eq("id", order.credit_id).single(),
+        serviceClient.from("credits").select("credit_name").eq("id", order.credit_id!).single(),
       ]);
 
       if (customerRes.data && creditRes.data) {

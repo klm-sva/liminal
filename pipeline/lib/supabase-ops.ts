@@ -84,7 +84,7 @@ export async function assemblePipelineContext(
   const run   = runResult.data as Run;
   const order = orderResult.data as Order;
 
-  const creditResult = await supabase.from("credits").select("*").eq("id", order.credit_id).single();
+  const creditResult = await supabase.from("credits").select("*").eq("id", order.credit_id!).single();
   if (creditResult.error) throw new Error(`Credit not found: ${creditResult.error.message}`);
   const credit = creditResult.data as Credit;
 

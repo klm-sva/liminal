@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     try {
       const [customerRes, creditRes, runRes] = await Promise.all([
         supabase.from("customers").select("email, name").eq("id", order.customer_id).single(),
-        supabase.from("credits").select("credit_name").eq("id", order.credit_id).single(),
+        supabase.from("credits").select("credit_name").eq("id", order.credit_id!).single(),
         supabase
           .from("runs")
           .select("output_html_path")
