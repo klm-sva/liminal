@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X, CheckCircle2, FileText, Info } from "lucide-react";
+import { generateReactHelpers } from "@uploadthing/react";
+import type { OurFileRouter } from "@/lib/uploadthing";
 import StepProgress from "@/components/ui/StepProgress";
+
+const { useUploadThing } = generateReactHelpers<OurFileRouter>();
 
 interface Props {
   orderId:            string;
@@ -14,24 +18,36 @@ interface Props {
   hasPreviousOrders?: boolean;
 }
 
-interface UploadedFile { name: string; size: string }
-
 export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, isGapAnalysis, hasPreviousOrders }: Props) {
   const router = useRouter();
-  const [files,      setFiles]      = useState<UploadedFile[]>([]);
-  const [dragOver,   setDragOver]   = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [files,    setFiles]    = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error,    setError]    = useState<string | null>(null);
 
-  function addFile(file: File) {
-    const sizeKB = (file.size / 1024).toFixed(0);
-    setFiles((prev) => [...prev, { name: file.name, size: `${sizeKB} KB` }]);
+  const { startUpload, isUploading } = useUploadThing("creditDocument", {
+    headers:              { "x-order-id": orderId },
+    uploadProgressGranularity: "fine",
+    onUploadProgress:     (p) => setProgress(p),
+    onClientUploadComplete: () => {
+      router.push(`/orders/${orderId}/processing`);
+    },
+    onUploadError: (err) => {
+      setError(err.message ?? "Upload failed. Please try again.");
+      setProgress(0);
+    },
+  });
+
+  function addFiles(incoming: File[]) {
+    setFiles((prev) => [...prev, ...incoming]);
+    setError(null);
   }
 
   async function handleSubmit() {
-    if (files.length === 0) return;
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    router.push(`/orders/${orderId}/processing`);
+    if (files.length === 0 || isUploading) return;
+    setError(null);
+    setProgress(0);
+    await startUpload(files);
   }
 
   return (
@@ -67,18 +83,23 @@ export default function UploadClient({ orderId, creditCode, creditName, required
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
             e.preventDefault(); setDragOver(false);
-            Array.from(e.dataTransfer.files).forEach(addFile);
+            addFiles(Array.from(e.dataTransfer.files));
           }}
           className={`relative border-2 border-dashed rounded-2xl p-8 text-center mb-5 transition-all duration-200 ${
-            dragOver ? "border-certify-blue bg-certify-blue/5" : "border-certify-cool-grey/25 hover:border-certify-blue/40"
+            isUploading
+              ? "border-certify-blue/40 bg-certify-blue/5 pointer-events-none"
+              : dragOver
+              ? "border-certify-blue bg-certify-blue/5"
+              : "border-certify-cool-grey/25 hover:border-certify-blue/40"
           }`}
         >
           <input
             type="file"
             multiple
             accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
-            className="absolute inset-0 opacity-0 cursor-pointer"
-            onChange={(e) => { Array.from(e.target.files ?? []).forEach(addFile); }}
+            disabled={isUploading}
+            className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            onChange={(e) => { addFiles(Array.from(e.target.files ?? [])); e.target.value = ""; }}
           />
           <div className="w-12 h-12 rounded-2xl bg-certify-blue/10 flex items-center justify-center mx-auto mb-3">
             <Upload size={22} className="text-certify-blue" />
@@ -87,7 +108,7 @@ export default function UploadClient({ orderId, creditCode, creditName, required
           <p className="text-xs text-certify-cool-grey">PDF, DOCX, XLSX, JPG, PNG up to 25 MB each</p>
         </div>
 
-        {/* Uploaded files */}
+        {/* File list */}
         {files.length > 0 && (
           <div className="bg-white border border-certify-white rounded-2xl shadow-card p-4 mb-5 space-y-2">
             {files.map((f, i) => (
@@ -97,13 +118,31 @@ export default function UploadClient({ orderId, creditCode, creditName, required
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-certify-deep truncate">{f.name}</p>
-                  <p className="text-xs text-certify-cool-grey">{f.size}</p>
+                  <p className="text-xs text-certify-cool-grey">{(f.size / 1024).toFixed(0)} KB</p>
                 </div>
-                <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}>
-                  <X size={14} className="text-certify-cool-grey hover:text-certify-deep transition-colors" />
-                </button>
+                {!isUploading && (
+                  <button onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}>
+                    <X size={14} className="text-certify-cool-grey hover:text-certify-deep transition-colors" />
+                  </button>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Upload progress bar */}
+        {isUploading && (
+          <div className="mb-5">
+            <div className="flex justify-between text-xs text-certify-cool-grey mb-1.5">
+              <span>Uploading…</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 bg-certify-white rounded-full overflow-hidden">
+              <div
+                className="h-2 rounded-full transition-all duration-200"
+                style={{ width: `${progress}%`, background: "linear-gradient(90deg, #388fa6, #1c5e70)" }}
+              />
+            </div>
           </div>
         )}
 
@@ -141,16 +180,29 @@ export default function UploadClient({ orderId, creditCode, creditName, required
           </p>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+            <p className="text-xs text-red-700">{error}</p>
+          </div>
+        )}
+
         <button
           onClick={handleSubmit}
-          disabled={files.length === 0 || submitting}
+          disabled={files.length === 0 || isUploading}
           className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
         >
-          {submitting ? (
-            <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Submitting…</>
+          {isUploading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Uploading {progress}%…
+            </>
           ) : `Submit ${files.length} file${files.length !== 1 ? "s" : ""} for processing`}
         </button>
-        {files.length === 0 && (
+        {files.length === 0 && !isUploading && (
           <p className="text-center text-xs text-certify-cool-grey mt-2">Upload at least one file to continue</p>
         )}
       </div>
