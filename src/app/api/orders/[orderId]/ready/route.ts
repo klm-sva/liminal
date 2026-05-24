@@ -83,6 +83,8 @@ export async function POST(
     .single();
 
   if (runError || !run) {
+    console.log("[ready] insert attempted with orderId:", orderId, "attemptNumber:", attemptNumber);
+    console.error("[ready] run insert failed:", JSON.stringify(runError, null, 2));
     return NextResponse.json(
       { error: "Failed to create run", details: runError?.message },
       { status: 500 }
