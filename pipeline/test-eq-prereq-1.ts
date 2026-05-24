@@ -51,7 +51,6 @@ const XLSX_PATH     = path.resolve(__dirname, "reference/leed/LEED_v41_BDC_Autom
 const FORM_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_form_schemas.json");
 const MECH_PDF_PATH = path.join(DESKTOP, "example drawing set/3rd__Spruce_Rec_Center-Mech SAMPLE MECH PLAN.pdf");
 const CREDIT_PDF_PATH = path.join(DESKTOP, "leed credit files Nov 2025 Guide /EQ files/leed bd+c v4.1 - EQ Prerequisite Minimum Indoor Air Quality Performance.pdf");
-const CALC_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_calculator_schemas.json");
 const OUTPUT_DIR    = path.resolve(__dirname, "output");
 const SLUG          = "eq-prereq-1-minimum-iaq";
 const EDITABLE_SLUG = "eq-prereq-1-minimum-iaq-editable";
@@ -312,17 +311,12 @@ For every GROUP B item explain exactly what the document is, why it must come fr
       mechExtract.text,
     ].join("\n");
 
-    const calcSchemasJson = fs.existsSync(CALC_SCHEMA_PATH)
-      ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
-      : { calculators: {} };
-
     calcGuide = await generateCalculatorGuide(
       client,
       creditRow,
       CREDIT_NAME,
       calcSourceContent,
       usage,
-      calcSchemasJson,
     );
 
     if (calcGuide && !calcGuide.skipped) {

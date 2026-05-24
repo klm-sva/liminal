@@ -48,7 +48,6 @@ const DESKTOP       = "/Users/kelsey/Desktop/program automation ";
 const XLSX_PATH     = path.join(DESKTOP, "automation analysis files/LEED_v41_BDC_Automation_Analysis_v6.xlsx");
 const PDF_PATH      = path.join(DESKTOP, "leed credit files Nov 2025 Guide /LT files /leed bd+c v4.1 - LT Credit - Sensitive Land Protection.pdf");
 const DRAWING_PATH  = path.join(DESKTOP, "example drawing set/Civil008.pdf");
-const CALC_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_calculator_schemas.json");
 const OUTPUT_DIR    = path.resolve(__dirname, "output");
 const SLUG          = "lt-sensitive-land-protection";
 const EDITABLE_SLUG = "lt-sensitive-land-protection-editable";
@@ -301,10 +300,7 @@ Do not repeat Part 1. Do not generate a map.`,
   // [6/7] Calculator Input Guide (if required)
   const k6 = step.start("[6/7] Calculator Input Guide (if required)");
   const projectData = `Credit: ${CREDIT_NAME}\nProgram: ${PROGRAM_NAME}\n${drawingExtract.text}`;
-  const calcSchemasJson = fs.existsSync(CALC_SCHEMA_PATH)
-    ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
-    : { calculators: {} };
-  const calcGuide   = await generateCalculatorGuide(client, creditRow, CREDIT_NAME, projectData, usage, calcSchemasJson);
+  const calcGuide   = await generateCalculatorGuide(client, creditRow, CREDIT_NAME, projectData, usage);
   step.complete(k6);
 
   // [7/7] Policy drafts + write output files

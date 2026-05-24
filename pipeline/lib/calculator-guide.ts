@@ -13,6 +13,10 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import * as fs   from "fs";
+import * as path from "path";
+
+const CALC_SCHEMA_PATH = path.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
 
 export interface CalcGuideResult {
   html:               string;
@@ -373,14 +377,16 @@ export async function generateCalculatorGuide(
   creditName:  string,
   projectData: string,
   usage:       { input: number; output: number },
-  schemasJson: Record<string, unknown>,
 ): Promise<CalcGuideResult | null> {
 
   if (!creditRow.toLowerCase().includes("calculator")) {
     return null;
   }
 
-  const schemas = ((schemasJson as Record<string, unknown>).calculators ?? {}) as Record<string, CalcSchema>;
+  const rawSchemas: Record<string, unknown> = fs.existsSync(CALC_SCHEMA_PATH)
+    ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
+    : {};
+  const schemas = ((rawSchemas).calculators ?? {}) as Record<string, CalcSchema>;
   const schema  = findSchemaForCredit(creditName, schemas);
   if (!schema) {
     const reason = `No calculator schema matched: credit="${creditName}"`;
