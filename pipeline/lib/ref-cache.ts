@@ -101,7 +101,24 @@ export class RefCache {
         `[platform-reference] No automation XLSX configured for program "${program}"`,
       );
     }
-    return this.getBuffer(storagePath);
+
+    const { data, error } = await this.supabase.storage.from(BUCKET).download(storagePath);
+    if (error || !data) {
+      console.error(`[getAutomationXlsx] Download failed — bucket: "${BUCKET}", path: "${storagePath}"`, {
+        message:    error?.message,
+        status:     (error as any)?.status ?? (error as any)?.statusCode,
+        statusText: (error as any)?.statusText,
+        name:       error?.name,
+        raw:        JSON.stringify(error),
+      });
+      throw new Error(
+        `[platform-reference] Cannot download "${storagePath}": ${error?.message ?? "no data returned"}`,
+      );
+    }
+
+    const buf = Buffer.from(await data.arrayBuffer());
+    this.buffers.set(storagePath, buf);
+    return buf;
   }
 
   /** Storage path for the LEED v4.1 form field schema JSON. */
