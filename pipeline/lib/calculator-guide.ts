@@ -1,5 +1,5 @@
 /**
- * pipeline/lib/calculator-guide.ts
+ * pipeline/lib/calculator-guide.ts — updated
  *
  * Universal Calculator Input Guide generator.
  *
@@ -12,11 +12,7 @@
  * all populate_calculator.py / openpyxl work.
  */
 
-import * as fs from "fs";
-import * as path from "path";
 import Anthropic from "@anthropic-ai/sdk";
-
-const SCHEMA_PATH = path.resolve(__dirname, "../reference/leed/leed_v41_calculator_schemas.json");
 
 export interface CalcGuideResult {
   html:               string;
@@ -53,12 +49,7 @@ function cc(s: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
-function loadAllSchemas(): Record<string, CalcSchema> {
-  return JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf-8")).calculators ?? {};
-}
-
-function findSchemaForCredit(creditName: string): CalcSchema | null {
-  const schemas  = loadAllSchemas();
+function findSchemaForCredit(creditName: string, schemas: Record<string, CalcSchema>): CalcSchema | null {
   const nameNorm = cc(creditName);
 
   for (const schema of Object.values(schemas)) {
@@ -382,13 +373,15 @@ export async function generateCalculatorGuide(
   creditName:  string,
   projectData: string,
   usage:       { input: number; output: number },
+  schemasJson: Record<string, unknown>,
 ): Promise<CalcGuideResult | null> {
 
   if (!creditRow.toLowerCase().includes("calculator")) {
     return null;
   }
 
-  const schema = findSchemaForCredit(creditName);
+  const schemas = ((schemasJson as Record<string, unknown>).calculators ?? {}) as Record<string, CalcSchema>;
+  const schema  = findSchemaForCredit(creditName, schemas);
   if (!schema) {
     const reason = `No calculator schema matched: credit="${creditName}"`;
     console.warn(`  [calc-guide] ⚠ ${reason}`);
