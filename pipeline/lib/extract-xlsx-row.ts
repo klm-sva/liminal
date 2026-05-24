@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import * as fs from "fs";
+import * as fs   from "fs";
 import * as path from "path";
 
 const AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
@@ -54,21 +54,69 @@ function parseList(raw: string): string[] {
     .filter(Boolean);
 }
 
-function loadWorkbook(): { rows: any[][]; headers: string[] } {
-  if (!fs.existsSync(AUTOMATION_XLSX)) {
-    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
-  }
-  const workbook = XLSX.readFile(AUTOMATION_XLSX);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+// ─── Buffer-based parsing (used in production — no local disk access) ─────────
+
+function parseRows(buffer: Buffer): { rows: any[][]; headers: string[] } {
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const sheet    = workbook.Sheets[workbook.SheetNames[0]];
   const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
   const headers = (rows[1] as string[]).map((h) => String(h ?? "").replace(/\n/g, " ").trim());
   return { rows, headers };
 }
 
 /**
- * Extract all four pipeline-driving data columns for a specific credit.
- * This is the single source of truth for the pipeline — called at runtime,
- * never hardcoded.
+ * Extract all four pipeline-driving data columns for a specific credit,
+ * given a pre-downloaded XLSX workbook buffer.
+ *
+ * Production path: caller downloads the buffer from Supabase Storage
+ * (platform-reference bucket) via RefCache and passes it here.
+ */
+export function extractCreditDataFromBuffer(workbookBuffer: Buffer, creditCode: string): CreditData {
+  const { rows } = parseRows(workbookBuffer);
+  const needle   = creditCode.toLowerCase();
+
+  const dataRow = rows.slice(2).find((row) => {
+    const name = String(row[COL.creditName] ?? "").toLowerCase();
+    const num  = String(row[COL.creditNumber] ?? "").toLowerCase();
+    return name.includes(needle) || num.includes(needle);
+  });
+
+  if (!dataRow) {
+    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet`);
+  }
+
+  const get = (col: number) => String(dataRow[col] ?? "").trim();
+
+  return {
+    creditNumber:    get(COL.creditNumber),
+    creditName:      get(COL.creditName),
+    ptsAvailable:    get(COL.ptsAvailable),
+    automatable:     get(COL.automatable),
+    docTier:         get(COL.docTier),
+    customerUploads: parseList(get(COL.customerUploads)),
+    claudeRetrieves: parseList(get(COL.claudeRetrieves)),
+    platformFiles: {
+      formLink:       get(COL.formLink)       || null,
+      calculatorInfo: get(COL.calculatorInfo) || null,
+    },
+    outputs:          parseList(get(COL.claudeOutputs)),
+    gbciVerification: get(COL.gbciVerification),
+    blockerNotes:     get(COL.blockerNotes),
+  };
+}
+
+// ─── Local-disk version (test scripts only — not used in production) ──────────
+
+function loadWorkbook(): { rows: any[][]; headers: string[] } {
+  if (!fs.existsSync(AUTOMATION_XLSX)) {
+    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
+  }
+  return parseRows(fs.readFileSync(AUTOMATION_XLSX));
+}
+
+/**
+ * Extract credit data by reading the XLSX from the local filesystem.
+ * Used by local test scripts only. Production code uses extractCreditDataFromBuffer.
  */
 export function extractCreditData(creditName: string): CreditData {
   const { rows } = loadWorkbook();
