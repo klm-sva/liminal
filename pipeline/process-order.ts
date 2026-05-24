@@ -65,8 +65,9 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const UPLOADS_BUCKET = "customer-uploads";
-const REF_BASE       = path.join(process.cwd(), "pipeline", "reference");
+const UPLOADS_BUCKET  = "customer-uploads";
+const OUTPUTS_BUCKET  = "order-outputs";
+const REF_BASE        = path.join(process.cwd(), "pipeline", "reference");
 // Use process.cwd() (project root) so the path is stable in both local Node.js
 // and Vercel serverless environments where __dirname points to .next/server/.
 const LEED_REF_DIR = path.join(REF_BASE, "leed");
@@ -1277,7 +1278,7 @@ ${plainText}`,
 
   const htmlPath = `${outputsFolder}/submission.html`;
   const { error: htmlErr } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true }),
+    supabase.storage.from(OUTPUTS_BUCKET).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true }),
     "upload submission.html",
   );
   if (htmlErr) throw new Error(`Failed to upload HTML output: ${htmlErr.message}`);
@@ -1287,7 +1288,7 @@ ${plainText}`,
   // Editable HTML — for customer download and PDF export
   const editablePath = `${outputsFolder}/submission-editable.html`;
   const { error: editErr } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true }),
+    supabase.storage.from(OUTPUTS_BUCKET).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true }),
     "upload submission-editable.html",
   );
   if (editErr) console.warn(`    Editable HTML upload failed: ${editErr.message}`);
@@ -1298,7 +1299,7 @@ ${plainText}`,
   if (mapBuffer) {
     const mapPath = `${outputsFolder}/walking-distance-map.png`;
     const { error: mapErr } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET).upload(mapPath, new Blob([new Uint8Array(mapBuffer)], { type: "image/png" }), { upsert: true }),
+      supabase.storage.from(OUTPUTS_BUCKET).upload(mapPath, new Blob([new Uint8Array(mapBuffer)], { type: "image/png" }), { upsert: true }),
       "upload map PNG",
     );
     if (mapErr) console.warn(`    Map upload failed: ${mapErr.message}`);
@@ -1310,7 +1311,7 @@ ${plainText}`,
     try {
       const draftPath = `${outputsFolder}/${draft.filename}`;
       const { error: draftErr } = await dbCall(
-        supabase.storage.from(UPLOADS_BUCKET).upload(draftPath, new Blob([draft.html], { type: "text/html" }), { upsert: true }),
+        supabase.storage.from(OUTPUTS_BUCKET).upload(draftPath, new Blob([draft.html], { type: "text/html" }), { upsert: true }),
         `upload policy draft ${draft.filename}`,
       );
       if (draftErr) console.warn(`    Policy draft upload failed (${draft.filename}): ${draftErr.message}`);
@@ -1355,8 +1356,8 @@ ${plainText}`,
     const token  = signQaToken(orderId);
 
     const [standardUrlRes, editableUrlRes] = await Promise.all([
-      supabase.storage.from(UPLOADS_BUCKET).createSignedUrl(htmlPath, 7 * 24 * 3600),
-      supabase.storage.from(UPLOADS_BUCKET).createSignedUrl(editablePath, 7 * 24 * 3600),
+      supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(htmlPath, 7 * 24 * 3600),
+      supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(editablePath, 7 * 24 * 3600),
     ]);
 
     await sendQAReviewEmail({

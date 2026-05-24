@@ -50,7 +50,7 @@ export default async function AdminReviewPage({
   const latestRun  = runRes.data;
 
   // Generate signed output URLs (7-day expiry)
-  const UPLOADS_BUCKET = "customer-uploads";
+  const UPLOADS_BUCKET = "order-outputs";
   const htmlPath       = latestRun?.output_html_path ?? "";
   const editablePath   = htmlPath.replace("submission.html", "submission-editable.html");
 

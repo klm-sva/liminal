@@ -2,7 +2,7 @@ import { NextResponse }        from "next/server";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const UPLOADS_BUCKET = "customer-uploads";
+const OUTPUTS_BUCKET = "order-outputs";
 
 export async function GET(
   request: Request,
@@ -36,7 +36,7 @@ export async function GET(
 
   const serviceClient = await createServiceClient();
   const { data: signedData, error: signError } = await serviceClient.storage
-    .from(UPLOADS_BUCKET)
+    .from(OUTPUTS_BUCKET)
     .createSignedUrl(path, 3600);
 
   if (signError || !signedData?.signedUrl) {
