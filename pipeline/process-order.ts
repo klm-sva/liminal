@@ -536,17 +536,23 @@ export async function processOrder(
   console.log(`  Step 5: Order → under_review`);
 
   // ── Step 6: Document quality review ──────────────────────────────────────
-  console.log(`  Step 6: Running document review...`);
-  const reviewResult = await reviewDocuments(
-    orderId,
-    order.customer_id,
-    credit.credit_code,
-    uploads
-  );
+  // Skip review entirely when customer submitted with no files — they chose to proceed without uploads.
+  let reviewResult: Awaited<ReturnType<typeof reviewDocuments>> | null = null;
+  if (uploads.length > 0) {
+    console.log(`  Step 6: Running document review...`);
+    reviewResult = await reviewDocuments(
+      orderId,
+      order.customer_id,
+      credit.credit_code,
+      uploads
+    );
+  } else {
+    console.log(`  Step 6: No uploads — skipping document review, proceeding directly.`);
+  }
 
   // ── Step 7: If incomplete on attempt 1 → documents_requested (notify, stop)
   //            If incomplete on attempt 2+ → continue anyway (best-effort run)
-  if (reviewResult.status === "incomplete") {
+  if (reviewResult && reviewResult.status === "incomplete") {
     const issueStrings = reviewResult.issues.map((i) => i.issue);
 
     if (attemptNumber === 1) {
