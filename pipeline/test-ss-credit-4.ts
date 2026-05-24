@@ -60,6 +60,7 @@ const SWQMP_RTF        = path.join(DOCS_DIR, "stormwater plan.rtf");
 const CREDIT_PDF       = path.join(DESKTOP, "leed credit files Nov 2025 Guide /SS files/leed bd+c v4.1 - SS Credit Rainwater Management.pdf");
 const XLSX_PATH        = path.resolve(__dirname, "reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
 const FORM_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_form_schemas.json");
+const CALC_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_calculator_schemas.json");
 const OUTPUT_DIR       = path.resolve(__dirname, "output");
 const SLUG             = "ss-credit-4-rainwater-management";
 const EDITABLE_SLUG    = "ss-credit-4-rainwater-management-editable";
@@ -347,12 +348,17 @@ For each item: explain what is needed, which field it satisfies, and why it cann
       pass1Html.slice(0, 20000),
     ].join("\n");
 
+    const calcSchemasJson = fs.existsSync(CALC_SCHEMA_PATH)
+      ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
+      : { calculators: {} };
+
     calcGuide = await generateCalculatorGuide(
       client,
       creditRow,
       CREDIT_NAME,
       calcSourceContent,
       usage,
+      calcSchemasJson,
     );
 
     if (calcGuide && !calcGuide.skipped) {

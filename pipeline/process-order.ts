@@ -34,7 +34,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as path from "path";
 import * as fs from "fs";
 import { createServiceClient } from "./lib/supabase";
-import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx-row";
+import { extractCreditDataFromBuffer, formatCreditDataForPrompt } from "./lib/extract-xlsx-row";
+import { RefCache } from "./lib/ref-cache";
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { analyzeDrawings } from "./drawing-analysis";
 import { generateMap, type MapType } from "./map-generation";
@@ -67,12 +68,8 @@ if (fs.existsSync(envPath)) {
 
 const UPLOADS_BUCKET  = "customer-uploads";
 const OUTPUTS_BUCKET  = "order-outputs";
-const REF_BASE        = path.join(process.cwd(), "pipeline", "reference");
-// Use process.cwd() (project root) so the path is stable in both local Node.js
-// and Vercel serverless environments where __dirname points to .next/server/.
-const LEED_REF_DIR = path.join(REF_BASE, "leed");
 
-// ─── Per-program reference subdirectory ──────────────────────────────────────
+// ─── Per-program subdirectory within the platform-reference Storage bucket ────
 
 const PROGRAM_REF_SUBDIR: Record<string, string> = {
   leed_bdc_v41: "leed",
@@ -80,22 +77,19 @@ const PROGRAM_REF_SUBDIR: Record<string, string> = {
   well_hsr:     "well-hsr",
 };
 
-// ─── Local credit requirements PDF lookup ────────────────────────────────────
-// Searches pipeline/reference/[program]/[category-folder]/[filename].pdf
+// ─── Storage-based credit requirements PDF lookup ─────────────────────────────
+// Downloads credit requirement PDFs from the platform-reference Supabase bucket.
+// Mirror of the previous pipeline/reference/ folder structure:
+//   platform-reference/[program-subdir]/[category-folder]/[filename].pdf
 //
-// Folder discovery (three strategies, tried in order):
+// Three folder-matching strategies, tried in order:
 //   1. Exact case-insensitive name match  ("Air" == "Air")
 //   2. Alphanumeric-normalised match       ("Air & Water Quality" ≈ "airwaterquality")
-//   3. Credit code prefix word match       "LTc5" → prefix "LT" → found in "LT files "
-//      Handles abbreviated folder names (EA files, LT files, IN RP files, IP files…)
+//   3. Credit code prefix word match       "LTc5" → "LT" → found in "LT files"
 //
-// File matching (two strategies, no guessing):
-//   1. Exact case-insensitive filename match against the constructed expected name
-//   2. Any PDF in the folder containing the exact credit code string (e.g. A01, SC1)
-//      OR containing the full credit name as a verbatim substring (handles LEED actual
-//      filenames like "leed bd+c v4.1 - LT Credit - Access to Quality Transit.pdf")
-//
-// Returns a miss object with search context when nothing matches; caller logs and fails.
+// Two file-matching strategies, tried in order:
+//   1. Exact case-insensitive match against the constructed expected filename
+//   2. Credit code OR credit name verbatim substring match
 
 export function buildExpectedPdfName(program: string, creditCode: string, creditName: string): string {
   const code = creditCode.replace(/β/g, "beta");
@@ -109,31 +103,29 @@ export function buildExpectedPdfName(program: string, creditCode: string, credit
   return `WELL_HSR_${code}_${name}.pdf`;
 }
 
-function findCategoryFolder(programDir: string, category: string, creditCode: string): string | undefined {
-  const allDirs = fs.existsSync(programDir)
-    ? fs.readdirSync(programDir).filter((d) => {
-        try { return fs.statSync(path.join(programDir, d)).isDirectory(); } catch { return false; }
-      })
-    : [];
-
-  const categoryLower = category.toLowerCase();
+async function findCategoryFolderFromStorage(
+  cache:         RefCache,
+  programSubdir: string,
+  category:      string,
+  creditCode:    string,
+): Promise<string | undefined> {
+  const allFolders  = await cache.listSubfolders(programSubdir);
+  const categoryLow = category.toLowerCase();
 
   // Strategy 1: exact case-insensitive
-  const exact = allDirs.find((d) => d.toLowerCase() === categoryLower);
+  const exact = allFolders.find((d) => d.toLowerCase() === categoryLow);
   if (exact) return exact;
 
-  // Strategy 2: alphanumeric-normalised (strips spaces, punctuation)
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const normalised = allDirs.find((d) => norm(d) === norm(category));
+  // Strategy 2: alphanumeric-normalised
+  const norm       = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalised = allFolders.find((d) => norm(d) === norm(category));
   if (normalised) return normalised;
 
-  // Strategy 3: credit code prefix word match
-  // Extract the letter prefix from codes like "LTc5" → "LT", "EAp1" → "EA", "A01" → "A"
+  // Strategy 3: credit code prefix word match ("LTc5" → "LT")
   const prefixMatch = creditCode.match(/^([A-Z]+)/i);
-  const prefix = prefixMatch ? prefixMatch[1].toUpperCase() : null;
+  const prefix      = prefixMatch ? prefixMatch[1].toUpperCase() : null;
   if (prefix) {
-    const byPrefix = allDirs.find((d) => {
-      // Split on whitespace so "LT files " → ["LT","files"], "IN RP files" → ["IN","RP","files"]
+    const byPrefix = allFolders.find((d) => {
       const words = d.trim().toUpperCase().split(/\s+/);
       return words.includes(prefix);
     });
@@ -143,56 +135,55 @@ function findCategoryFolder(programDir: string, category: string, creditCode: st
   return undefined;
 }
 
-function findCreditPdfBuffer(
+async function findCreditPdfFromStorage(
+  cache:      RefCache,
   program:    string,
   category:   string,
   creditCode: string,
   creditName: string,
-): { buffer: Buffer; resolvedPath: string } | { found: false; searchedDir: string; filesFound: string[] } {
+): Promise<
+  | { buffer: Buffer; resolvedPath: string }
+  | { found: false; searchedDir: string; filesFound: string[] }
+> {
   const subdir = PROGRAM_REF_SUBDIR[program];
   if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
 
-  const programDir  = path.join(REF_BASE, subdir);
-  const categoryDir = findCategoryFolder(programDir, category, creditCode);
+  const categoryDir = await findCategoryFolderFromStorage(cache, subdir, category, creditCode);
 
   const searchedDir = categoryDir
-    ? path.join(programDir, categoryDir).replace(process.cwd() + path.sep, "")
-    : path.join(`pipeline/reference/${subdir}`, category);
+    ? `platform-reference/${subdir}/${categoryDir}`
+    : `platform-reference/${subdir}/${category}`;
 
   if (!categoryDir) return { found: false, searchedDir, filesFound: [] };
 
-  const folderPath = path.join(programDir, categoryDir);
-  const allFiles   = fs.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
+  const folderPath = `${subdir}/${categoryDir}`;
+  const allFiles   = (await cache.listFiles(folderPath)).filter((f) => f.toLowerCase().endsWith(".pdf"));
 
-  // 1. Exact case-insensitive match against constructed filename
+  // 1. Exact case-insensitive match against constructed expected filename
   const expectedName = buildExpectedPdfName(program, creditCode, creditName);
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
-    const resolved = path.join(folderPath, exact);
-    return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
+    const sp = `${folderPath}/${exact}`;
+    return { buffer: await cache.getBuffer(sp), resolvedPath: `platform-reference/${sp}` };
   }
 
-  // 2. Exact credit code substring (e.g. A01, SC1 in WELL filenames)
-  //    OR full credit name as verbatim substring (handles actual LEED filename format)
-  const creditNameLower = creditName.toLowerCase();
-  const match =
+  // 2. Credit code substring OR credit name verbatim substring
+  const nameLower = creditName.toLowerCase();
+  const match     =
     allFiles.find((f) => f.includes(creditCode)) ??
-    allFiles.find((f) => f.toLowerCase().includes(creditNameLower));
+    allFiles.find((f) => f.toLowerCase().includes(nameLower));
 
   if (match) {
-    const resolved = path.join(folderPath, match);
-    return { buffer: fs.readFileSync(resolved), resolvedPath: resolved };
+    const sp = `${folderPath}/${match}`;
+    return { buffer: await cache.getBuffer(sp), resolvedPath: `platform-reference/${sp}` };
   }
 
-  // Neither strategy matched
   return { found: false, searchedDir, filesFound: allFiles };
 }
 
 // ─── LEED appendix helpers ────────────────────────────────────────────────────
-// Requirements PDFs for some LEED credits reference supplementary appendix
-// documents by number (e.g. "See Appendix 2"). These appendix files live at
-// the root of pipeline/reference/leed/ and should be passed to Claude as
-// additional context for those credits only.
+// Supplementary appendix PDFs live at the root of platform-reference/leed/.
+// They are loaded when a requirements PDF references them ("See Appendix 2").
 
 function scanPdfForAppendixRefs(buffer: Buffer): number[] {
   // PDF streams are often partially readable as latin1 text. This catches
@@ -208,35 +199,29 @@ function scanPdfForAppendixRefs(buffer: Buffer): number[] {
   return [...nums].sort((a, b) => a - b);
 }
 
-function loadLeedAppendices(
+async function loadLeedAppendicesFromStorage(
+  cache:          RefCache,
   referencedNums: number[],
-): Array<{ num: number; buffer: Buffer; filename: string }> {
-  const leedRoot = path.join(REF_BASE, "leed");
-  if (!fs.existsSync(leedRoot)) return [];
-
-  const appendixFiles = fs.readdirSync(leedRoot).filter((f) => {
+): Promise<Array<{ num: number; buffer: Buffer; filename: string }>> {
+  const allFiles      = await cache.listFiles("leed");
+  const appendixFiles = allFiles.filter((f) => {
     const fl = f.toLowerCase();
-    return fl.startsWith("appendix") && fl.endsWith(".pdf") &&
-      !fs.statSync(path.join(leedRoot, f)).isDirectory();
+    return fl.startsWith("appendix") && fl.endsWith(".pdf");
   });
 
   const results: Array<{ num: number; buffer: Buffer; filename: string }> = [];
 
   for (const num of referencedNums) {
-    // Match "appendix 2 " (with trailing space/period) to avoid "appendix 21" matching "2"
+    // Match "appendix 2 " or "appendix 2." to avoid "appendix 21" matching "2"
     const match = appendixFiles.find((f) => {
       const fl = f.toLowerCase();
       return fl.includes(`appendix ${num} `) || fl.includes(`appendix ${num}.`);
     });
 
     if (match) {
-      results.push({
-        num,
-        buffer:   fs.readFileSync(path.join(leedRoot, match)),
-        filename: match,
-      });
+      results.push({ num, buffer: await cache.getBuffer(`leed/${match}`), filename: match });
     } else {
-      console.warn(`  Step 12.7: Appendix ${num} referenced in requirements but not found in pipeline/reference/leed/`);
+      console.warn(`  Step 12.7: Appendix ${num} referenced but not found in platform-reference/leed/`);
     }
   }
 
@@ -259,12 +244,15 @@ function creditCodeToFormKey(code: string): string {
 }
 
 // ─── LEED reference file loader ───────────────────────────────────────────────
+// Downloads form and calculator schemas from platform-reference/leed/ and
+// formats the relevant credit section for injection into the Claude prompt.
 
-function loadLeedReferenceData(
-  creditCode: string,
-  creditName: string,
+async function loadLeedReferenceDataFromStorage(
+  cache:         RefCache,
+  creditCode:    string,
+  creditName:    string,
   hasCalculator: boolean,
-): string {
+): Promise<string> {
   const lines: string[] = [
     "═══════════════════════════════════════════════════════",
     "LEED AUTHORITATIVE REFERENCE FILES — USE EXCLUSIVELY",
@@ -275,10 +263,9 @@ function loadLeedReferenceData(
   ];
 
   // Form schema
-  const formSchemaPath = path.join(LEED_REF_DIR, "leed_v41_form_schemas.json");
-  if (fs.existsSync(formSchemaPath)) {
-    const allSchemas  = JSON.parse(fs.readFileSync(formSchemaPath, "utf-8"));
-    const formKey     = creditCodeToFormKey(creditCode);
+  try {
+    const allSchemas: any = await cache.getJson(cache.formSchemasPath);
+    const formKey         = creditCodeToFormKey(creditCode);
     const creditSchema: any =
       allSchemas.credits?.[formKey] ??
       Object.values(allSchemas.credits ?? {}).find((c: any) =>
@@ -292,16 +279,15 @@ function loadLeedReferenceData(
     } else {
       lines.push(`FORM FIELD SCHEMA: not found for ${creditCode} — use web search to identify live form fields`);
     }
-  } else {
-    lines.push("FORM FIELD SCHEMA: leed_v41_form_schemas.json not found in pipeline/reference/leed/");
+  } catch (err) {
+    lines.push(`FORM FIELD SCHEMA: failed to load from platform-reference — ${(err as Error).message}`);
   }
 
   // Calculator schema (only if this credit has a calculator per the spreadsheet)
   if (hasCalculator) {
-    const calcSchemaPath = path.join(LEED_REF_DIR, "leed_v41_calculator_schemas.json");
-    if (fs.existsSync(calcSchemaPath)) {
-      const allCalcSchemas = JSON.parse(fs.readFileSync(calcSchemaPath, "utf-8"));
-      const formKey        = creditCodeToFormKey(creditCode);
+    try {
+      const allCalcSchemas: any = await cache.getJson(cache.calcSchemasPath);
+      const formKey             = creditCodeToFormKey(creditCode);
       const calcSchema: any =
         allCalcSchemas.calculators?.[formKey] ??
         Object.values(allCalcSchemas.calculators ?? {}).find((c: any) =>
@@ -315,8 +301,8 @@ function loadLeedReferenceData(
       } else {
         lines.push(`\nCALCULATOR SCHEMA: not found for ${creditCode}`);
       }
-    } else {
-      lines.push("\nCALCULATOR SCHEMA: leed_v41_calculator_schemas.json not found in pipeline/reference/leed/");
+    } catch (err) {
+      lines.push(`\nCALCULATOR SCHEMA: failed to load from platform-reference — ${(err as Error).message}`);
     }
   }
 
@@ -477,6 +463,7 @@ export async function processOrder(
 
   const client   = new Anthropic({ apiKey, timeout: 180000, maxRetries: 0 });
   const supabase = createServiceClient();
+  const refCache = new RefCache(supabase);
 
   console.log(`\n[process-order] ▶ Order ${orderId} / Run ${runId}`);
 
@@ -506,7 +493,8 @@ export async function processOrder(
 
   // ── Step 2: Read all 4 columns from automation analysis XLSX ──────────────
   console.log(`  Step 2: Loading credit data from automation analysis...`);
-  const creditData = extractCreditData(credit.credit_code);
+  const xlsxBuffer = await refCache.getAutomationXlsx(credit.program);
+  const creditData  = extractCreditDataFromBuffer(xlsxBuffer, credit.credit_code);
   console.log(`    Outputs defined: ${creditData.outputs.join(", ") || "(none)"}`);
 
   // ── Step 3: Determine attempt number and storage paths ────────────────────
@@ -732,9 +720,10 @@ export async function processOrder(
     }
   }
 
-  // ── Step 12: Load credit requirements PDF from local reference folder ────────
-  console.log(`  Step 12: Loading credit requirements PDF from pipeline/reference...`);
-  const pdfLookup = findCreditPdfBuffer(
+  // ── Step 12: Load credit requirements PDF from platform-reference Storage ────
+  console.log(`  Step 12: Loading credit requirements PDF from platform-reference...`);
+  const pdfLookup = await findCreditPdfFromStorage(
+    refCache,
     credit.program,
     credit.category,
     credit.credit_code,
@@ -747,7 +736,7 @@ export async function processOrder(
     console.error(`    Directory searched : ${pdfLookup.searchedDir}`);
     console.error(`    Expected filename  : ${expectedName}`);
     console.error(`    Files present      : ${pdfLookup.filesFound.length === 0 ? "(none)" : pdfLookup.filesFound.join(", ")}`);
-    console.error(`    Add the correct PDF to pipeline/reference/ and re-run.`);
+    console.error(`    Add the correct PDF to platform-reference/ and re-run.`);
 
     const errMsg = `Requirements PDF not found — searched: ${pdfLookup.searchedDir} — expected: ${expectedName}`;
 
@@ -762,7 +751,7 @@ export async function processOrder(
   }
 
   const reqPdfBuffer = pdfLookup.buffer;
-  console.log(`    ✓ Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path.sep, "")}`);
+  console.log(`    ✓ Found: ${pdfLookup.resolvedPath}`);
 
   // ── Step 12.7: Scan requirements PDF for LEED appendix references ────────
   // Looks for "Appendix N" patterns in the PDF text and loads any matching
@@ -773,13 +762,13 @@ export async function processOrder(
     const appendixNums = scanPdfForAppendixRefs(reqPdfBuffer);
     if (appendixNums.length > 0) {
       console.log(`  Step 12.7: Found references to appendix/appendices: ${appendixNums.join(", ")}`);
-      const appendices = loadLeedAppendices(appendixNums);
+      const appendices = await loadLeedAppendicesFromStorage(refCache, appendixNums);
       for (const ap of appendices) {
         appendixDocBlocks.push(preparePdfDocument(ap.buffer, `LEED v4.1 BD+C Guide — Appendix ${ap.num}`));
         console.log(`    ✓ Loaded: ${ap.filename}`);
       }
       if (appendices.length === 0) {
-        console.log(`    No matching appendix files found in pipeline/reference/leed/`);
+        console.log(`    No matching appendix files found in platform-reference/leed/`);
       }
     } else {
       console.log(`  Step 12.7: No appendix references found in requirements PDF`);
@@ -792,7 +781,8 @@ export async function processOrder(
   if (isLeed(credit.credit_code)) {
     console.log(`  Step 12.5: Loading LEED reference files for ${credit.credit_code}...`);
     try {
-      referenceDataBlock = loadLeedReferenceData(
+      referenceDataBlock = await loadLeedReferenceDataFromStorage(
+        refCache,
         credit.credit_code,
         creditData.creditName,
         creditData.platformFiles.calculatorInfo !== null,
@@ -1031,12 +1021,17 @@ ${plainText}`,
         fullHtml.slice(0, 30000),
       ].join("\n");
 
+      const calcSchemasJson = await refCache
+        .getJson<Record<string, unknown>>(refCache.calcSchemasPath)
+        .catch(() => ({ calculators: {} }));
+
       calcGuide = await generateCalculatorGuide(
         client,
         creditDataBlock,
         creditData.creditName,
         calcProjectData,
         { input: 0, output: 0 },
+        calcSchemasJson,
       );
 
       if (calcGuide && !calcGuide.skipped) {

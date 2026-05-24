@@ -59,6 +59,7 @@ const SPECS_RTF       = path.join(TEST_DOCS_DIR, "test text.rtf");
 const CREDIT_PDF      = path.join(DESKTOP, "leed credit files Nov 2025 Guide /MR files/leed bd+c v4.1 - MR Credit Environmental Product Declarations.pdf");
 const XLSX_PATH       = path.resolve(__dirname, "reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
 const FORM_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_form_schemas.json");
+const CALC_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_calculator_schemas.json");
 const OUTPUT_DIR      = path.resolve(__dirname, "output");
 const SLUG            = "mr-credit-2-epd";
 const EDITABLE_SLUG   = "mr-credit-2-epd-editable";
@@ -327,12 +328,17 @@ For GROUP B items, explain exactly what is needed and why it cannot be auto-retr
       pass2Html.slice(0, 20000),
     ].join("\n");
 
+    const calcSchemasJson = fs.existsSync(CALC_SCHEMA_PATH)
+      ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
+      : { calculators: {} };
+
     calcGuide = await generateCalculatorGuide(
       client,
       creditRow,
       CREDIT_NAME,
       calcSourceContent,
       usage,
+      calcSchemasJson,
     );
 
     if (calcGuide && !calcGuide.skipped) {

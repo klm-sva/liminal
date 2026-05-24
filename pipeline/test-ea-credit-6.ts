@@ -60,6 +60,7 @@ const MECH_PDF         = path.join(DOCS_DIR, "3rd__Spruce_Rec_Center-Mech.pdf");
 const CREDIT_PDF       = path.join(DESKTOP, "leed credit files Nov 2025 Guide /EA files/leed bd+c v4.1 - EA Credit Enhanced Refrigerant Management.pdf");
 const XLSX_PATH        = path.resolve(__dirname, "reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
 const FORM_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_form_schemas.json");
+const CALC_SCHEMA_PATH = path.resolve(__dirname, "reference/leed/leed_v41_calculator_schemas.json");
 const OUTPUT_DIR       = path.resolve(__dirname, "output");
 const SLUG             = "ea-credit-6-enhanced-refrigerant";
 const EDITABLE_SLUG    = "ea-credit-6-enhanced-refrigerant-editable";
@@ -377,12 +378,17 @@ For each item: explain exactly what is needed, which field it satisfies, and why
       pass1Html.slice(0, 20000),
     ].join("\n");
 
+    const calcSchemasJson = fs.existsSync(CALC_SCHEMA_PATH)
+      ? JSON.parse(fs.readFileSync(CALC_SCHEMA_PATH, "utf-8"))
+      : { calculators: {} };
+
     calcGuide = await generateCalculatorGuide(
       client,
       creditRow,
       CREDIT_NAME,
       calcSourceContent,
       usage,
+      calcSchemasJson,
     );
 
     if (calcGuide && !calcGuide.skipped) {
