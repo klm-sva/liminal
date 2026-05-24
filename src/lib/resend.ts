@@ -151,8 +151,8 @@ export async function sendOutputDeliveryEmail({
         Use the <strong>editable version</strong> to make changes directly in your browser,
         then save as a PDF using <strong>File &rarr; Print &rarr; Save as PDF</strong>.
       </p>
-      <p><strong>Important:</strong> These files will be automatically deleted in 48 hours. Please download and save them now.</p>
-      <p><a href="${APP()}/orders/${orderId}">View Order →</a></p>
+      <p>Your submitted project documents will be deleted from our servers within 48 hours. Your output files are retained permanently in your dashboard.</p>
+      <p><a href="${APP()}/orders/${orderId}/delivery">View Output →</a></p>
     `,
   });
 }
@@ -175,11 +175,11 @@ export async function sendDeletionWarningEmail({
     to,
     subject: `Action required — download your ${creditName} files before they expire`,
     html: `
-      <h1>Your files expire in 48 hours</h1>
+      <h1>Uploaded documents expiring in 48 hours</h1>
       <p>Hi ${name},</p>
-      <p>The files for your <strong>${creditName}</strong> order will be permanently deleted in 48 hours as part of our privacy policy.</p>
-      <p>Please download your submission documents before they expire.</p>
-      <p><a href="${APP()}/orders/${orderId}">Download Files →</a></p>
+      <p>This is a reminder that the project documents you uploaded for <strong>${creditName}</strong> will be automatically deleted from our servers in 48 hours as part of our privacy policy.</p>
+      <p>Your output files are not affected and remain available in your dashboard.</p>
+      <p><a href="${APP()}/orders/${orderId}/delivery">View Output →</a></p>
     `,
   });
 }

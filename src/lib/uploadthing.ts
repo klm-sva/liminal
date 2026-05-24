@@ -26,23 +26,35 @@ export const ourFileRouter = {
         try {
           const serviceClient = await createServiceClient();
 
-          // Persist file URL to the most recent run for this order (re-submissions)
-          const { data: latestRun } = await serviceClient
-            .from("runs")
-            .select("id, customer_upload_paths")
-            .eq("order_id", orderId)
-            .order("created_at", { ascending: false })
-            .limit(1)
+          // Fetch order to build the correct storage path
+          const { data: order } = await serviceClient
+            .from("orders")
+            .select("project_id, credit_id, runs_used")
+            .eq("id", orderId)
             .single();
 
-          if (latestRun) {
-            const existingPaths = (latestRun.customer_upload_paths ?? []) as string[];
-            await serviceClient
-              .from("runs")
-              .update({ customer_upload_paths: [...existingPaths, file.url] })
-              .eq("id", latestRun.id);
-          }
+          if (order?.project_id && order?.credit_id) {
+            const { data: credit } = await serviceClient
+              .from("credits")
+              .select("credit_code")
+              .eq("id", order.credit_id)
+              .single();
 
+            if (credit?.credit_code) {
+              const attemptNumber = order.runs_used + 1;
+              const storagePath   = `${userId}/${order.project_id}/orders/${orderId}-${credit.credit_code}/attempt-${attemptNumber}/${file.name}`;
+
+              const response    = await fetch(file.url);
+              const arrayBuffer = await response.arrayBuffer();
+
+              await serviceClient.storage
+                .from("customer-uploads")
+                .upload(storagePath, Buffer.from(arrayBuffer), {
+                  contentType: file.type,
+                  upsert:      true,
+                });
+            }
+          }
         } catch (err) {
           console.error(`[uploadthing] creditDocument post-upload failed: ${(err as Error).message}`);
         }

@@ -1,11 +1,24 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Download, FileText, FileSpreadsheet, ClipboardList, CheckCircle2, Mail, AlertTriangle } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export default async function DeliveryPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
+
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: ownedOrder } = await authClient
+    .from("orders")
+    .select("id")
+    .eq("id", orderId)
+    .eq("customer_id", user.id)
+    .single();
+
+  if (!ownedOrder) redirect("/dashboard");
 
   const supabase = await createServiceClient();
   const [orderRes, runRes] = await Promise.all([

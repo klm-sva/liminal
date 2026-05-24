@@ -17,6 +17,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import {
   sendDocumentsRequestedEmail,
   sendProcessingStartedEmail,
+  sendUploadConfirmationEmail,
 } from "@/lib/resend";
 
 const READY_STATUSES = new Set([
@@ -91,12 +92,31 @@ export async function POST(
   // Load customer and credit for emails
   const [customerRes, creditRes] = await Promise.all([
     serviceClient.from("customers").select("email, name").eq("id", order.customer_id).single(),
-    serviceClient.from("credits").select("credit_name").eq("id", order.credit_id!).single(),
+    serviceClient.from("credits").select("credit_name, credit_code").eq("id", order.credit_id!).single(),
   ]);
 
   const customerEmail = customerRes.data?.email ?? "";
   const customerName  = customerRes.data?.name ?? "there";
   const creditName    = creditRes.data?.credit_name ?? "your credit";
+  const creditCode    = creditRes.data?.credit_code ?? "";
+
+  // Send upload confirmation email now that files are in Storage
+  if (customerEmail && creditCode && order.project_id) {
+    const attemptFolder = `${order.customer_id}/${order.project_id}/orders/${orderId}-${creditCode}/attempt-${attemptNumber}`;
+    const { data: storageFiles } = await serviceClient.storage
+      .from("customer-uploads")
+      .list(attemptFolder);
+    const fileCount = (storageFiles ?? []).filter((f) => f.name && !f.name.endsWith("/")).length;
+    if (fileCount > 0) {
+      await sendUploadConfirmationEmail({
+        to:         customerEmail,
+        name:       customerName,
+        creditName,
+        orderId,
+        fileCount,
+      }).catch((e) => console.error("[ready] sendUploadConfirmationEmail failed:", e));
+    }
+  }
 
   // Notify customer that processing has started
   await sendProcessingStartedEmail({
