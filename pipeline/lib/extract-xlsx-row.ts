@@ -2,7 +2,7 @@ import * as XLSX from "xlsx";
 import * as fs from "fs";
 import * as path from "path";
 
-const AUTOMATION_XLSX = path.resolve(__dirname, "../reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
+const AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
 
 // ─── Column indices in the automation analysis spreadsheet ────────────────────
 // Row 1 (index 1) is the header row. Data rows start at index 2.
