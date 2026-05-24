@@ -12,6 +12,7 @@
  */
 
 import { NextResponse }        from "next/server";
+import { waitUntil }           from "@vercel/functions";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -123,53 +124,33 @@ export async function POST(
     creditName,
   }).catch((e) => console.error("[ready] sendProcessingStartedEmail failed:", e));
 
-  // Run the pipeline — this is synchronous in development; in production this
-  // should be handed off to a background worker / Edge Function.
-  // We intentionally do not await here if you use a queue; for simplicity we
-  // await inline and handle the result to send the appropriate email.
-  try {
-    const { processOrder } = await import("../../../../../../pipeline/process-order");
-    const result = await processOrder(orderId, run.id);
-
-    if (result.status === "documents_requested") {
-      await sendDocumentsRequestedEmail({
-        to:         customerEmail,
-        name:       customerName,
-        creditName,
-        orderId,
-        issues:     result.issues ?? [],
-      });
-      return NextResponse.json({
-        status:  "documents_requested",
-        run_id:  run.id,
-        issues:  result.issues,
-      });
-    }
-
-    if (result.status === "complete") {
-      // Output is held for QA review — delivery email sent by the 47h cron.
-      // QA review email already sent inside processOrder (Step 18.5).
-      return NextResponse.json({
-        status:       "complete",
-        run_id:       run.id,
-        output_paths: result.outputPaths,
-      });
-    }
-  } catch (err) {
-    const message = (err as Error).message;
-    await serviceClient.from("runs").update({
-      status:        "failed",
-      error_message: message,
-      completed_at:  new Date().toISOString(),
-    }).eq("id", run.id);
-
-    await serviceClient.from("orders").update({ status: "failed" }).eq("id", orderId);
-
-    return NextResponse.json(
-      { error: "Pipeline failed", details: message },
-      { status: 500 }
-    );
-  }
+  // Fire the pipeline in the background — response returns immediately so the
+  // customer lands on the processing page without waiting for pipeline completion.
+  waitUntil(
+    import("../../../../../../pipeline/process-order").then(({ processOrder }) =>
+      processOrder(orderId, run.id).then(async (result) => {
+        if (result.status === "documents_requested") {
+          await sendDocumentsRequestedEmail({
+            to:         customerEmail,
+            name:       customerName,
+            creditName,
+            orderId,
+            issues:     result.issues ?? [],
+          });
+        }
+        // complete: QA email already sent inside processOrder; delivery email sent by cron
+      }).catch(async (err) => {
+        const message = (err as Error).message;
+        console.error("[ready] pipeline failed:", message);
+        await serviceClient.from("runs").update({
+          status:        "failed",
+          error_message: message,
+          completed_at:  new Date().toISOString(),
+        }).eq("id", run.id);
+        await serviceClient.from("orders").update({ status: "failed" }).eq("id", orderId);
+      })
+    )
+  );
 
   return NextResponse.json({ status: "processing", run_id: run.id });
 }
