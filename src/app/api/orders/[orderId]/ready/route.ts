@@ -60,12 +60,6 @@ export async function POST(
     );
   }
 
-  if (order.runs_remaining <= 0) {
-    return NextResponse.json(
-      { error: "No runs remaining for this order." },
-      { status: 409 }
-    );
-  }
 
   const serviceClient = await createServiceClient();
   const attemptNumber = order.runs_used + 1;
