@@ -494,6 +494,11 @@ export async function processOrder(
   const customer = customerRes.data;
 
   // ── Step 2: Read all 4 columns from automation analysis XLSX ──────────────
+  console.log('[Step 2 diagnostic]', {
+    cwd:         process.cwd(),
+    xlsxExists:  require('fs').existsSync(require('path').join(process.cwd(), 'pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx')),
+    dirContents: require('fs').readdirSync(require('path').join(process.cwd(), 'pipeline')).join(', '),
+  });
   console.log(`  Step 2: Loading credit data from automation analysis...`);
   const creditData = extractCreditData(credit.credit_code);
   console.log(`    Outputs defined: ${creditData.outputs.join(", ") || "(none)"}`);
