@@ -45,6 +45,23 @@ export interface PlatformFiles {
   // requirements.txt and other credit-specific files are resolved by credit_code
 }
 
+// Converts a DB credit code to the format used in the XLSX credit number column.
+// e.g. "LTc5" → ["lt credit 5", "ltc5"]
+//      "EAp2" → ["ea prereq 2", "eap2"]
+//      "IPp"  → ["ip prereq",   "ipp"]
+function creditCodeNeedles(code: string): string[] {
+  const lower = code.toLowerCase();
+  const m = code.match(/^([A-Za-z]+)(c|p)(\d+)?$/i);
+  if (m) {
+    const prefix = m[1].toLowerCase();
+    const type   = m[2].toLowerCase() === "c" ? "credit" : "prereq";
+    const num    = m[3] ?? "";
+    const xlsxFmt = num ? `${prefix} ${type} ${num}` : `${prefix} ${type}`;
+    return [xlsxFmt, lower];
+  }
+  return [lower];
+}
+
 function parseList(raw: string): string[] {
   if (!raw || !raw.trim()) return [];
   // Split on semicolons or newlines, trim each item, filter blanks
@@ -73,16 +90,16 @@ function parseRows(buffer: Buffer): { rows: any[][]; headers: string[] } {
  */
 export function extractCreditDataFromBuffer(workbookBuffer: Buffer, creditCode: string): CreditData {
   const { rows } = parseRows(workbookBuffer);
-  const needle   = creditCode.toLowerCase();
+  const needles  = creditCodeNeedles(creditCode);
 
   const dataRow = rows.slice(2).find((row) => {
     const name = String(row[COL.creditName] ?? "").toLowerCase();
     const num  = String(row[COL.creditNumber] ?? "").toLowerCase();
-    return name.includes(needle) || num.includes(needle);
+    return needles.some((n) => name.includes(n) || num.includes(n));
   });
 
   if (!dataRow) {
-    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet`);
+    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet (tried: ${needles.join(", ")})`);
   }
 
   const get = (col: number) => String(dataRow[col] ?? "").trim();
@@ -123,18 +140,18 @@ function loadWorkbook(): { rows: any[][]; headers: string[] } {
  * Extract credit data by reading the XLSX from the local filesystem.
  * Used by local test scripts only. Production code uses extractCreditDataFromBuffer.
  */
-export function extractCreditData(creditName: string): CreditData {
+export function extractCreditData(creditCode: string): CreditData {
   const { rows } = loadWorkbook();
-  const needle = creditName.toLowerCase();
+  const needles  = creditCodeNeedles(creditCode);
 
   const dataRow = rows.slice(2).find((row) => {
     const name = String(row[COL.creditName] ?? "").toLowerCase();
     const num  = String(row[COL.creditNumber] ?? "").toLowerCase();
-    return name.includes(needle) || num.includes(needle);
+    return needles.some((n) => name.includes(n) || num.includes(n));
   });
 
   if (!dataRow) {
-    throw new Error(`Credit "${creditName}" not found in automation analysis spreadsheet`);
+    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet (tried: ${needles.join(", ")})`);
   }
 
   const get = (col: number) => String(dataRow[col] ?? "").trim();
