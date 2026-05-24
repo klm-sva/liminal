@@ -500,8 +500,9 @@ export async function processOrder(
     dirContents: require('fs').readdirSync(require('path').join(process.cwd(), 'pipeline')).join(', '),
   });
   console.log(`  Step 2: Loading credit data from automation analysis...`);
+  console.log(`  Step 2a: calling extractCreditData for "${credit.credit_code}"...`);
   const creditData = extractCreditData(credit.credit_code);
-  console.log(`    Outputs defined: ${creditData.outputs.join(", ") || "(none)"}`);
+  console.log(`  Step 2b: extractCreditData returned — outputs: ${creditData.outputs.join(", ") || "(none)"}`);
 
   // ── Step 3: Determine attempt number and storage paths ────────────────────
   const attemptNumber = run.attempt_number ?? run.run_number ?? 1;

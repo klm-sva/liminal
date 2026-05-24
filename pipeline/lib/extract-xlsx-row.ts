@@ -111,7 +111,12 @@ function loadWorkbook(): { rows: any[][]; headers: string[] } {
   if (!fs.existsSync(AUTOMATION_XLSX)) {
     throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
   }
-  return parseRows(fs.readFileSync(AUTOMATION_XLSX));
+  console.log(`  [loadWorkbook] reading file from disk: ${AUTOMATION_XLSX}`);
+  const buf = fs.readFileSync(AUTOMATION_XLSX);
+  console.log(`  [loadWorkbook] file read complete — ${buf.length} bytes — parsing XLSX...`);
+  const result = parseRows(buf);
+  console.log(`  [loadWorkbook] XLSX parse complete — ${result.rows.length} rows`);
+  return result;
 }
 
 /**
