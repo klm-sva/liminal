@@ -20,17 +20,37 @@ interface Props {
 
 export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, isGapAnalysis, hasPreviousOrders }: Props) {
   const router = useRouter();
-  const [files,    setFiles]    = useState<File[]>([]);
-  const [dragOver, setDragOver] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error,    setError]    = useState<string | null>(null);
+  const [files,        setFiles]        = useState<File[]>([]);
+  const [dragOver,     setDragOver]     = useState(false);
+  const [progress,     setProgress]     = useState(0);
+  const [error,        setError]        = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function callReady(): Promise<boolean> {
+    setIsSubmitting(true);
+    try {
+      const res  = await fetch(`/api/orders/${orderId}/ready`, { method: "POST" });
+      const data = await res.json() as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Failed to submit order. Please try again.");
+        return false;
+      }
+      return true;
+    } catch {
+      setError("Failed to submit order. Please try again.");
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   const { startUpload, isUploading } = useUploadThing("creditDocument", {
     headers:              { "x-order-id": orderId },
     uploadProgressGranularity: "fine",
     onUploadProgress:     (p) => setProgress(p),
-    onClientUploadComplete: () => {
-      router.push(`/orders/${orderId}/processing`);
+    onClientUploadComplete: async () => {
+      const ok = await callReady();
+      if (ok) router.push(`/orders/${orderId}/processing`);
     },
     onUploadError: (err) => {
       setError(err.message ?? "Upload failed. Please try again.");
@@ -44,11 +64,12 @@ export default function UploadClient({ orderId, creditCode, creditName, required
   }
 
   async function handleSubmit() {
-    if (isUploading) return;
+    if (isUploading || isSubmitting) return;
     setError(null);
 
     if (files.length === 0) {
-      router.push(`/orders/${orderId}/processing`);
+      const ok = await callReady();
+      if (ok) router.push(`/orders/${orderId}/processing`);
       return;
     }
 
@@ -195,7 +216,7 @@ export default function UploadClient({ orderId, creditCode, creditName, required
 
         <button
           onClick={handleSubmit}
-          disabled={isUploading}
+          disabled={isUploading || isSubmitting}
           className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
         >
           {isUploading ? (
@@ -205,6 +226,14 @@ export default function UploadClient({ orderId, creditCode, creditName, required
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
               Uploading {progress}%…
+            </>
+          ) : isSubmitting ? (
+            <>
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Submitting…
             </>
           ) : files.length === 0
             ? "Proceed to processing"
