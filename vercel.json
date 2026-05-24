@@ -8,5 +8,13 @@
       "path": "/api/admin/deliver",
       "schedule": "*/5 * * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/admin/orders/[orderId]/request-changes/route.ts": {
+      "maxDuration": 800
+    },
+    "src/app/api/orders/[orderId]/confirm-upload/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }

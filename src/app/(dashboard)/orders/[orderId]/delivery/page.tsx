@@ -8,17 +8,35 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   const { orderId } = await params;
 
   const supabase = await createServiceClient();
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, credits(credit_code, credit_name, has_calculator, has_leed_form)")
-    .eq("id", orderId)
-    .single();
+  const [orderRes, runRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, credits(credit_code, credit_name, has_calculator, has_leed_form)")
+      .eq("id", orderId)
+      .single(),
+    supabase
+      .from("runs")
+      .select("output_html_path")
+      .eq("order_id", orderId)
+      .eq("status", "completed")
+      .order("run_number", { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
 
-  if (!order) notFound();
+  if (!orderRes.data) notFound();
+  const order = orderRes.data;
 
   type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; has_calculator: boolean; has_leed_form: boolean } | null };
   const credit = (order as unknown as OrderWithCredit)?.credits;
   if (!credit) notFound();
+
+  const htmlPath     = runRes.data?.output_html_path ?? null;
+  const editablePath = htmlPath ? htmlPath.replace("submission.html", "submission-editable.html") : null;
+
+  function downloadHref(storagePath: string) {
+    return `/orders/${orderId}/download?path=${encodeURIComponent(storagePath)}`;
+  }
 
   return (
     <div className="min-h-screen bg-certify-white">
@@ -61,68 +79,78 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
 
             {/* File download rows */}
             <div className="space-y-2 mb-4">
-              {/* Standard HTML output — always */}
-              <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
-                <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
-                  <FileText size={15} className="text-certify-blue" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_Output.html</p>
-                  <p className="text-xs text-certify-cool-grey">Full submission output · HTML</p>
-                </div>
-                <button className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                  <Download size={13} />
-                  Download
-                </button>
-              </div>
+              {!htmlPath ? (
+                <p className="text-xs text-certify-cool-grey py-2">
+                  Your output files will be emailed to you when ready.
+                </p>
+              ) : (
+                <>
+                  {/* Standard HTML output */}
+                  <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
+                    <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
+                      <FileText size={15} className="text-certify-blue" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_Output.html</p>
+                      <p className="text-xs text-certify-cool-grey">Full submission output · HTML</p>
+                    </div>
+                    <a
+                      href={downloadHref(htmlPath)}
+                      download
+                      className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors"
+                    >
+                      <Download size={13} />
+                      Download
+                    </a>
+                  </div>
 
-              {/* Editable HTML — always */}
-              <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
-                <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
-                  <FileText size={15} className="text-certify-blue" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_Editable.html</p>
-                  <p className="text-xs text-certify-cool-grey">Editable version · click to edit, print to PDF</p>
-                </div>
-                <button className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                  <Download size={13} />
-                  Download
-                </button>
-              </div>
+                  {/* Editable HTML */}
+                  {editablePath && (
+                    <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
+                      <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
+                        <FileText size={15} className="text-certify-blue" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_Editable.html</p>
+                        <p className="text-xs text-certify-cool-grey">Editable version · click to edit, print to PDF</p>
+                      </div>
+                      <a
+                        href={downloadHref(editablePath)}
+                        download
+                        className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors"
+                      >
+                        <Download size={13} />
+                        Download
+                      </a>
+                    </div>
+                  )}
 
-              {/* Calculator — conditional */}
-              {credit.has_calculator && (
-                <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
-                  <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
-                    <FileSpreadsheet size={15} className="text-certify-blue" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_Calculator.xlsx</p>
-                    <p className="text-xs text-certify-cool-grey">Calculator inputs provided · Excel</p>
-                  </div>
-                  <button className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                    <Download size={13} />
-                    Download
-                  </button>
-                </div>
-              )}
+                  {/* Calculator — informational note (embedded in HTML output) */}
+                  {credit.has_calculator && (
+                    <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
+                      <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
+                        <FileSpreadsheet size={15} className="text-certify-blue" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-certify-deep truncate">Calculator Input Guide</p>
+                        <p className="text-xs text-certify-cool-grey">Included in the HTML output above</p>
+                      </div>
+                    </div>
+                  )}
 
-              {/* LEED form — conditional */}
-              {credit.has_leed_form && (
-                <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
-                  <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
-                    <ClipboardList size={15} className="text-certify-blue" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-certify-deep truncate">{credit.credit_code}_LEED_Form.txt</p>
-                    <p className="text-xs text-certify-cool-grey">Pre-filled sample online form</p>
-                  </div>
-                  <button className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
-                    <Download size={13} />
-                    Download
-                  </button>
-                </div>
+                  {/* LEED form — informational note */}
+                  {credit.has_leed_form && (
+                    <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
+                      <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
+                        <ClipboardList size={15} className="text-certify-blue" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-certify-deep truncate">LEED Online Form Data</p>
+                        <p className="text-xs text-certify-cool-grey">Pre-filled form data included in HTML output</p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

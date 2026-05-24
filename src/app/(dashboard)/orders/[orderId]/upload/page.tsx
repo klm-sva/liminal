@@ -24,7 +24,7 @@ export default async function UploadPage({
   const supabase = await createServiceClient();
   const { data: order } = await supabase
     .from("orders")
-    .select("id, project_id, credit_id, credits(credit_code, credit_name, required_customer_documents)")
+    .select("id, project_id, credit_id, status, credits(credit_code, credit_name, required_customer_documents)")
     .eq("id", orderId)
     .single();
 
@@ -33,6 +33,7 @@ export default async function UploadPage({
   type OrderWithCredit = {
     id: string;
     project_id: string | null;
+    status: string;
     credits?: { credit_code: string; credit_name: string; required_customer_documents: string[] } | null;
   };
   const typedOrder = order as unknown as OrderWithCredit;
@@ -41,8 +42,8 @@ export default async function UploadPage({
     ? GAP_ANALYSIS_DOCS
     : (credit?.required_customer_documents ?? []);
 
-  // Credit requires no uploads — skip straight to processing
-  if (!isGapAnalysis && requiredDocs.length === 0) {
+  // Credit requires no uploads AND the customer hasn't been asked to resubmit — skip to processing
+  if (!isGapAnalysis && requiredDocs.length === 0 && typedOrder?.status !== "documents_requested") {
     redirect(`/orders/${orderId}/processing`);
   }
 

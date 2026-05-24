@@ -30,11 +30,22 @@ export default function UploadClient({ orderId, creditCode, creditName, required
     setIsSubmitting(true);
     try {
       const res  = await fetch(`/api/orders/${orderId}/ready`, { method: "POST" });
-      const data = await res.json() as { error?: string };
+      const data = await res.json() as { error?: string; status?: string; issues?: string[] };
+
       if (!res.ok) {
         setError(data.error ?? "Failed to submit order. Please try again.");
         return false;
       }
+
+      if (data.status === "documents_requested") {
+        const header = "Additional documents needed. Please upload the missing items and submit again:";
+        const list   = data.issues && data.issues.length > 0
+          ? data.issues.map((i) => `• ${i}`).join("\n")
+          : "Please review the required documents and resubmit.";
+        setError(`${header}\n\n${list}`);
+        return false;
+      }
+
       return true;
     } catch {
       setError("Failed to submit order. Please try again.");
@@ -49,6 +60,8 @@ export default function UploadClient({ orderId, creditCode, creditName, required
     uploadProgressGranularity: "fine",
     onUploadProgress:     (p) => setProgress(p),
     onClientUploadComplete: async () => {
+      // Consolidate upload: one email + accurate path list on the run
+      await fetch(`/api/orders/${orderId}/confirm-upload`, { method: "POST" }).catch(() => null);
       const ok = await callReady();
       if (ok) router.push(`/orders/${orderId}/processing`);
     },
@@ -210,7 +223,7 @@ export default function UploadClient({ orderId, creditCode, creditName, required
         {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
-            <p className="text-xs text-red-700">{error}</p>
+            <p className="text-xs text-red-700 whitespace-pre-line">{error}</p>
           </div>
         )}
 

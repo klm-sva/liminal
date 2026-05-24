@@ -1,6 +1,5 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { sendUploadConfirmationEmail } from "@/lib/resend";
 
 const f = createUploadthing();
 
@@ -44,29 +43,6 @@ export const ourFileRouter = {
               .eq("id", latestRun.id);
           }
 
-          // Send upload confirmation email
-          const [orderRes, customerRes] = await Promise.all([
-            serviceClient.from("orders").select("credit_id, customer_id").eq("id", orderId).single(),
-            serviceClient.from("customers").select("email, name").eq("id", userId).single(),
-          ]);
-
-          if (orderRes.data && customerRes.data) {
-            const creditRes = await serviceClient
-              .from("credits")
-              .select("credit_name")
-              .eq("id", orderRes.data.credit_id!)
-              .single();
-
-            if (creditRes.data) {
-              await sendUploadConfirmationEmail({
-                to:         customerRes.data.email,
-                name:       customerRes.data.name ?? "there",
-                creditName: creditRes.data.credit_name,
-                orderId,
-                fileCount:  1,
-              });
-            }
-          }
         } catch (err) {
           console.error(`[uploadthing] creditDocument post-upload failed: ${(err as Error).message}`);
         }

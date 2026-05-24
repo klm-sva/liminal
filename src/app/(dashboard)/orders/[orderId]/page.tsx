@@ -1,0 +1,130 @@
+import { notFound, redirect } from "next/navigation";
+import Link                   from "next/link";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+
+export default async function OrderPage({
+  params,
+}: {
+  params: Promise<{ orderId: string }>;
+}) {
+  const { orderId } = await params;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const serviceClient = await createServiceClient();
+  const { data: order } = await serviceClient
+    .from("orders")
+    .select("id, customer_id, status, credits(credit_name, credit_code)")
+    .eq("id", orderId)
+    .single();
+
+  if (!order) notFound();
+
+  type OrderRow = typeof order & { customer_id: string; credits?: { credit_name: string; credit_code: string } | null };
+  const typed = order as unknown as OrderRow;
+
+  if (typed.customer_id !== user.id) redirect("/dashboard");
+
+  const status = typed.status;
+  const shortId = orderId.slice(-6).toUpperCase();
+
+  if (status === "documents_requested") {
+    const { data: run } = await serviceClient
+      .from("runs")
+      .select("review_issues")
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    const issues: string[] = (run?.review_issues as string[] | null) ?? [];
+
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Additional documents needed</h1>
+          <p className="text-sm text-certify-cool-grey mb-8">Order #{shortId}</p>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+            <p className="text-sm font-semibold text-amber-800 mb-3">Our review found the following issues with your submission:</p>
+            {issues.length > 0 ? (
+              <ul className="space-y-2">
+                {issues.map((issue, i) => (
+                  <li key={i} className="text-sm text-amber-700 flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5">•</span>
+                    <span>{issue}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-amber-700">Please upload the required documents and resubmit.</p>
+            )}
+          </div>
+
+          <Link
+            href={`/orders/${orderId}/upload`}
+            className="w-full flex items-center justify-center bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all shadow-md"
+          >
+            Upload missing documents
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "processing" || status === "under_review") {
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Processing your order</h1>
+          <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
+          <p className="text-sm text-certify-cool-grey">
+            We are working on your submission. You will receive an email when it is ready — typically within a few minutes.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "complete" || status === "delivered") {
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Your output is ready</h1>
+          <p className="text-sm text-certify-cool-grey mb-8">Order #{shortId}</p>
+          <Link
+            href={`/orders/${orderId}/delivery`}
+            className="inline-flex items-center justify-center bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 px-8 rounded-xl transition-all shadow-md"
+          >
+            View your output
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Processing failed</h1>
+          <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
+          <p className="text-sm text-certify-cool-grey mb-4">
+            Something went wrong processing your order. Please contact support and reference your order number.
+          </p>
+          <a
+            href="mailto:support@liminalsva.com"
+            className="text-certify-blue hover:text-certify-teal transition-colors text-sm"
+          >
+            Contact support →
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Any other status (awaiting_upload, awaiting_ready, etc.) — redirect to upload page
+  redirect(`/orders/${orderId}/upload`);
+}

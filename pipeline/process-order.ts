@@ -1326,9 +1326,7 @@ ${plainText}`,
   // ── Step 18: Mark complete, send QA review email, schedule cleanup ──────────
   console.log(`  Step 18: Marking order complete...`);
 
-  const deliveryScheduledAt = new Date(
-    new Date(order.created_at).getTime() + 47 * 60 * 60 * 1000,
-  );
+  const deliveryScheduledAt = new Date(Date.now() + 47 * 60 * 60 * 1000);
 
   await supabase.from("runs").update({
     status:           "completed",

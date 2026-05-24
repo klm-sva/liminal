@@ -82,7 +82,7 @@ export async function sendDocumentsRequestedEmail({
       <p>We reviewed your submission for <strong>${creditName}</strong> and need the following before we can proceed:</p>
       <ul>${issueList}</ul>
       <p>Please upload the corrected documents and mark your submission as ready again.</p>
-      <p><a href="${APP()}/orders/${orderId}">Upload Documents →</a></p>
+      <p><a href="${APP()}/orders/${orderId}/upload">Upload Documents →</a></p>
     `,
   });
 }

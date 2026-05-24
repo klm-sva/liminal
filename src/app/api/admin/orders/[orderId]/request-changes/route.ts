@@ -11,7 +11,7 @@ import { NextResponse }        from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyQaToken }       from "@/lib/qa-token";
 
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 export async function POST(
   request: Request,
