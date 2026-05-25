@@ -17,7 +17,6 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export const maxDuration = 300;
 import {
-  sendDocumentsRequestedEmail,
   sendProcessingStartedEmail,
   sendUploadConfirmationEmail,
 } from "@/lib/resend";

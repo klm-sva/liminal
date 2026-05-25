@@ -1,6 +1,7 @@
-import { notFound, redirect } from "next/navigation";
-import { createServiceClient } from "@/lib/supabase/server";
-import UploadClient from "./_upload-client";
+import { notFound }             from "next/navigation";
+import { createServiceClient }  from "@/lib/supabase/server";
+import UploadClient             from "./_upload-client";
+import AutoSubmit               from "./_auto-submit";
 
 const GAP_ANALYSIS_DOCS = [
   "Project drawings (site plan, floor plans)",
@@ -42,9 +43,28 @@ export default async function UploadPage({
     ? GAP_ANALYSIS_DOCS
     : (credit?.required_customer_documents ?? []);
 
-  // Credit requires no uploads AND the customer hasn't been asked to resubmit — skip to processing
-  if (!isGapAnalysis && requiredDocs.length === 0 && typedOrder?.status !== "documents_requested") {
-    redirect(`/orders/${orderId}/processing`);
+  // Zero-doc credit with no prior request — trigger pipeline immediately without
+  // showing the upload UI. The AutoSubmit component calls ready client-side so
+  // the user's auth session is available, then redirects to /processing.
+  if (!isGapAnalysis && requiredDocs.length === 0 && typedOrder?.status === "awaiting_upload") {
+    return <AutoSubmit orderId={orderId} />;
+  }
+
+  // For non-awaiting_upload zero-doc statuses (documents_requested etc.) fall through
+  // to the normal upload UI so the customer can resubmit.
+
+  // Fetch review issues from the most recent failed run when docs were requested
+  let reviewIssues: string[] = [];
+  if (typedOrder?.status === "documents_requested") {
+    const { data: latestRun } = await supabase
+      .from("runs")
+      .select("review_issues")
+      .eq("order_id", orderId)
+      .eq("status", "failed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    reviewIssues = (latestRun?.review_issues as string[] | null) ?? [];
   }
 
   // Check whether any previous completed orders exist for the same project
@@ -66,6 +86,7 @@ export default async function UploadPage({
       creditCode={credit?.credit_code}
       creditName={credit?.credit_name}
       requiredDocs={requiredDocs}
+      reviewIssues={reviewIssues}
       isGapAnalysis={isGapAnalysis}
       hasPreviousOrders={hasPreviousOrders}
     />

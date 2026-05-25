@@ -14,11 +14,12 @@ interface Props {
   creditCode?:        string;
   creditName?:        string;
   requiredDocs:       string[];
+  reviewIssues?:      string[];
   isGapAnalysis:      boolean;
   hasPreviousOrders?: boolean;
 }
 
-export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, isGapAnalysis, hasPreviousOrders }: Props) {
+export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, reviewIssues = [], isGapAnalysis, hasPreviousOrders }: Props) {
   const router = useRouter();
   const [files,        setFiles]        = useState<File[]>([]);
   const [dragOver,     setDragOver]     = useState(false);
@@ -30,19 +31,10 @@ export default function UploadClient({ orderId, creditCode, creditName, required
     setIsSubmitting(true);
     try {
       const res  = await fetch(`/api/orders/${orderId}/ready`, { method: "POST" });
-      const data = await res.json() as { error?: string; status?: string; issues?: string[] };
+      const data = await res.json() as { error?: string; status?: string };
 
       if (!res.ok) {
         setError(data.error ?? "Failed to submit order. Please try again.");
-        return false;
-      }
-
-      if (data.status === "documents_requested") {
-        const header = "Additional documents needed. Please upload the missing items and submit again:";
-        const list   = data.issues && data.issues.length > 0
-          ? data.issues.map((i) => `• ${i}`).join("\n")
-          : "Please review the required documents and resubmit.";
-        setError(`${header}\n\n${list}`);
         return false;
       }
 
@@ -101,6 +93,19 @@ export default function UploadClient({ orderId, creditCode, creditName, required
         <p className="text-certify-cool-grey mb-1">Order #{orderId.slice(-6).toUpperCase()}</p>
         {!isGapAnalysis && creditCode && (
           <p className="text-sm font-semibold text-certify-deep mb-6">{creditCode}: {creditName}</p>
+        )}
+
+        {/* Review issues from previous submission */}
+        {reviewIssues.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-red-700 mb-2">Additional documents needed</p>
+            <ul className="space-y-1">
+              {reviewIssues.map((issue, i) => (
+                <li key={i} className="text-xs text-red-700 leading-relaxed">• {issue}</li>
+              ))}
+            </ul>
+            <p className="text-xs text-red-600 mt-3">Please upload the missing items and resubmit.</p>
+          </div>
         )}
 
         {/* Upload guidance note */}
