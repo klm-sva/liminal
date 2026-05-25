@@ -12,6 +12,7 @@
  */
 
 import { NextResponse }        from "next/server";
+import { waitUntil }           from "@vercel/functions";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -129,15 +130,19 @@ export async function POST(
   console.log(`[ready] dispatching to worker — url=${workerUrl ?? "NOT SET"} secret=${workerSecret ? "SET" : "NOT SET"}`);
 
   if (workerUrl && workerSecret) {
-    fetch(`${workerUrl}/process`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "x-worker-secret": workerSecret },
-      body:    JSON.stringify({ orderId, runId: run.id }),
-    }).then((r) => {
-      console.log(`[ready] worker responded status=${r.status}`);
-    }).catch((err) => {
-      console.error(`[ready] worker dispatch failed: ${err.message}`);
-    });
+    // waitUntil keeps the Vercel function alive until the dispatch fetch completes.
+    // Without it the fetch is cancelled when the response is sent.
+    waitUntil(
+      fetch(`${workerUrl}/process`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "x-worker-secret": workerSecret },
+        body:    JSON.stringify({ orderId, runId: run.id }),
+      }).then((r) => {
+        console.log(`[ready] worker responded status=${r.status}`);
+      }).catch((err) => {
+        console.error(`[ready] worker dispatch failed: ${err.message}`);
+      })
+    );
   } else {
     console.error("[ready] PIPELINE_WORKER_URL or WORKER_SECRET not set — pipeline not started");
   }
