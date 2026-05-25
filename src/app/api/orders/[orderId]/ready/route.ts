@@ -12,7 +12,6 @@
  */
 
 import { NextResponse }        from "next/server";
-import { waitUntil }           from "@vercel/functions";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -124,33 +123,19 @@ export async function POST(
     creditName,
   }).catch((e) => console.error("[ready] sendProcessingStartedEmail failed:", e));
 
-  // Fire the pipeline in the background — response returns immediately so the
-  // customer lands on the processing page without waiting for pipeline completion.
-  waitUntil(
-    import("../../../../../../pipeline/process-order").then(({ processOrder }) =>
-      processOrder(orderId, run.id).then(async (result) => {
-        if (result.status === "documents_requested") {
-          await sendDocumentsRequestedEmail({
-            to:         customerEmail,
-            name:       customerName,
-            creditName,
-            orderId,
-            issues:     result.issues ?? [],
-          });
-        }
-        // complete: QA email already sent inside processOrder; delivery email sent by cron
-      }).catch(async (err) => {
-        const message = (err as Error).message;
-        console.error("[ready] pipeline failed:", message);
-        await serviceClient.from("runs").update({
-          status:        "failed",
-          error_message: message,
-          completed_at:  new Date().toISOString(),
-        }).eq("id", run.id);
-        await serviceClient.from("orders").update({ status: "failed" }).eq("id", orderId);
-      })
-    )
-  );
+  // Dispatch to the standalone pipeline worker — no Vercel timeout applies there.
+  const workerUrl    = process.env.PIPELINE_WORKER_URL;
+  const workerSecret = process.env.WORKER_SECRET;
+
+  if (workerUrl && workerSecret) {
+    fetch(`${workerUrl}/process`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "x-worker-secret": workerSecret },
+      body:    JSON.stringify({ orderId, runId: run.id }),
+    }).catch((err) => console.error("[ready] worker dispatch failed:", err.message));
+  } else {
+    console.error("[ready] PIPELINE_WORKER_URL or WORKER_SECRET not set — pipeline not started");
+  }
 
   return NextResponse.json({ status: "processing", run_id: run.id });
 }
