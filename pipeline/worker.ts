@@ -9,37 +9,74 @@
  *   PORT                   — optional, defaults to 3001
  *   (all pipeline env vars) — SUPABASE_*, ANTHROPIC_API_KEY, etc.
  *
- * Start: npx ts-node --skip-project pipeline/worker.ts
+ * Build:  npm run build:worker
+ * Start:  node pipeline/worker.js
  */
 
-import * as path    from "path";
-import * as fs      from "fs";
-import express      from "express";
-import { processOrder } from "./process-order";
+import * as path from "path";
+import * as fs   from "fs";
 
-// Load .env.local when running locally
-const envPath = path.resolve(__dirname, "../.env.local");
-if (fs.existsSync(envPath)) {
-  for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    const val = trimmed.slice(eqIdx + 1).trim();
-    if (!process.env[key]) process.env[key] = val;
+// ── Step 1: log immediately so Railway shows something even if we crash ────────
+console.log("[worker] starting up...");
+
+// ── Step 2: load .env.local for local development ─────────────────────────────
+try {
+  const envPath = path.resolve(__dirname, "../.env.local");
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+    console.log("[worker] loaded .env.local");
   }
+} catch (err) {
+  console.error("[worker] failed to load .env.local:", (err as Error).message);
+}
+
+// ── Step 3: validate required env vars ────────────────────────────────────────
+const REQUIRED_VARS = [
+  "WORKER_SECRET",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "ANTHROPIC_API_KEY",
+];
+const missing = REQUIRED_VARS.filter((k) => !process.env[k]);
+if (missing.length > 0) {
+  console.error("[worker] missing required env vars:", missing.join(", "));
+  process.exit(1);
+}
+console.log("[worker] env vars OK");
+
+// ── Step 4: load express ───────────────────────────────────────────────────────
+let express: typeof import("express");
+try {
+  express = require("express");
+  console.log("[worker] express loaded");
+} catch (err) {
+  console.error("[worker] failed to load express:", (err as Error).message);
+  process.exit(1);
 }
 
 const app    = express();
 const PORT   = process.env.PORT ?? 3001;
-const SECRET = process.env.WORKER_SECRET;
+const SECRET = process.env.WORKER_SECRET!;
 
 app.use(express.json());
 
-app.post("/process", async (req: express.Request, res: express.Response) => {
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+app.get("/health", (_req: any, res: any) => {
+  res.json({ status: "ok" });
+});
+
+app.post("/process", async (req: any, res: any) => {
   const authHeader = req.headers["x-worker-secret"];
-  if (!SECRET || authHeader !== SECRET) {
+  if (authHeader !== SECRET) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -57,19 +94,25 @@ app.post("/process", async (req: express.Request, res: express.Response) => {
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
 
   try {
+    // Dynamic import so pipeline packages are loaded on first job, not at startup
+    const { processOrder } = require("./process-order");
     const result = await processOrder(orderId, runId);
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${(err as Error).message}`);
+    console.error((err as Error).stack);
   }
 });
 
-app.get("/health", (_req: express.Request, res: express.Response) => {
-  res.json({ status: "ok" });
-});
+// ── Start ─────────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-  console.log(`[worker] listening on port ${PORT}`);
-});
+try {
+  app.listen(PORT, () => {
+    console.log(`[worker] listening on port ${PORT}`);
+  });
+} catch (err) {
+  console.error("[worker] failed to start server:", (err as Error).message);
+  process.exit(1);
+}

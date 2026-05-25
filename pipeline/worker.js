@@ -5,6 +5,13 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -21,53 +28,24 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-
-// pipeline/worker.ts
-var path11 = __toESM(require("path"));
-var fs12 = __toESM(require("fs"));
-var import_express = __toESM(require("express"));
-
-// pipeline/process-order.ts
-var import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
-var path10 = __toESM(require("path"));
-var fs11 = __toESM(require("fs"));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // pipeline/lib/supabase.ts
-var import_supabase_js = require("@supabase/supabase-js");
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
   return (0, import_supabase_js.createClient)(url, key);
 }
+var import_supabase_js;
+var init_supabase = __esm({
+  "pipeline/lib/supabase.ts"() {
+    "use strict";
+    import_supabase_js = require("@supabase/supabase-js");
+  }
+});
 
 // pipeline/lib/extract-xlsx-row.ts
-var XLSX = __toESM(require("xlsx"));
-var fs = __toESM(require("fs"));
-var path = __toESM(require("path"));
-var AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
-var COL = {
-  creditNumber: 0,
-  creditName: 1,
-  ptsAvailable: 2,
-  ptsAuto: 3,
-  automatable: 4,
-  docTier: 5,
-  allDocuments: 6,
-  // full combined list
-  customerUploads: 7,
-  // Column 1: Project Team Must Upload
-  claudeRetrieves: 8,
-  // Column 2: Claude Auto-Retrieves
-  claudeOutputs: 9,
-  // Column 4: Outputs Generated
-  gbciVerification: 10,
-  blockerNotes: 11,
-  formLink: 12,
-  // Column 3 partial: LEED Online Form Link
-  calculatorInfo: 13
-  // Column 3 partial: Calculator / Worksheet
-};
 function creditCodeNeedles(code) {
   const lower = code.toLowerCase();
   const m = code.match(/^([A-Za-z]+)(c|p)(\d+)?$/i);
@@ -151,14 +129,40 @@ function formatCreditDataForPrompt(data2) {
   ];
   return lines.join("\n");
 }
-
-// pipeline/document-review.ts
-var import_sdk = __toESM(require("@anthropic-ai/sdk"));
-var path2 = __toESM(require("path"));
-var fs3 = __toESM(require("fs"));
+var XLSX, fs, path, AUTOMATION_XLSX, COL;
+var init_extract_xlsx_row = __esm({
+  "pipeline/lib/extract-xlsx-row.ts"() {
+    "use strict";
+    XLSX = __toESM(require("xlsx"));
+    fs = __toESM(require("fs"));
+    path = __toESM(require("path"));
+    AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
+    COL = {
+      creditNumber: 0,
+      creditName: 1,
+      ptsAvailable: 2,
+      ptsAuto: 3,
+      automatable: 4,
+      docTier: 5,
+      allDocuments: 6,
+      // full combined list
+      customerUploads: 7,
+      // Column 1: Project Team Must Upload
+      claudeRetrieves: 8,
+      // Column 2: Claude Auto-Retrieves
+      claudeOutputs: 9,
+      // Column 4: Outputs Generated
+      gbciVerification: 10,
+      blockerNotes: 11,
+      formLink: 12,
+      // Column 3 partial: LEED Online Form Link
+      calculatorInfo: 13
+      // Column 3 partial: Calculator / Worksheet
+    };
+  }
+});
 
 // pipeline/lib/pdf-to-images.ts
-var fs2 = __toESM(require("fs"));
 function preparePdfDocument(input, title) {
   const buf = typeof input === "string" ? fs2.readFileSync(input) : input;
   return {
@@ -171,6 +175,13 @@ function preparePdfDocument(input, title) {
     title
   };
 }
+var fs2;
+var init_pdf_to_images = __esm({
+  "pipeline/lib/pdf-to-images.ts"() {
+    "use strict";
+    fs2 = __toESM(require("fs"));
+  }
+});
 
 // pipeline/lib/supabase-ops.ts
 async function logAuditEvent(event) {
@@ -187,36 +198,14 @@ async function logAuditEvent(event) {
     console.warn(`[audit] Failed to log ${event.eventType}: ${error.message}`);
   }
 }
+var init_supabase_ops = __esm({
+  "pipeline/lib/supabase-ops.ts"() {
+    "use strict";
+    init_supabase();
+  }
+});
 
 // pipeline/document-review.ts
-var envPath = path2.resolve(__dirname, "../.env.local");
-if (fs3.existsSync(envPath)) {
-  for (const line of fs3.readFileSync(envPath, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
-  }
-}
-var DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
-
-You will be told what document type is required. Review the provided file and determine:
-1. Is this the correct document type?
-2. Is it complete (not truncated, not blank, not corrupted)?
-3. Is it legible and professionally prepared?
-4. Does it contain the key information normally expected in this document type?
-
-Respond with a single JSON object:
-{
-  "acceptable": boolean,
-  "issue": string | null
-}
-
-Set "acceptable" to true if the document is suitable for LEED submission.
-Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
-The "issue" string must be written for the project team to read \u2014 be specific and actionable.
-Return only the JSON object.`;
 async function reviewDocument(client2, requiredDocumentDescription, fileBuffer, filename2) {
   const isPdf = filename2.toLowerCase().endsWith(".pdf");
   const contentBlocks = isPdf ? [
@@ -350,17 +339,49 @@ async function reviewDocuments(orderId, customerId, creditCode, uploads) {
     reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
+var import_sdk, path2, fs3, envPath, DOCUMENT_REVIEW_PROMPT;
+var init_document_review = __esm({
+  "pipeline/document-review.ts"() {
+    "use strict";
+    import_sdk = __toESM(require("@anthropic-ai/sdk"));
+    path2 = __toESM(require("path"));
+    fs3 = __toESM(require("fs"));
+    init_supabase();
+    init_extract_xlsx_row();
+    init_pdf_to_images();
+    init_supabase_ops();
+    envPath = path2.resolve(__dirname, "../.env.local");
+    if (fs3.existsSync(envPath)) {
+      for (const line of fs3.readFileSync(envPath, "utf-8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+    DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
+
+You will be told what document type is required. Review the provided file and determine:
+1. Is this the correct document type?
+2. Is it complete (not truncated, not blank, not corrupted)?
+3. Is it legible and professionally prepared?
+4. Does it contain the key information normally expected in this document type?
+
+Respond with a single JSON object:
+{
+  "acceptable": boolean,
+  "issue": string | null
+}
+
+Set "acceptable" to true if the document is suitable for LEED submission.
+Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
+The "issue" string must be written for the project team to read \u2014 be specific and actionable.
+Return only the JSON object.`;
+  }
+});
 
 // pipeline/drawing-analysis.ts
-var path3 = __toESM(require("path"));
-var fs4 = __toESM(require("fs"));
-var os = __toESM(require("os"));
-var import_child_process = require("child_process");
-var import_util = require("util");
-var execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
-var PYTHON_SCRIPT = path3.resolve(__dirname, "lib/analyze_drawings.py");
-var PYTHON_BIN = process.env.PYTHON_BIN ?? "python3";
-var TIMEOUT_MS = 18e4;
 async function analyzeDrawings(projectId, customerId, drawingPaths) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
@@ -489,13 +510,25 @@ ${stderr.trim()}`);
     }
   }
 }
-
-// pipeline/map-generation.ts
-var path4 = __toESM(require("path"));
-var fs5 = __toESM(require("fs"));
+var path3, fs4, os, import_child_process, import_util, execFileAsync, PYTHON_SCRIPT, PYTHON_BIN, TIMEOUT_MS;
+var init_drawing_analysis = __esm({
+  "pipeline/drawing-analysis.ts"() {
+    "use strict";
+    path3 = __toESM(require("path"));
+    fs4 = __toESM(require("fs"));
+    os = __toESM(require("os"));
+    import_child_process = require("child_process");
+    import_util = require("util");
+    init_supabase();
+    init_supabase_ops();
+    execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+    PYTHON_SCRIPT = path3.resolve(__dirname, "lib/analyze_drawings.py");
+    PYTHON_BIN = process.env.PYTHON_BIN ?? "python3";
+    TIMEOUT_MS = 18e4;
+  }
+});
 
 // pipeline/lib/pipeline-utils.ts
-var import_axios = __toESM(require("axios"));
 async function withTimeout(promise, ms, label) {
   let timer;
   const timeoutPromise = new Promise((_, reject) => {
@@ -520,23 +553,15 @@ async function axiosGetWithRetry(url, options = {}, timeoutMs = 1e4, label = "HT
     return import_axios.default.get(url, opts);
   }
 }
+var import_axios;
+var init_pipeline_utils = __esm({
+  "pipeline/lib/pipeline-utils.ts"() {
+    "use strict";
+    import_axios = __toESM(require("axios"));
+  }
+});
 
 // pipeline/map-generation.ts
-var envPath2 = path4.resolve(__dirname, "../.env.local");
-if (fs5.existsSync(envPath2)) {
-  for (const line of fs5.readFileSync(envPath2, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
-  }
-}
-var MAPS_API_KEY = () => {
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) throw new Error("GOOGLE_MAPS_API_KEY not set in .env.local");
-  return key;
-};
 function decodePolyline(encoded) {
   const points = [];
   let index = 0, lat = 0, lng = 0;
@@ -683,9 +708,65 @@ ${today}`;
   );
   return { pngBuffer, routes, mapType: request.mapType };
 }
+var path4, fs5, envPath2, MAPS_API_KEY;
+var init_map_generation = __esm({
+  "pipeline/map-generation.ts"() {
+    "use strict";
+    path4 = __toESM(require("path"));
+    fs5 = __toESM(require("fs"));
+    init_pipeline_utils();
+    envPath2 = path4.resolve(__dirname, "../.env.local");
+    if (fs5.existsSync(envPath2)) {
+      for (const line of fs5.readFileSync(envPath2, "utf-8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+    MAPS_API_KEY = () => {
+      const key = process.env.GOOGLE_MAPS_API_KEY;
+      if (!key) throw new Error("GOOGLE_MAPS_API_KEY not set in .env.local");
+      return key;
+    };
+  }
+});
 
 // pipeline/lib/make-editable.ts
-var TABLE_CSS = `
+function injectTableCss(html) {
+  const tag = `<style id="liminal-table-css">${TABLE_CSS}
+</style>`;
+  let result = html;
+  const headIdx = result.indexOf("</head>");
+  if (headIdx !== -1) {
+    result = result.slice(0, headIdx) + tag + "\n" + result.slice(headIdx);
+  } else {
+    result = tag + "\n" + result;
+  }
+  result = result.replace(/<body([^>]*)>/i, (_match, attrs = "") => {
+    if (attrs.toLowerCase().includes("margin")) return _match;
+    return `<body${attrs} style="margin: 0 20%; padding: 40px 0; box-sizing: border-box;">`;
+  });
+  return result;
+}
+function addContentEditable(html) {
+  return html.replace(/<(p|td|th|h[1-6]|li)(\s[^>]*)?>/gi, (match, tag, attrs = "") => {
+    if (attrs.toLowerCase().includes("contenteditable")) return match;
+    return `<${tag}${attrs} contenteditable="true">`;
+  });
+}
+function makeEditable(html) {
+  let result = injectTableCss(html);
+  result = result.replace(/<body([^>]*)>/i, (match) => match + "\n" + BANNER_HTML);
+  result = addContentEditable(result);
+  return result;
+}
+var TABLE_CSS, BANNER_HTML;
+var init_make_editable = __esm({
+  "pipeline/lib/make-editable.ts"() {
+    "use strict";
+    TABLE_CSS = `
 table {
   max-width: 100%;
   width: 100%;
@@ -707,23 +788,7 @@ td, th {
     word-wrap: break-word;
   }
 }`;
-function injectTableCss(html) {
-  const tag = `<style id="liminal-table-css">${TABLE_CSS}
-</style>`;
-  let result = html;
-  const headIdx = result.indexOf("</head>");
-  if (headIdx !== -1) {
-    result = result.slice(0, headIdx) + tag + "\n" + result.slice(headIdx);
-  } else {
-    result = tag + "\n" + result;
-  }
-  result = result.replace(/<body([^>]*)>/i, (_match, attrs = "") => {
-    if (attrs.toLowerCase().includes("margin")) return _match;
-    return `<body${attrs} style="margin: 0 20%; padding: 40px 0; box-sizing: border-box;">`;
-  });
-  return result;
-}
-var BANNER_HTML = `
+    BANNER_HTML = `
 <div class="liminal-edit-banner" style="background:#abcde8;color:#2b4044;padding:12px 16px;font-size:13px;font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:9999;box-shadow:0 2px 4px rgba(0,0,0,0.12);">
   <span style="flex:1;">This document is editable. Click any text to edit it directly. When finished, use <strong>File &rarr; Print &rarr; Save as PDF</strong> in your browser to save your edited version. Your edits are saved on your computer only &mdash; nothing is sent to the server.</span>
   <button onclick="window.print()" style="background:#327cb9;color:white;border:none;padding:8px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:600;">Print to PDF</button>
@@ -743,47 +808,10 @@ var BANNER_HTML = `
     min-height: 1em;
   }
 </style>`;
-function addContentEditable(html) {
-  return html.replace(/<(p|td|th|h[1-6]|li)(\s[^>]*)?>/gi, (match, tag, attrs = "") => {
-    if (attrs.toLowerCase().includes("contenteditable")) return match;
-    return `<${tag}${attrs} contenteditable="true">`;
-  });
-}
-function makeEditable(html) {
-  let result = injectTableCss(html);
-  result = result.replace(/<body([^>]*)>/i, (match) => match + "\n" + BANNER_HTML);
-  result = addContentEditable(result);
-  return result;
-}
+  }
+});
 
 // pipeline/lib/policy-generator.ts
-var fs6 = __toESM(require("fs"));
-var path5 = __toESM(require("path"));
-var POLICY_PATTERNS = [
-  /signed\s+\w+\s+policy/i,
-  /written\s+\w+\s+policy/i,
-  /\w+\s+policy\s+(letter|document|statement|commitment)/i,
-  /policy\s+(on|for|regarding)\s+/i,
-  /commitment\s+letter/i,
-  /signed\s+commitment/i,
-  /signed\s+statement/i,
-  /management\s+plan/i,
-  /operations\s+(and\s+maintenance\s+)?plan/i,
-  /maintenance\s+plan/i,
-  /transportation\s+demand\s+management/i,
-  /tdm\s+program/i,
-  /green\s+cleaning\s+policy/i,
-  /smoking\s+policy/i,
-  /tobacco\s+policy/i,
-  /lighting\s+policy/i,
-  /thermal\s+comfort\s+policy/i,
-  /indoor\s+air\s+quality\s+policy/i,
-  /acoustic\s+policy/i,
-  /wellness\s+policy/i,
-  /tenant\s+guide(lines?)?/i,
-  /lease\s+(agreement|language|addendum)/i,
-  /\bpolicy\b/i
-];
 function detectPolicyRequirements(creditRow) {
   const fragments = creditRow.split(/[;\|\n]|(?<=[a-z])\s+and\s+(?=[a-z])/i).map((s) => s.trim()).filter((s) => s.length > 10);
   const found = [];
@@ -1073,11 +1101,42 @@ function policyChecklistHtml(drafts) {
   </table>
 </div>`;
 }
+var fs6, path5, POLICY_PATTERNS;
+var init_policy_generator = __esm({
+  "pipeline/lib/policy-generator.ts"() {
+    "use strict";
+    fs6 = __toESM(require("fs"));
+    path5 = __toESM(require("path"));
+    init_make_editable();
+    POLICY_PATTERNS = [
+      /signed\s+\w+\s+policy/i,
+      /written\s+\w+\s+policy/i,
+      /\w+\s+policy\s+(letter|document|statement|commitment)/i,
+      /policy\s+(on|for|regarding)\s+/i,
+      /commitment\s+letter/i,
+      /signed\s+commitment/i,
+      /signed\s+statement/i,
+      /management\s+plan/i,
+      /operations\s+(and\s+maintenance\s+)?plan/i,
+      /maintenance\s+plan/i,
+      /transportation\s+demand\s+management/i,
+      /tdm\s+program/i,
+      /green\s+cleaning\s+policy/i,
+      /smoking\s+policy/i,
+      /tobacco\s+policy/i,
+      /lighting\s+policy/i,
+      /thermal\s+comfort\s+policy/i,
+      /indoor\s+air\s+quality\s+policy/i,
+      /acoustic\s+policy/i,
+      /wellness\s+policy/i,
+      /tenant\s+guide(lines?)?/i,
+      /lease\s+(agreement|language|addendum)/i,
+      /\bpolicy\b/i
+    ];
+  }
+});
 
 // pipeline/lib/calculator-guide.ts
-var fs7 = __toESM(require("fs"));
-var path6 = __toESM(require("path"));
-var CALC_SCHEMA_PATH = path6.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
 function cc(s) {
   return s.toLowerCase().replace(/prerequisite/g, "prereq").replace(/[^a-z0-9]/g, "");
 }
@@ -1190,11 +1249,6 @@ Rules:
     throw new Error(`Calculator guide extraction: JSON parse failed \u2014 ${text.slice(start, start + 200)}`);
   }
 }
-var PRIMARY = "#327cb9";
-var LIGHT_BG = "#abcde8";
-var PALE_BG = "#f7fafd";
-var BODY_TEXT = "#515062";
-var WHITE = "#ffffff";
 function esc(v) {
   if (v === null || v === void 0) return "";
   return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -1397,43 +1451,22 @@ function skippedHtml(creditName, reason) {
   </span>
 </div>`;
 }
+var fs7, path6, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
+var init_calculator_guide = __esm({
+  "pipeline/lib/calculator-guide.ts"() {
+    "use strict";
+    fs7 = __toESM(require("fs"));
+    path6 = __toESM(require("path"));
+    CALC_SCHEMA_PATH = path6.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
+    PRIMARY = "#327cb9";
+    LIGHT_BG = "#abcde8";
+    PALE_BG = "#f7fafd";
+    BODY_TEXT = "#515062";
+    WHITE = "#ffffff";
+  }
+});
 
 // pipeline/lib/specs-extract.ts
-var import_sdk2 = __toESM(require("@anthropic-ai/sdk"));
-var fs8 = __toESM(require("fs"));
-var path7 = __toESM(require("path"));
-var os2 = __toESM(require("os"));
-var import_child_process2 = require("child_process");
-var UPLOADS_BUCKET = "customer-uploads";
-var PROFILE_FILENAME = "specs-profile.json";
-var EXTRACTION_PROMPT = `You are extracting a compact product and material inventory from a construction specification document.
-
-Extract ONLY the following for each permanently installed building product or material:
-- Product name / description
-- Manufacturer name (if specified)
-- Model number or series (if specified)
-- CSI Division and section number
-- Material type or category (e.g. Concrete, Steel, Glazing, Acoustic Ceiling, Flooring, etc.)
-- Any sustainability notes (recycled content, EPD available, LEED credit referenced, etc.)
-
-IGNORE: administrative text, bid procedures, general conditions, substitution procedures, warranties, execution methods, testing procedures, and any prose that does not identify a specific product.
-
-Return a JSON object with this exact structure:
-{
-  "products": [
-    {
-      "name": "product name",
-      "manufacturer": "manufacturer or null",
-      "model": "model/series or null",
-      "csi_division": "e.g. 09 51 13",
-      "material_type": "category",
-      "sustainability_notes": "notes or null"
-    }
-  ],
-  "summary": "2-3 sentence plain-text summary of the overall material palette and any notable sustainability specifications"
-}
-
-Return ONLY the JSON \u2014 no markdown, no explanation.`;
 function convertToText(buffer, filename2) {
   const ext = path7.extname(filename2).toLowerCase();
   const tmp = path7.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
@@ -1634,65 +1667,50 @@ function formatSpecsProfileForContext(profile) {
   }
   return lines.filter((l) => l !== void 0).join("\n");
 }
+var import_sdk2, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET, PROFILE_FILENAME, EXTRACTION_PROMPT;
+var init_specs_extract = __esm({
+  "pipeline/lib/specs-extract.ts"() {
+    "use strict";
+    import_sdk2 = __toESM(require("@anthropic-ai/sdk"));
+    fs8 = __toESM(require("fs"));
+    path7 = __toESM(require("path"));
+    os2 = __toESM(require("os"));
+    import_child_process2 = require("child_process");
+    init_supabase();
+    UPLOADS_BUCKET = "customer-uploads";
+    PROFILE_FILENAME = "specs-profile.json";
+    EXTRACTION_PROMPT = `You are extracting a compact product and material inventory from a construction specification document.
 
-// pipeline/lib/document-extract.ts
-var import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
-var fs9 = __toESM(require("fs"));
-var path8 = __toESM(require("path"));
-var os3 = __toESM(require("os"));
-var import_child_process3 = require("child_process");
-var UPLOADS_BUCKET2 = "customer-uploads";
-var EXTRACTION_PROMPT2 = `You are analyzing a professional document uploaded as part of a LEED v4.1 building certification project.
+Extract ONLY the following for each permanently installed building product or material:
+- Product name / description
+- Manufacturer name (if specified)
+- Model number or series (if specified)
+- CSI Division and section number
+- Material type or category (e.g. Concrete, Steel, Glazing, Acoustic Ceiling, Flooring, etc.)
+- Any sustainability notes (recycled content, EPD available, LEED credit referenced, etc.)
 
-Read this document carefully and extract all information relevant to LEED credit submissions.
+IGNORE: administrative text, bid procedures, general conditions, substitution procedures, warranties, execution methods, testing procedures, and any prose that does not identify a specific product.
 
 Return a JSON object with this exact structure:
 {
-  "type_name": "Full human-readable document type \u2014 e.g. 'Geotechnical Investigation Report', 'Energy Model Output', 'Stormwater Management Plan', 'Phase I Environmental Site Assessment', 'Traffic Impact Study', 'Commissioning Report', 'Water Audit', 'Structural Report', 'Owner's Project Requirements', 'Construction Waste Management Plan', 'Acoustics Report', 'Photometric/Lighting Calculation Report', 'Indoor Air Quality Management Plan', 'Habitat Survey', 'Ventilation Design Report', 'Site Survey', 'Mechanical Schedule', or whatever this document actually is",
-  "type_slug": "kebab-case short identifier \u2014 e.g. 'geotechnical', 'energy-model', 'stormwater-plan', 'phase-i-esa', 'traffic-study', 'commissioning', 'water-audit', 'structural', 'opr', 'waste-management-plan', 'acoustics', 'lighting', 'iaq-plan', 'habitat-survey', 'ventilation', 'site-survey', 'mechanical-schedule'",
-  "firm": "authoring firm name or null",
-  "author": "author/engineer name and credentials or null",
-  "date": "document date as string or null",
-  "project_reference": "project name and/or address found in the document or null",
-  "data": {
-    // Extract ALL quantitative values, thresholds, compliance determinations, and key findings.
-    // Organize into logical sub-objects by topic. Use whatever fields fit this document type.
-    // Be thorough \u2014 include every number, area, rating, classification, recommendation, and conclusion
-    // that could inform a LEED credit analysis. Examples by document type:
-    //
-    // Geotechnical: site_address, topography, groundwater_depth_ft, seasonal_high_groundwater_ft,
-    //   soils (array of layers with depth/description/USCS), hydrologic_soil_group, expansive_soils,
-    //   expansion_index, liquefaction_potential, seismic_site_class, contamination_findings,
-    //   phase_ii_recommended, foundation_recommendation, bearing_capacity_psf
-    //
-    // Energy model: software, baseline_standard, gross_floor_area_sf, proposed_site_eui,
-    //   baseline_site_eui, percent_better_than_baseline, annual_energy_cost, hvac_system,
-    //   heating_fuel, window_u_factor, window_shgc, roof_r_value, lpd_proposed, renewables_kw,
-    //   ea_credit_1_points
-    //
-    // Stormwater: pre_development_runoff_cf, post_development_runoff_cf, retention_volume_cf,
-    //   percent_runoff_managed, treatment_methods (array), infiltration_rate_in_hr,
-    //   ss_credit_applicable, green_infrastructure_sf
-    //
-    // Phase I ESA: rec_status, recs (array with description/type/recommendation),
-    //   historical_uses, regulatory_findings, phase_ii_recommended
-    //
-    // Commissioning: cx_agent, commissioned_systems, opr_status, bod_status, cx_plan_status,
-    //   issues_identified, issues_resolved, ea_prereq_satisfied, ea_enhanced_cx
-    //
-    // Traffic/TDM: peak_hour_trips, level_of_service, transit_access, bike_facilities,
-    //   tdm_measures, lt_credit_applicable
-    //
-    // Water audit: baseline_water_use_kgal, proposed_water_use_kgal, percent_reduction,
-    //   fixture_types (array), we_credit_points
-    //
-    // Use judgment for any other document type \u2014 extract whatever is credit-relevant.
-  },
-  "context_block": "Compact plain-text block formatted for injection into a LEED credit analysis AI prompt. Structure: lead with document type name, firm, author, date, and project reference on the first line. Then present all key findings as short labeled lines or bullet points grouped by topic. Include every number, threshold, classification, and compliance determination. End with any open items, limitations, or recommendations that could affect credit eligibility. Target 250-450 words \u2014 dense with data, no filler prose.",
-  "summary": "2-3 sentence plain English summary of what this document is, its key findings, and which LEED credits it is most relevant to."
+  "products": [
+    {
+      "name": "product name",
+      "manufacturer": "manufacturer or null",
+      "model": "model/series or null",
+      "csi_division": "e.g. 09 51 13",
+      "material_type": "category",
+      "sustainability_notes": "notes or null"
+    }
+  ],
+  "summary": "2-3 sentence plain-text summary of the overall material palette and any notable sustainability specifications"
 }
 
-Return ONLY the JSON \u2014 no markdown fences, no explanation.`;
+Return ONLY the JSON \u2014 no markdown, no explanation.`;
+  }
+});
+
+// pipeline/lib/document-extract.ts
 function toText(buffer, filename2) {
   const ext = path8.extname(filename2).toLowerCase();
   const tmp = path8.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
@@ -1834,11 +1852,72 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
+var import_sdk3, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET2, EXTRACTION_PROMPT2;
+var init_document_extract = __esm({
+  "pipeline/lib/document-extract.ts"() {
+    "use strict";
+    import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
+    fs9 = __toESM(require("fs"));
+    path8 = __toESM(require("path"));
+    os3 = __toESM(require("os"));
+    import_child_process3 = require("child_process");
+    init_supabase();
+    UPLOADS_BUCKET2 = "customer-uploads";
+    EXTRACTION_PROMPT2 = `You are analyzing a professional document uploaded as part of a LEED v4.1 building certification project.
+
+Read this document carefully and extract all information relevant to LEED credit submissions.
+
+Return a JSON object with this exact structure:
+{
+  "type_name": "Full human-readable document type \u2014 e.g. 'Geotechnical Investigation Report', 'Energy Model Output', 'Stormwater Management Plan', 'Phase I Environmental Site Assessment', 'Traffic Impact Study', 'Commissioning Report', 'Water Audit', 'Structural Report', 'Owner's Project Requirements', 'Construction Waste Management Plan', 'Acoustics Report', 'Photometric/Lighting Calculation Report', 'Indoor Air Quality Management Plan', 'Habitat Survey', 'Ventilation Design Report', 'Site Survey', 'Mechanical Schedule', or whatever this document actually is",
+  "type_slug": "kebab-case short identifier \u2014 e.g. 'geotechnical', 'energy-model', 'stormwater-plan', 'phase-i-esa', 'traffic-study', 'commissioning', 'water-audit', 'structural', 'opr', 'waste-management-plan', 'acoustics', 'lighting', 'iaq-plan', 'habitat-survey', 'ventilation', 'site-survey', 'mechanical-schedule'",
+  "firm": "authoring firm name or null",
+  "author": "author/engineer name and credentials or null",
+  "date": "document date as string or null",
+  "project_reference": "project name and/or address found in the document or null",
+  "data": {
+    // Extract ALL quantitative values, thresholds, compliance determinations, and key findings.
+    // Organize into logical sub-objects by topic. Use whatever fields fit this document type.
+    // Be thorough \u2014 include every number, area, rating, classification, recommendation, and conclusion
+    // that could inform a LEED credit analysis. Examples by document type:
+    //
+    // Geotechnical: site_address, topography, groundwater_depth_ft, seasonal_high_groundwater_ft,
+    //   soils (array of layers with depth/description/USCS), hydrologic_soil_group, expansive_soils,
+    //   expansion_index, liquefaction_potential, seismic_site_class, contamination_findings,
+    //   phase_ii_recommended, foundation_recommendation, bearing_capacity_psf
+    //
+    // Energy model: software, baseline_standard, gross_floor_area_sf, proposed_site_eui,
+    //   baseline_site_eui, percent_better_than_baseline, annual_energy_cost, hvac_system,
+    //   heating_fuel, window_u_factor, window_shgc, roof_r_value, lpd_proposed, renewables_kw,
+    //   ea_credit_1_points
+    //
+    // Stormwater: pre_development_runoff_cf, post_development_runoff_cf, retention_volume_cf,
+    //   percent_runoff_managed, treatment_methods (array), infiltration_rate_in_hr,
+    //   ss_credit_applicable, green_infrastructure_sf
+    //
+    // Phase I ESA: rec_status, recs (array with description/type/recommendation),
+    //   historical_uses, regulatory_findings, phase_ii_recommended
+    //
+    // Commissioning: cx_agent, commissioned_systems, opr_status, bod_status, cx_plan_status,
+    //   issues_identified, issues_resolved, ea_prereq_satisfied, ea_enhanced_cx
+    //
+    // Traffic/TDM: peak_hour_trips, level_of_service, transit_access, bike_facilities,
+    //   tdm_measures, lt_credit_applicable
+    //
+    // Water audit: baseline_water_use_kgal, proposed_water_use_kgal, percent_reduction,
+    //   fixture_types (array), we_credit_points
+    //
+    // Use judgment for any other document type \u2014 extract whatever is credit-relevant.
+  },
+  "context_block": "Compact plain-text block formatted for injection into a LEED credit analysis AI prompt. Structure: lead with document type name, firm, author, date, and project reference on the first line. Then present all key findings as short labeled lines or bullet points grouped by topic. Include every number, threshold, classification, and compliance determination. End with any open items, limitations, or recommendations that could affect credit eligibility. Target 250-450 words \u2014 dense with data, no filler prose.",
+  "summary": "2-3 sentence plain English summary of what this document is, its key findings, and which LEED credits it is most relevant to."
+}
+
+Return ONLY the JSON \u2014 no markdown fences, no explanation.`;
+  }
+});
 
 // pipeline/lib/pdf-extract.ts
-var fs10 = __toESM(require("fs"));
-var path9 = __toESM(require("path"));
-var _cache = /* @__PURE__ */ new Map();
 async function renderPdfToTiles(pdfBuffer, cols = 2, rows = 2, dpi = 200, tileMaxSide = 2500) {
   const _req = eval("require");
   const pdfjsLib = _req("pdfjs-dist/legacy/build/pdf.mjs");
@@ -1941,8 +2020,15 @@ async function extractPdfContentFromBuffer(client2, pdfBuffer2, filename2, extra
   console.log(`  [pdf-extract] Extracting from ${filename2} [${renderMode}]...`);
   return _extract(client2, pdfBuffer2, filename2, extractionPrompt, renderMode, cacheKey);
 }
-var EXTRACT_PROMPTS = {
-  CIVIL_DRAWING: `Extract all of the following from this civil drawing set:
+var fs10, path9, _cache, EXTRACT_PROMPTS;
+var init_pdf_extract = __esm({
+  "pipeline/lib/pdf-extract.ts"() {
+    "use strict";
+    fs10 = __toESM(require("fs"));
+    path9 = __toESM(require("path"));
+    _cache = /* @__PURE__ */ new Map();
+    EXTRACT_PROMPTS = {
+      CIVIL_DRAWING: `Extract all of the following from this civil drawing set:
 - Project name
 - Project address (full street address, city, state, zip)
 - Owner / developer name (if shown)
@@ -1956,7 +2042,7 @@ var EXTRACT_PROMPTS = {
 - Benchmark / datum and coordinate system if shown
 - Any slope or grading notes relevant to sensitive land classification
 Output as structured plain text. Be thorough \u2014 include every data point visible.`,
-  CREDIT_REQUIREMENTS: `Extract all of the following from this LEED credit guide:
+      CREDIT_REQUIREMENTS: `Extract all of the following from this LEED credit guide:
 - Credit name and number
 - Points available
 - All compliance options with their full thresholds and requirements
@@ -1967,7 +2053,7 @@ Output as structured plain text. Be thorough \u2014 include every data point vis
 - All LEED Online form fields described or referenced
 - Any definitions or special terms
 Output as structured plain text. Be complete \u2014 every requirement matters.`,
-  GEOTECHNICAL_REPORT: `Extract all of the following from this geotechnical report:
+      GEOTECHNICAL_REPORT: `Extract all of the following from this geotechnical report:
 - Project name and address
 - Report date and author
 - Soil classifications (USCS or ASTM) for each boring or test pit
@@ -1977,10 +2063,16 @@ Output as structured plain text. Be complete \u2014 every requirement matters.`,
 - Bearing capacity values
 - Any environmental observations
 Output as structured plain text.`
-};
+    };
+  }
+});
 
 // pipeline/prompts/credit-submission.ts
-var CREDIT_SUBMISSION_PROMPT = `ABSOLUTE OUTPUT RULE \u2014 THIS OVERRIDES EVERYTHING ELSE:
+var CREDIT_SUBMISSION_PROMPT;
+var init_credit_submission = __esm({
+  "pipeline/prompts/credit-submission.ts"() {
+    "use strict";
+    CREDIT_SUBMISSION_PROMPT = `ABSOLUTE OUTPUT RULE \u2014 THIS OVERRIDES EVERYTHING ELSE:
 
 Your output is a customer-facing professional document. The customer paid for this document. They will submit it as part of a building certification review.
 
@@ -2207,10 +2299,10 @@ At the very end, include a Processing Summary section with:
 - Credit and program processed
 - List of all outputs generated
 - List of any [OWNER TO CONFIRM] items with descriptions`;
+  }
+});
 
 // src/lib/resend.ts
-var import_resend = require("resend");
-var _resend = null;
 function getResend() {
   if (!_resend) {
     _resend = new import_resend.Resend(process.env.RESEND_API_KEY);
@@ -2291,48 +2383,31 @@ async function sendQAReviewEmail({
     `
   });
 }
+var import_resend, _resend;
+var init_resend = __esm({
+  "src/lib/resend.ts"() {
+    "use strict";
+    import_resend = require("resend");
+    _resend = null;
+  }
+});
 
 // src/lib/qa-token.ts
-var import_crypto = require("crypto");
 function secret() {
   return process.env.QA_SECRET ?? process.env.CRON_SECRET ?? "";
 }
 function signQaToken(orderId) {
   return (0, import_crypto.createHmac)("sha256", secret()).update(orderId).digest("hex");
 }
+var import_crypto;
+var init_qa_token = __esm({
+  "src/lib/qa-token.ts"() {
+    "use strict";
+    import_crypto = require("crypto");
+  }
+});
 
 // pipeline/lib/validate-output.ts
-var BLOCKING_PATTERNS = [
-  // ── 1. Unfilled auto-retrievable placeholders ────────────────────────────
-  // [INSERT TRANSIT DATA], [INSERT TRIP COUNT], [INSERT GTFS DATA], etc.
-  {
-    pattern: /\[INSERT\s+[^\]]{0,80}(?:TRANSIT\s+(?:SCHEDULE|DATA|TIMETABLE)|TRIP\s+COUNT|GTFS|WALKING\s+DISTANCE\s+(?:MEASUREMENT|DATA)|CENSUS\s+DATA|UTILITY\s+RATE|AERIAL\s+(?:MAP|IMAGE)|WEATHER\s+DATA)[^\]]{0,30}\]/i,
-    description: "Unfilled placeholder for auto-retrievable data"
-  },
-  // ── 2. [OWNER/CUSTOMER TO CONFIRM] on auto-retrievable data ─────────────
-  // Only flags when the content is unambiguously auto-retrievable.
-  // EXCLUDED: "transit agency" (appears in "transit agency committed to restoring service")
-  // EXCLUDED: "service rerouted", "service disruption" (owner decision, not auto-retrievable)
-  // EXCLUDED: "site plan", "pedestrian routes", "drawing set" (legitimate customer uploads)
-  {
-    pattern: /\[(?:CUSTOMER|TEAM|OWNER)\s+TO\s+(?:PROVIDE|CONFIRM)[^\]]{0,120}(?:transit\s+(?:schedule|timetable)|bus\s+(?:schedule|route\s+schedule)|trip\s+counts?|directional\s+(?:trip|count)|one-direction\s+(?:trip|count)|gtfs|census\s+data|utility\s+rates?|aerial\s+(?:map|photo)|weather\s+data|walking\s+distance\s+(?:measurement|data))/i,
-    description: "[OWNER/CUSTOMER TO CONFIRM] used on auto-retrievable item"
-  },
-  // ── 3. Named-subject instruction to customer ─────────────────────────────
-  // "customer must provide trip counts" / "project team should collect GTFS data"
-  // Requires named subject + modal verb, so it cannot match descriptive text.
-  {
-    pattern: /(?:customer|owner|project\s+team|applicant|you)\s+(?:should|must|will\s+need\s+to|needs?\s+to|is\s+required\s+to|are\s+required\s+to)\s+(?:provide|submit|obtain|collect|gather|supply)\s+[^.]{0,120}(?:trip\s+counts?|transit\s+(?:schedule|timetable)|directional\s+(?:trip|count)|gtfs|census\s+data|utility\s+rates?)/i,
-    description: "Customer instructed by name to obtain auto-retrievable data"
-  },
-  // ── 4. Full-phrase: provide trip counts from agency timetables ────────────
-  // "provide one-direction trip counts for Routes X, sourced from IndyGo timetables"
-  // Very specific — the complete phrase that Claude uses when asking for GTFS data.
-  {
-    pattern: /(?:provide|obtain|collect)\s+[^.]{0,80}trip\s+counts?\s+[^.]{0,80}(?:sourced?\s+from|from\s+the)\s+[^.]{0,80}(?:timetable|published\s+schedule)/i,
-    description: "Customer asked to source trip counts from transit agency timetables"
-  }
-];
 function stripHtml(html) {
   return html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&nbsp;/gi, " ").replace(/&#\d+;/gi, " ").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
 }
@@ -2357,33 +2432,6 @@ function validateNoUnnecessaryCustomerRequests(html) {
   }
   return violations;
 }
-var OUTPUT_STOP_WORDS = /* @__PURE__ */ new Set([
-  "the",
-  "and",
-  "for",
-  "with",
-  "from",
-  "that",
-  "this",
-  "are",
-  "has",
-  "have",
-  "its",
-  "not",
-  "but",
-  "all",
-  "each",
-  "any",
-  "per",
-  "via",
-  "tab",
-  "html",
-  "file",
-  "list",
-  "full",
-  "leed",
-  "well"
-]);
 function outputKeywords(item) {
   return item.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !OUTPUT_STOP_WORDS.has(w));
 }
@@ -2413,68 +2461,72 @@ function validateCalculatorGuidePresent(html, creditRow) {
     context: "Automation analysis requires a calculator but the output HTML contains no 'Calculator Input Guide' heading. generateCalculatorGuide() may have been skipped or thrown."
   }];
 }
+var BLOCKING_PATTERNS, OUTPUT_STOP_WORDS;
+var init_validate_output = __esm({
+  "pipeline/lib/validate-output.ts"() {
+    "use strict";
+    BLOCKING_PATTERNS = [
+      // ── 1. Unfilled auto-retrievable placeholders ────────────────────────────
+      // [INSERT TRANSIT DATA], [INSERT TRIP COUNT], [INSERT GTFS DATA], etc.
+      {
+        pattern: /\[INSERT\s+[^\]]{0,80}(?:TRANSIT\s+(?:SCHEDULE|DATA|TIMETABLE)|TRIP\s+COUNT|GTFS|WALKING\s+DISTANCE\s+(?:MEASUREMENT|DATA)|CENSUS\s+DATA|UTILITY\s+RATE|AERIAL\s+(?:MAP|IMAGE)|WEATHER\s+DATA)[^\]]{0,30}\]/i,
+        description: "Unfilled placeholder for auto-retrievable data"
+      },
+      // ── 2. [OWNER/CUSTOMER TO CONFIRM] on auto-retrievable data ─────────────
+      // Only flags when the content is unambiguously auto-retrievable.
+      // EXCLUDED: "transit agency" (appears in "transit agency committed to restoring service")
+      // EXCLUDED: "service rerouted", "service disruption" (owner decision, not auto-retrievable)
+      // EXCLUDED: "site plan", "pedestrian routes", "drawing set" (legitimate customer uploads)
+      {
+        pattern: /\[(?:CUSTOMER|TEAM|OWNER)\s+TO\s+(?:PROVIDE|CONFIRM)[^\]]{0,120}(?:transit\s+(?:schedule|timetable)|bus\s+(?:schedule|route\s+schedule)|trip\s+counts?|directional\s+(?:trip|count)|one-direction\s+(?:trip|count)|gtfs|census\s+data|utility\s+rates?|aerial\s+(?:map|photo)|weather\s+data|walking\s+distance\s+(?:measurement|data))/i,
+        description: "[OWNER/CUSTOMER TO CONFIRM] used on auto-retrievable item"
+      },
+      // ── 3. Named-subject instruction to customer ─────────────────────────────
+      // "customer must provide trip counts" / "project team should collect GTFS data"
+      // Requires named subject + modal verb, so it cannot match descriptive text.
+      {
+        pattern: /(?:customer|owner|project\s+team|applicant|you)\s+(?:should|must|will\s+need\s+to|needs?\s+to|is\s+required\s+to|are\s+required\s+to)\s+(?:provide|submit|obtain|collect|gather|supply)\s+[^.]{0,120}(?:trip\s+counts?|transit\s+(?:schedule|timetable)|directional\s+(?:trip|count)|gtfs|census\s+data|utility\s+rates?)/i,
+        description: "Customer instructed by name to obtain auto-retrievable data"
+      },
+      // ── 4. Full-phrase: provide trip counts from agency timetables ────────────
+      // "provide one-direction trip counts for Routes X, sourced from IndyGo timetables"
+      // Very specific — the complete phrase that Claude uses when asking for GTFS data.
+      {
+        pattern: /(?:provide|obtain|collect)\s+[^.]{0,80}trip\s+counts?\s+[^.]{0,80}(?:sourced?\s+from|from\s+the)\s+[^.]{0,80}(?:timetable|published\s+schedule)/i,
+        description: "Customer asked to source trip counts from transit agency timetables"
+      }
+    ];
+    OUTPUT_STOP_WORDS = /* @__PURE__ */ new Set([
+      "the",
+      "and",
+      "for",
+      "with",
+      "from",
+      "that",
+      "this",
+      "are",
+      "has",
+      "have",
+      "its",
+      "not",
+      "but",
+      "all",
+      "each",
+      "any",
+      "per",
+      "via",
+      "tab",
+      "html",
+      "file",
+      "list",
+      "full",
+      "leed",
+      "well"
+    ]);
+  }
+});
 
 // pipeline/lib/output-cleaner.ts
-var SENTENCE_PATTERNS = [
-  // Pattern 1 — Search / action announcements (what Claude is about to do)
-  { id: "P1-ill-search", re: /\bI'?(?:ll| will)\s+search\b/i },
-  { id: "P1-let-me-search", re: /\bLet\s+me\s+search\b/i },
-  { id: "P1-searching-for", re: /\bSearching\s+for\b/i },
-  { id: "P1-ill-look-up", re: /\bI'?(?:ll| will)\s+look\s+up\b/i },
-  { id: "P1-let-look-up", re: /\bLet\s+me\s+look\s+up\b/i },
-  { id: "P1-ill-retrieve", re: /\bI'?(?:ll| will)\s+retrieve\b/i },
-  { id: "P1-ill-find", re: /\bI'?(?:ll| will)\s+find\b/i },
-  { id: "P1-now-ill", re: /\bNow\s+I'?ll\b/i },
-  { id: "P1-im-going-to", re: /\bI'?m\s+going\s+to\b/i },
-  { id: "P1-i-will-now", re: /\bI\s+will\s+now\b/i },
-  { id: "P1-first-ill", re: /\bFirst\s+I'?ll\b/i },
-  { id: "P1-next-ill", re: /\bNext\s+I'?ll\b/i },
-  // "Let me compile / generate / produce / write / create / present / provide / organize / begin"
-  { id: "P1-let-me-action", re: /\bLet\s+me\s+(?:now\s+)?(?:compile|generate|produce|write|create|present|provide|organize|structure|format|begin|complete|fill|populate|build|construct|draft)\b/i },
-  // "I'll now compile / generate / produce / write / fill / complete / populate"
-  { id: "P1-ill-now-action", re: /\bI'?(?:ll| will)\s+now\s+(?:compile|generate|produce|write|create|present|provide|organize|complete|fill|populate|build|construct|draft)\b/i },
-  // Pattern 3 — Process narration (completion / state announcements)
-  { id: "P3-now-i-have-all", re: /\bNow\s+I\s+have\s+(?:all\s+(?:the\s+)?(?:data|information)|everything)\b/i },
-  { id: "P3-now-i-have-evth", re: /\bNow\s+I\s+have\s+everything\b/i },
-  // "I now have [comprehensive / complete / detailed / sufficient / enough / all / the data]"
-  { id: "P3-i-now-have", re: /\bI\s+now\s+have\s+(?:comprehensive|complete|detailed|sufficient|enough|all|the\s+(?:data|information|context|details|results|findings|information\s+needed|data\s+needed))\b/i },
-  { id: "P3-i-have-gathered", re: /\bI\s+have\s+(?:now\s+)?gathered\b/i },
-  { id: "P3-i-have-collected", re: /\bI\s+have\s+(?:now\s+)?collected\b/i },
-  { id: "P3-i-have-retrieved", re: /\bI\s+have\s+(?:now\s+)?retrieved\b/i },
-  { id: "P3-i-have-found-all", re: /\bI\s+have\s+found\s+all\b/i },
-  { id: "P3-i-have-compiled", re: /\bI\s+have\s+(?:now\s+)?compiled\b/i },
-  { id: "P3-i-have-completed", re: /\bI\s+have\s+(?:now\s+)?completed\b/i },
-  { id: "P3-with-info-now", re: /\bWith\s+this\s+(?:data|information|context)\s+I\s+(?:can\s+now|will\s+now|'ll\s+now)\b/i },
-  { id: "P3-i-now-have-need", re: /\bI\s+now\s+have\s+what\s+I\s+need\b/i },
-  { id: "P3-i-have-what-need", re: /\bI\s+have\s+(?:all\s+)?(?:the\s+)?(?:data|information|context|details)\s+(?:I\s+need|needed)\b/i },
-  // Pattern 5 — Data retrieval currency notes inline
-  { id: "P5-current-as-of", re: /\b(?:data|information|rates?|values?|results?)\s+(?:is|are)\s+current\s+as\s+of\b/i },
-  // Pattern 6 — Internal reasoning / process description
-  { id: "P6-i-determined", re: /\bI\s+determined\s+that\b/i },
-  { id: "P6-i-calculated", re: /\bI\s+calculated\b/i },
-  { id: "P6-i-assessed", re: /\bI\s+assessed\b/i },
-  { id: "P6-i-evaluated", re: /\bI\s+evaluated\b/i },
-  { id: "P6-based-my-analysis", re: /\bBased\s+on\s+my\s+(?:analysis|review|search|findings|research)\b/i },
-  { id: "P6-after-reviewing", re: /\bAfter\s+(?:reviewing|analyzing|searching|examining|researching)\b/i },
-  { id: "P6-i-can-now", re: /\bI\s+can\s+now\s+(?:compile|generate|produce|write|create|complete|fill|provide|present)\b/i }
-];
-var BLOCK_PATTERNS = [
-  // Pattern 2 — Findings summaries / preambles
-  { id: "P2-key-findings", re: /^Key\s+findings?:/i },
-  { id: "P2-heres-what", re: /^Here'?s\s+what\s+I\s+found:/i },
-  { id: "P2-here-are-results", re: /^Here\s+are\s+the\s+results?:/i },
-  { id: "P2-i-found-that", re: /^I\s+found\s+that\b/i },
-  { id: "P2-my-search", re: /^My\s+search\s+returned\b/i },
-  { id: "P2-search-shows", re: /^The\s+search\s+shows?\b/i },
-  { id: "P2-search-results", re: /^Search\s+results?:/i },
-  { id: "P2-based-my-search", re: /^Based\s+on\s+my\s+search\b/i },
-  // "Based on the search results / the data / this information / these findings"
-  { id: "P2-based-on-the", re: /^Based\s+on\s+(?:the\s+|these\s+|this\s+|those\s+)?(?:search\s+results?|data|information|findings?|analysis|results?|above)\b/i },
-  { id: "P2-i-was-able", re: /^I\s+was\s+able\s+to\s+find\b/i },
-  { id: "P2-i-retrieved-fol", re: /^I\s+retrieved\s+the\s+following\b/i },
-  { id: "P2-with-that", re: /^With\s+(?:that|this|these|those)\s+(?:data|information|findings?|results?|context),?\s+I\b/i }
-];
-var SEPARATOR_LINE_RE = /^[ \t]*(?:-{3,}|\*{3,}|={3,})[ \t]*$/;
 function inc(counts, id, n = 1) {
   counts[id] = (counts[id] ?? 0) + n;
 }
@@ -2612,26 +2664,79 @@ function scrubNarration(input) {
   }
   return { cleaned: text, counts, total: total2 };
 }
+var SENTENCE_PATTERNS, BLOCK_PATTERNS, SEPARATOR_LINE_RE;
+var init_output_cleaner = __esm({
+  "pipeline/lib/output-cleaner.ts"() {
+    "use strict";
+    SENTENCE_PATTERNS = [
+      // Pattern 1 — Search / action announcements (what Claude is about to do)
+      { id: "P1-ill-search", re: /\bI'?(?:ll| will)\s+search\b/i },
+      { id: "P1-let-me-search", re: /\bLet\s+me\s+search\b/i },
+      { id: "P1-searching-for", re: /\bSearching\s+for\b/i },
+      { id: "P1-ill-look-up", re: /\bI'?(?:ll| will)\s+look\s+up\b/i },
+      { id: "P1-let-look-up", re: /\bLet\s+me\s+look\s+up\b/i },
+      { id: "P1-ill-retrieve", re: /\bI'?(?:ll| will)\s+retrieve\b/i },
+      { id: "P1-ill-find", re: /\bI'?(?:ll| will)\s+find\b/i },
+      { id: "P1-now-ill", re: /\bNow\s+I'?ll\b/i },
+      { id: "P1-im-going-to", re: /\bI'?m\s+going\s+to\b/i },
+      { id: "P1-i-will-now", re: /\bI\s+will\s+now\b/i },
+      { id: "P1-first-ill", re: /\bFirst\s+I'?ll\b/i },
+      { id: "P1-next-ill", re: /\bNext\s+I'?ll\b/i },
+      // "Let me compile / generate / produce / write / create / present / provide / organize / begin"
+      { id: "P1-let-me-action", re: /\bLet\s+me\s+(?:now\s+)?(?:compile|generate|produce|write|create|present|provide|organize|structure|format|begin|complete|fill|populate|build|construct|draft)\b/i },
+      // "I'll now compile / generate / produce / write / fill / complete / populate"
+      { id: "P1-ill-now-action", re: /\bI'?(?:ll| will)\s+now\s+(?:compile|generate|produce|write|create|present|provide|organize|complete|fill|populate|build|construct|draft)\b/i },
+      // Pattern 3 — Process narration (completion / state announcements)
+      { id: "P3-now-i-have-all", re: /\bNow\s+I\s+have\s+(?:all\s+(?:the\s+)?(?:data|information)|everything)\b/i },
+      { id: "P3-now-i-have-evth", re: /\bNow\s+I\s+have\s+everything\b/i },
+      // "I now have [comprehensive / complete / detailed / sufficient / enough / all / the data]"
+      { id: "P3-i-now-have", re: /\bI\s+now\s+have\s+(?:comprehensive|complete|detailed|sufficient|enough|all|the\s+(?:data|information|context|details|results|findings|information\s+needed|data\s+needed))\b/i },
+      { id: "P3-i-have-gathered", re: /\bI\s+have\s+(?:now\s+)?gathered\b/i },
+      { id: "P3-i-have-collected", re: /\bI\s+have\s+(?:now\s+)?collected\b/i },
+      { id: "P3-i-have-retrieved", re: /\bI\s+have\s+(?:now\s+)?retrieved\b/i },
+      { id: "P3-i-have-found-all", re: /\bI\s+have\s+found\s+all\b/i },
+      { id: "P3-i-have-compiled", re: /\bI\s+have\s+(?:now\s+)?compiled\b/i },
+      { id: "P3-i-have-completed", re: /\bI\s+have\s+(?:now\s+)?completed\b/i },
+      { id: "P3-with-info-now", re: /\bWith\s+this\s+(?:data|information|context)\s+I\s+(?:can\s+now|will\s+now|'ll\s+now)\b/i },
+      { id: "P3-i-now-have-need", re: /\bI\s+now\s+have\s+what\s+I\s+need\b/i },
+      { id: "P3-i-have-what-need", re: /\bI\s+have\s+(?:all\s+)?(?:the\s+)?(?:data|information|context|details)\s+(?:I\s+need|needed)\b/i },
+      // Pattern 5 — Data retrieval currency notes inline
+      { id: "P5-current-as-of", re: /\b(?:data|information|rates?|values?|results?)\s+(?:is|are)\s+current\s+as\s+of\b/i },
+      // Pattern 6 — Internal reasoning / process description
+      { id: "P6-i-determined", re: /\bI\s+determined\s+that\b/i },
+      { id: "P6-i-calculated", re: /\bI\s+calculated\b/i },
+      { id: "P6-i-assessed", re: /\bI\s+assessed\b/i },
+      { id: "P6-i-evaluated", re: /\bI\s+evaluated\b/i },
+      { id: "P6-based-my-analysis", re: /\bBased\s+on\s+my\s+(?:analysis|review|search|findings|research)\b/i },
+      { id: "P6-after-reviewing", re: /\bAfter\s+(?:reviewing|analyzing|searching|examining|researching)\b/i },
+      { id: "P6-i-can-now", re: /\bI\s+can\s+now\s+(?:compile|generate|produce|write|create|complete|fill|provide|present)\b/i }
+    ];
+    BLOCK_PATTERNS = [
+      // Pattern 2 — Findings summaries / preambles
+      { id: "P2-key-findings", re: /^Key\s+findings?:/i },
+      { id: "P2-heres-what", re: /^Here'?s\s+what\s+I\s+found:/i },
+      { id: "P2-here-are-results", re: /^Here\s+are\s+the\s+results?:/i },
+      { id: "P2-i-found-that", re: /^I\s+found\s+that\b/i },
+      { id: "P2-my-search", re: /^My\s+search\s+returned\b/i },
+      { id: "P2-search-shows", re: /^The\s+search\s+shows?\b/i },
+      { id: "P2-search-results", re: /^Search\s+results?:/i },
+      { id: "P2-based-my-search", re: /^Based\s+on\s+my\s+search\b/i },
+      // "Based on the search results / the data / this information / these findings"
+      { id: "P2-based-on-the", re: /^Based\s+on\s+(?:the\s+|these\s+|this\s+|those\s+)?(?:search\s+results?|data|information|findings?|analysis|results?|above)\b/i },
+      { id: "P2-i-was-able", re: /^I\s+was\s+able\s+to\s+find\b/i },
+      { id: "P2-i-retrieved-fol", re: /^I\s+retrieved\s+the\s+following\b/i },
+      { id: "P2-with-that", re: /^With\s+(?:that|this|these|those)\s+(?:data|information|findings?|results?|context),?\s+I\b/i }
+    ];
+    SEPARATOR_LINE_RE = /^[ \t]*(?:-{3,}|\*{3,}|={3,})[ \t]*$/;
+  }
+});
 
 // pipeline/process-order.ts
-var envPath3 = path10.resolve(__dirname, "../.env.local");
-if (fs11.existsSync(envPath3)) {
-  for (const line of fs11.readFileSync(envPath3, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
-  }
-}
-var UPLOADS_BUCKET3 = "customer-uploads";
-var OUTPUTS_BUCKET = "order-outputs";
-var REF_BASE = path10.join(process.cwd(), "pipeline/reference");
-var PROGRAM_REF_SUBDIR = {
-  leed_bdc_v41: "leed",
-  well_v2: "well-v2",
-  well_hsr: "well-hsr"
-};
+var process_order_exports = {};
+__export(process_order_exports, {
+  buildExpectedPdfName: () => buildExpectedPdfName,
+  processOrder: () => processOrder
+});
 function buildExpectedPdfName(program, creditCode, creditName) {
   const code = creditCode.replace(/β/g, "beta");
   const name = creditName.replace(/β/g, "beta");
@@ -2720,7 +2825,6 @@ function loadLeedAppendices(referencedNums) {
   }
   return results;
 }
-var LEED_CODE_RE = /^(LT|SS|WE|EA|MR|EQ|IN|IP)(c|p)\d+$/i;
 function isLeed(creditCode) {
   return LEED_CODE_RE.test(creditCode);
 }
@@ -2793,12 +2897,6 @@ function drawingsPath(customerId, projectId) {
 async function dbCall(query, label) {
   return withTimeout(Promise.resolve(query), 1e4, `Supabase: ${label}`);
 }
-var MAP_OUTPUT_KEYWORDS = {
-  "transit-stops": ["transit", "transit stop", "bus stop", "rail station"],
-  "bicycle-facilities": ["bicycle", "bike", "cycling", "cycle"],
-  "surrounding-density": ["density", "surrounding", "neighborhood context"],
-  "site-context": ["site context", "site map", "vicinity map", "walking distance"]
-};
 function detectRequiredMapType(outputs) {
   const combined = outputs.join(" ").toLowerCase();
   for (const [mapType, keywords] of Object.entries(MAP_OUTPUT_KEYWORDS)) {
@@ -2808,7 +2906,6 @@ function detectRequiredMapType(outputs) {
   }
   return null;
 }
-var WEB_SEARCH_TOOL = { type: "web_search_20250305", name: "web_search" };
 function validateAllDeliverables(params) {
   const checks = [];
   const outputsText = params.outputs.join(" ").toLowerCase();
@@ -3464,17 +3561,17 @@ ${part1Html}` },
     policyDraftCount: policyDrafts.length
   });
   fullHtml = gatedHtml;
-  const missing = deliverableChecks.filter((c) => !c.present);
+  const missing2 = deliverableChecks.filter((c) => !c.present);
   const found = deliverableChecks.filter((c) => c.present);
   console.log(`  Step 16.5: Deliverables check for ${credit.credit_code}:`);
   found.forEach((c) => console.log(`    \u2713 ${c.item}`));
-  missing.forEach((c) => console.warn(`    \u2717 MISSING: ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
-  if (missing.length > 0) {
-    console.warn(`  Step 16.5: \u26A0 ${missing.length} missing deliverable(s) \u2014 marking order failed`);
+  missing2.forEach((c) => console.warn(`    \u2717 MISSING: ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
+  if (missing2.length > 0) {
+    console.warn(`  Step 16.5: \u26A0 ${missing2.length} missing deliverable(s) \u2014 marking order failed`);
     await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
     await supabase.from("runs").update({
       status: "failed",
-      error_message: `Missing deliverables: ${missing.map((c) => c.item).join(", ")}`,
+      error_message: `Missing deliverables: ${missing2.map((c) => c.item).join(", ")}`,
       completed_at: (/* @__PURE__ */ new Date()).toISOString()
     }).eq("id", runId);
     await logAuditEvent({
@@ -3482,9 +3579,9 @@ ${part1Html}` },
       entityType: "order",
       entityId: orderId,
       customerId: order.customer_id,
-      metadata: { creditCode: credit.credit_code, missing: missing.map((c) => c.item) }
+      metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item) }
     });
-    return { orderId, runId, status: "failed", issues: missing.map((c) => `${c.item}: ${c.reason}`) };
+    return { orderId, runId, status: "failed", issues: missing2.map((c) => `${c.item}: ${c.reason}`) };
   }
   console.log(`  Step 16.5: \u2713 All deliverables confirmed \u2014 proceeding to delivery`);
   console.log(`  Step 18: Uploading outputs to Storage...`);
@@ -3601,27 +3698,112 @@ ${part1Html}` },
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
+var import_sdk4, path10, fs11, envPath3, UPLOADS_BUCKET3, OUTPUTS_BUCKET, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var init_process_order = __esm({
+  "pipeline/process-order.ts"() {
+    "use strict";
+    import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
+    path10 = __toESM(require("path"));
+    fs11 = __toESM(require("fs"));
+    init_supabase();
+    init_extract_xlsx_row();
+    init_document_review();
+    init_drawing_analysis();
+    init_map_generation();
+    init_supabase_ops();
+    init_pdf_to_images();
+    init_make_editable();
+    init_policy_generator();
+    init_calculator_guide();
+    init_specs_extract();
+    init_document_extract();
+    init_pdf_extract();
+    init_credit_submission();
+    init_resend();
+    init_qa_token();
+    init_validate_output();
+    init_pipeline_utils();
+    init_output_cleaner();
+    envPath3 = path10.resolve(__dirname, "../.env.local");
+    if (fs11.existsSync(envPath3)) {
+      for (const line of fs11.readFileSync(envPath3, "utf-8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+    UPLOADS_BUCKET3 = "customer-uploads";
+    OUTPUTS_BUCKET = "order-outputs";
+    REF_BASE = path10.join(process.cwd(), "pipeline/reference");
+    PROGRAM_REF_SUBDIR = {
+      leed_bdc_v41: "leed",
+      well_v2: "well-v2",
+      well_hsr: "well-hsr"
+    };
+    LEED_CODE_RE = /^(LT|SS|WE|EA|MR|EQ|IN|IP)(c|p)\d+$/i;
+    MAP_OUTPUT_KEYWORDS = {
+      "transit-stops": ["transit", "transit stop", "bus stop", "rail station"],
+      "bicycle-facilities": ["bicycle", "bike", "cycling", "cycle"],
+      "surrounding-density": ["density", "surrounding", "neighborhood context"],
+      "site-context": ["site context", "site map", "vicinity map", "walking distance"]
+    };
+    WEB_SEARCH_TOOL = { type: "web_search_20250305", name: "web_search" };
+  }
+});
 
 // pipeline/worker.ts
-var envPath4 = path11.resolve(__dirname, "../.env.local");
-if (fs12.existsSync(envPath4)) {
-  for (const line of fs12.readFileSync(envPath4, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    const val = trimmed.slice(eqIdx + 1).trim();
-    if (!process.env[key]) process.env[key] = val;
+var path11 = __toESM(require("path"));
+var fs12 = __toESM(require("fs"));
+console.log("[worker] starting up...");
+try {
+  const envPath4 = path11.resolve(__dirname, "../.env.local");
+  if (fs12.existsSync(envPath4)) {
+    for (const line of fs12.readFileSync(envPath4, "utf-8").split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+    console.log("[worker] loaded .env.local");
   }
+} catch (err) {
+  console.error("[worker] failed to load .env.local:", err.message);
 }
-var app = (0, import_express.default)();
+var REQUIRED_VARS = [
+  "WORKER_SECRET",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "ANTHROPIC_API_KEY"
+];
+var missing = REQUIRED_VARS.filter((k) => !process.env[k]);
+if (missing.length > 0) {
+  console.error("[worker] missing required env vars:", missing.join(", "));
+  process.exit(1);
+}
+console.log("[worker] env vars OK");
+var express;
+try {
+  express = require("express");
+  console.log("[worker] express loaded");
+} catch (err) {
+  console.error("[worker] failed to load express:", err.message);
+  process.exit(1);
+}
+var app = express();
 var PORT = process.env.PORT ?? 3001;
 var SECRET = process.env.WORKER_SECRET;
-app.use(import_express.default.json());
+app.use(express.json());
+app.get("/health", (_req2, res) => {
+  res.json({ status: "ok" });
+});
 app.post("/process", async (req, res) => {
   const authHeader = req.headers["x-worker-secret"];
-  if (!SECRET || authHeader !== SECRET) {
+  if (authHeader !== SECRET) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -3634,17 +3816,21 @@ app.post("/process", async (req, res) => {
   const startedAt = Date.now();
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
   try {
-    const result = await processOrder(orderId, runId);
+    const { processOrder: processOrder2 } = (init_process_order(), __toCommonJS(process_order_exports));
+    const result = await processOrder2(orderId, runId);
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
     console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${err.message}`);
+    console.error(err.stack);
   }
 });
-app.get("/health", (_req2, res) => {
-  res.json({ status: "ok" });
-});
-app.listen(PORT, () => {
-  console.log(`[worker] listening on port ${PORT}`);
-});
+try {
+  app.listen(PORT, () => {
+    console.log(`[worker] listening on port ${PORT}`);
+  });
+} catch (err) {
+  console.error("[worker] failed to start server:", err.message);
+  process.exit(1);
+}
