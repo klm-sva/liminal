@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "worker": "ts-node --skip-project --transpile-only pipeline/worker.ts"
+    "build:worker": "esbuild pipeline/worker.ts --bundle --platform=node --packages=external --outfile=pipeline/worker.js",
+    "worker": "node pipeline/worker.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",
@@ -48,6 +49,7 @@
     "@types/react-dom": "^19",
     "@types/sharp": "^0.31.1",
     "autoprefixer": "^10.4.20",
+    "esbuild": "^0.28.0",
     "eslint": "^8",
     "eslint-config-next": "^15.1.3",
     "pdf-parse": "^2.4.5",
