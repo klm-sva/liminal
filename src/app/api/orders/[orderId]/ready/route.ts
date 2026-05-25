@@ -126,12 +126,18 @@ export async function POST(
   const workerUrl    = process.env.PIPELINE_WORKER_URL;
   const workerSecret = process.env.WORKER_SECRET;
 
+  console.log(`[ready] dispatching to worker — url=${workerUrl ?? "NOT SET"} secret=${workerSecret ? "SET" : "NOT SET"}`);
+
   if (workerUrl && workerSecret) {
     fetch(`${workerUrl}/process`, {
       method:  "POST",
       headers: { "Content-Type": "application/json", "x-worker-secret": workerSecret },
       body:    JSON.stringify({ orderId, runId: run.id }),
-    }).catch((err) => console.error("[ready] worker dispatch failed:", err.message));
+    }).then((r) => {
+      console.log(`[ready] worker responded status=${r.status}`);
+    }).catch((err) => {
+      console.error(`[ready] worker dispatch failed: ${err.message}`);
+    });
   } else {
     console.error("[ready] PIPELINE_WORKER_URL or WORKER_SECRET not set — pipeline not started");
   }
