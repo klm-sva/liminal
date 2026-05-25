@@ -1,5 +1,5 @@
 /**
- * pipeline/worker.js
+ * pipeline/worker.ts
  *
  * Standalone HTTP worker that runs the pipeline with no timeout.
  * Deploy on any server (Railway, DigitalOcean, etc.) that can run Node.js.
@@ -9,12 +9,15 @@
  *   PORT                   — optional, defaults to 3001
  *   (all pipeline env vars) — SUPABASE_*, ANTHROPIC_API_KEY, etc.
  *
- * Start: node pipeline/worker.js
+ * Start: npx ts-node --skip-project pipeline/worker.ts
  */
 
+import * as path    from "path";
+import * as fs      from "fs";
+import express      from "express";
+import { processOrder } from "./process-order";
+
 // Load .env.local when running locally
-const path = require("path");
-const fs   = require("fs");
 const envPath = path.resolve(__dirname, "../.env.local");
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, "utf-8").split("\n")) {
@@ -28,24 +31,23 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-const express = require("express");
-
 const app    = express();
-const PORT   = process.env.PORT || 3001;
+const PORT   = process.env.PORT ?? 3001;
 const SECRET = process.env.WORKER_SECRET;
 
 app.use(express.json());
 
-app.post("/process", async (req, res) => {
-  // Validate secret
+app.post("/process", async (req: express.Request, res: express.Response) => {
   const authHeader = req.headers["x-worker-secret"];
   if (!SECRET || authHeader !== SECRET) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" });
+    return;
   }
 
-  const { orderId, runId } = req.body ?? {};
+  const { orderId, runId } = (req.body ?? {}) as { orderId?: string; runId?: string };
   if (!orderId || !runId) {
-    return res.status(400).json({ error: "Missing orderId or runId" });
+    res.status(400).json({ error: "Missing orderId or runId" });
+    return;
   }
 
   // Acknowledge immediately — pipeline runs in background
@@ -55,18 +57,18 @@ app.post("/process", async (req, res) => {
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
 
   try {
-    // Import here so env vars are loaded before the module initialises
-    const { processOrder } = require("./process-order");
     const result = await processOrder(orderId, runId);
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
-    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${err.message}`);
+    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${(err as Error).message}`);
   }
 });
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/health", (_req: express.Request, res: express.Response) => {
+  res.json({ status: "ok" });
+});
 
 app.listen(PORT, () => {
   console.log(`[worker] listening on port ${PORT}`);
