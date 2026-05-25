@@ -1,6 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install --production=false"
+buildCommand = "npm install --omit=dev"
+
+[variables]
+NODE_VERSION = "20"
 
 [deploy]
 startCommand = "node pipeline/worker.js"
