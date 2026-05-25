@@ -4,6 +4,7 @@ buildCommand = "npm install --omit=dev"
 
 [variables]
 NODE_VERSION = "20"
+NODE_OPTIONS = ""
 
 [deploy]
 startCommand = "node pipeline/worker.js"
