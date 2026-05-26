@@ -12,7 +12,6 @@
  */
 
 import { NextResponse }        from "next/server";
-import { waitUntil }           from "@vercel/functions";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 
@@ -130,21 +129,25 @@ export async function POST(
   console.log(`[ready] dispatching to worker — url=${workerUrl ?? "NOT SET"} secret=${workerSecret ? "SET" : "NOT SET"}`);
 
   if (workerUrl && workerSecret) {
-    // waitUntil keeps the Vercel function alive until the dispatch fetch completes.
-    // Without it the fetch is cancelled when the response is sent.
-    waitUntil(
-      fetch(`${workerUrl}/process`, {
+    try {
+      const workerRes = await fetch(`${workerUrl}/process`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "x-worker-secret": workerSecret },
         body:    JSON.stringify({ orderId, runId: run.id }),
-      }).then((r) => {
-        console.log(`[ready] worker responded status=${r.status}`);
-      }).catch((err) => {
-        console.error(`[ready] worker dispatch failed: ${err.message}`);
-      })
-    );
+      });
+      // Write dispatch result to run record so it's visible in Supabase
+      await serviceClient.from("runs").update({
+        error_message: `dispatch_status=${workerRes.status}`,
+      }).eq("id", run.id);
+    } catch (err) {
+      const msg = `dispatch_failed: ${(err as Error).message}`;
+      console.error(`[ready] ${msg}`);
+      await serviceClient.from("runs").update({ error_message: msg }).eq("id", run.id);
+    }
   } else {
-    console.error("[ready] PIPELINE_WORKER_URL or WORKER_SECRET not set — pipeline not started");
+    const msg = "dispatch_failed: PIPELINE_WORKER_URL or WORKER_SECRET not set";
+    console.error(`[ready] ${msg}`);
+    await serviceClient.from("runs").update({ error_message: msg }).eq("id", run.id);
   }
 
   return NextResponse.json({ status: "processing", run_id: run.id });
