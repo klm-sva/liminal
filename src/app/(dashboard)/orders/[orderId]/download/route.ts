@@ -4,6 +4,16 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 const OUTPUTS_BUCKET = "order-outputs";
 
+const MIME_TYPES: Record<string, string> = {
+  html: "text/html",
+  pdf:  "application/pdf",
+  png:  "image/png",
+  jpg:  "image/jpeg",
+  jpeg: "image/jpeg",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ orderId: string }> },
@@ -35,13 +45,25 @@ export async function GET(
   }
 
   const serviceClient = await createServiceClient();
-  const { data: signedData, error: signError } = await serviceClient.storage
+  const { data: fileData, error: downloadError } = await serviceClient.storage
     .from(OUTPUTS_BUCKET)
-    .createSignedUrl(path, 3600);
+    .download(path);
 
-  if (signError || !signedData?.signedUrl) {
+  if (downloadError || !fileData) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  return NextResponse.redirect(signedData.signedUrl);
+  const filename  = path.split("/").pop() ?? "download";
+  const ext       = filename.split(".").pop()?.toLowerCase() ?? "";
+  const mimeType  = MIME_TYPES[ext] ?? "application/octet-stream";
+
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+
+  return new NextResponse(buffer, {
+    headers: {
+      "Content-Type":        mimeType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length":      buffer.byteLength.toString(),
+    },
+  });
 }
