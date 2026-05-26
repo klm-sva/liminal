@@ -4506,6 +4506,7 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: st
   processing:           { label: "Processing",            color: "#388fa6", bg: "#388fa615" },
   complete:             { label: "Complete",              color: "#a3bfa1", bg: "#a3bfa115" },
   failed:               { label: "Failed",               color: "#d97b6c", bg: "#d97b6c15" },
+  address_invalid:      { label: "Address Invalid",       color: "#f59e0b", bg: "#f59e0b15" },
   // legacy aliases
   pending_upload:       { label: "Awaiting Upload",       color: "#edc299", bg: "#edc29915" },
   delivered:            { label: "Delivered",             color: "#a3bfa1", bg: "#a3bfa115" },
