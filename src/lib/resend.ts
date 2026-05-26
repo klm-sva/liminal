@@ -298,6 +298,37 @@ export async function sendCustomerDelayEmail({
   });
 }
 
+// ─── 9. Address invalid ───────────────────────────────────────────────────────
+
+export async function sendAddressInvalidEmail({
+  to,
+  name,
+  creditName,
+  projectId,
+  reason,
+}: {
+  to:         string;
+  name:       string;
+  creditName: string;
+  projectId:  string;
+  reason:     string;
+}) {
+  return getResend().emails.send({
+    from:    FROM(),
+    to,
+    subject: `Action required — project address needs correction`,
+    html: `
+      <h1>Your project address could not be verified</h1>
+      <p>Hi ${name},</p>
+      <p>We were unable to process your <strong>${creditName}</strong> submission because the project address could not be verified:</p>
+      <p style="background:#fff8e1;border-left:3px solid #f59e0b;padding:12px 16px;font-size:14px;">${reason}</p>
+      <p>Please update your project address and resubmit. No additional charge will apply for this resubmission.</p>
+      <p><a href="${APP()}/projects/${projectId}/edit">Update Project Address →</a></p>
+      <p style="font-size:12px;color:#888;">If you believe your address is correct, please reply to this email and we will investigate.</p>
+    `,
+  });
+}
+
 // ─── Legacy emails (kept for compatibility) ───────────────────────────────────
 
 export async function sendProjectInviteEmail({

@@ -27,6 +27,7 @@ export const ORDER_STATUS_CONFIG: Record<OrderStatus, { label: string; color: st
   processing:           { label: "Processing",     color: "#388fa6", bg: "#388fa615" },
   complete:             { label: "Complete",        color: "#10b981", bg: "#10b98115" },
   failed:               { label: "Failed",          color: "#ef4444", bg: "#ef444415" },
+  address_invalid:      { label: "Address Invalid", color: "#f59e0b", bg: "#f59e0b15" },
   pending_upload:       { label: "Upload Needed",  color: "#388fa6", bg: "#388fa615" },
   delivered:            { label: "Delivered",       color: "#10b981", bg: "#10b98115" },
 };

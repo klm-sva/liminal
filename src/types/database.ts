@@ -20,10 +20,11 @@ export type OrderStatus =
   | "processing"
   | "complete"
   | "failed"
+  | "address_invalid"
   // legacy aliases
   | "pending_upload"
   | "delivered";
-export type RunStatus = "pending" | "processing" | "completed" | "failed";
+export type RunStatus = "pending" | "processing" | "completed" | "failed" | "address_invalid";
 
 // ─── Table row types ───────────────────────────────────────────────────────────
 

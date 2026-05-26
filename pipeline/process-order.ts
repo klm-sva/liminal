@@ -47,7 +47,8 @@ import { extractSpecs, loadSpecsProfile, formatSpecsProfileForContext } from "./
 import { extractDocument, loadAllDocumentProfiles, formatAllDocumentProfilesForContext } from "./lib/document-extract";
 import { extractPdfContentFromBuffer } from "./lib/pdf-extract";
 import { CREDIT_SUBMISSION_PROMPT } from "./prompts/credit-submission";
-import { sendQAReviewEmail } from "../src/lib/resend";
+import { sendQAReviewEmail, sendAddressInvalidEmail } from "../src/lib/resend";
+import { validateAddress } from "./lib/geocode";
 import { signQaToken } from "../src/lib/qa-token";
 import { validateNoUnnecessaryCustomerRequests, validateAllOutputsProduced, validateCalculatorGuidePresent } from "./lib/validate-output";
 import { withTimeout, StepLogger } from "./lib/pipeline-utils";
@@ -586,6 +587,31 @@ export async function processOrder(
       review_issues: issueStrings,
     }).eq("id", runId);
   }
+
+  // ── Step 7.5: Validate project address ───────────────────────────────────
+  console.log(`  Step 7.5: Validating project address: "${project.address ?? "(none)"}"...`);
+  const addrResult = await validateAddress(project.address ?? "");
+  if (!addrResult.valid) {
+    console.warn(`  Step 7.5: ✗ Address invalid — ${addrResult.reason}`);
+    await supabase.from("runs").update({
+      status:        "address_invalid",
+      error_message: addrResult.reason,
+      completed_at:  new Date().toISOString(),
+    }).eq("id", runId);
+    try {
+      await sendAddressInvalidEmail({
+        to:         customer.email,
+        name:       customer.name ?? "there",
+        creditName: credit.credit_name,
+        projectId:  project.id,
+        reason:     addrResult.reason,
+      });
+    } catch (emailErr) {
+      console.warn(`  Step 7.5: Failed to send address invalid email: ${(emailErr as Error).message}`);
+    }
+    return { orderId, runId, status: "failed", issues: [addrResult.reason] };
+  }
+  console.log(`  Step 7.5: ✓ ${addrResult.reason}`);
 
   // ── Step 8: Update order → processing ────────────────────────────────────
   await supabase.from("orders").update({ status: "processing" }).eq("id", orderId);
