@@ -39,7 +39,7 @@ export async function PATCH(
   const body = await request.json();
   const updates: ProjectUpdate = {};
   for (const [key, value] of Object.entries(body)) {
-    if (ALLOWED.has(key) && value !== undefined && value !== null && value !== "") {
+    if (ALLOWED.has(key) && value !== undefined) {
       (updates as Record<string, unknown>)[key] = value;
     }
   }

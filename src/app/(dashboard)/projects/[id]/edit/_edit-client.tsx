@@ -30,12 +30,36 @@ export default function EditProjectClient({ project }: { project: ProjectData })
   const [desc,      setDesc]      = useState(project.description ?? "");
   const [saving,    setSaving]    = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    // TODO: wire real PATCH /api/projects/[id] when backend is ready
-    await new Promise((r) => setTimeout(r, 800));
-    router.push(`/projects/${project.id}`);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          address:       address      || null,
+          gross_sqft:    sqft         ? Number(sqft)    : null,
+          stories:       stories      ? Number(stories) : null,
+          building_type: bldgType     || null,
+          occupancy:     occupancy    || null,
+          description:   desc         || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error ?? "Failed to save");
+      }
+      router.push(`/projects/${project.id}`);
+      router.refresh();
+    } catch (err) {
+      setError((err as Error).message);
+      setSaving(false);
+    }
   }
 
   const flagged = project.flagged_fields ?? [];
@@ -100,6 +124,12 @@ export default function EditProjectClient({ project }: { project: ProjectData })
               />
             </Field>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <p className="text-xs text-red-700">{error}</p>
+            </div>
+          )}
 
           <div className="flex gap-3">
             <Link href={`/projects/${project.id}`} className="flex-1 text-center py-3 border border-certify-cool-grey/20 text-certify-dark-grey text-sm font-medium rounded-xl hover:bg-certify-white transition-colors">
