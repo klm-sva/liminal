@@ -39,7 +39,12 @@ export default function PaymentClient({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create checkout session");
+      if (!res.ok) {
+        const errMsg = typeof data?.error === "string"
+          ? data.error
+          : (data?.error?.message ?? JSON.stringify(data?.error) ?? "Failed to create checkout session");
+        throw new Error(errMsg);
+      }
       window.location.href = data.url;
     } catch (err) {
       setError((err as Error).message);
