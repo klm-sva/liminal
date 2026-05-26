@@ -851,7 +851,7 @@ export async function processOrder(
     "",
     projectDataBlock,
     "",
-    "Generate PART 2 — SUPPORTING DOCUMENTATION SECTION for this credit as instructed.",
+    "Generate PART 2 — SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 — COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either.",
   ].join("\n");
 
   // Dynamic system prompt — append QA instructions when regenerating after review

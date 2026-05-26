@@ -211,24 +211,116 @@ For each item:
 
 Never omit any Column 1 item. Never omit any Column 2 item. If a Column 2 item was not successfully retrieved, mark it ⚠ RETRIEVAL INCOMPLETE and explain what the project team should verify.
 
-══════════════════════════════
-VISUAL AND FORMATTING STANDARDS
-══════════════════════════════
-- Section headers: #327cb9
-- Secondary background: #abcde8
-- Primary background: white
-- Accent / body text: #515062
-- Table header rows: #327cb9 background, white text, bold
-- Table body rows: alternating white and #e8f0f7
-- All table borders: 1px solid #cccccc
-- Font: Arial, Helvetica, sans-serif
+══════════════════════════════════════════════════════
+HTML OUTPUT — CLASS VOCABULARY (MANDATORY)
+══════════════════════════════════════════════════════
 
-For the Submission Checklist badges:
-- ✓ PROVIDED badge: background #d4edda, color #155724, border #c3e6cb
-- ◉ REQUIRED badge: background #fff3cd, color #856404, border #ffc107
-- ⚠ RETRIEVAL INCOMPLETE badge: background #f8d7da, color #721c24, border #f5c6cb
+The pipeline injects the Liminal stylesheet into every output. You MUST use these CSS class names. Do NOT write <style> blocks or inline style= attributes — the stylesheet is provided for you. Use the classes that apply to the content; unused classes are harmless.
 
-At the very end, include a Processing Summary section with:
-- Credit and program processed
-- List of all outputs generated
-- List of any [OWNER TO CONFIRM] items with descriptions`;
+DOCUMENT STRUCTURE
+Use this pattern for every credit, adapting sections as the credit requires:
+
+  <div class="page-header">
+    <h1>Credit Code — Credit Name</h1>
+    <div class="sub">Project Name · City, State · Date</div>
+  </div>
+  <div class="meta-bar"><span>Program:</span> LEED v4.1 BD+C &nbsp; <span>Credit:</span> LT Credit 5</div>
+
+  <div class="section-header">Section Title</div>
+  <div class="section-body">
+    ... section content ...
+  </div>
+
+  <div class="section-subheader">Subsection Title</div>  ← lighter, nested under a section
+  <div class="section-body"> ... </div>
+
+  <div class="section-wrap"> ... padding wrapper for free-flowing content ... </div>
+  <div class="form-id-bar">LEED Online — Form Section Identifier</div>
+  <hr class="divider">
+
+FORM FIELDS (Part 1 — online form reproduction)
+  <div class="field-row">
+    <span class="field-label">Field Name</span>
+    <span class="field-value filled">Populated value here</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Upload Field</span>
+    <span class="field-value upload">[OWNER TO CONFIRM: description of what is needed]</span>
+  </div>
+  <span class="owner-field">[OWNER TO CONFIRM: description]</span>  ← inline owner item
+  <span class="field-id">field_id_123</span>  ← LEED Online field ID, monospace
+  <span class="radio-selected">●</span> Selected option
+  <span class="radio-unselected"></span> Other option
+
+TABLES — always real HTML tables, never plain text or markdown
+  <table>
+    <thead><tr><th>Column</th><th>Column</th></tr></thead>
+    <tbody>
+      <tr><td>Data</td><td>Data</td></tr>
+    </tbody>
+  </table>
+  thead th: #327cb9 background, white text — automatic from stylesheet
+  tbody rows: alternating white/#e8f0f7 — automatic from stylesheet
+
+CALCULATION BOXES
+  <div class="calc-box">
+    <div class="step">Step 1: formula or value</div>
+    <div class="step">Step 2: result</div>
+  </div>
+
+COMPLIANCE RESULTS
+  <div class="result-pass">✓ COMPLIANT — 3 Points Earned</div>
+  <div class="result-fail">✗ NOT COMPLIANT</div>
+  <div class="result-warn">⚠ CONDITIONAL — owner confirmation required</div>
+  <span class="pass">Compliant</span> / <span class="fail">Non-compliant</span>  ← inline
+  <div class="point-box">3 / 5 Points</div>
+  <div class="point-box-pending">Pending Owner Confirmation</div>
+  <div class="compliance-threshold-box">
+    <div class="threshold-label">Weekday Directional Trips</div>
+    <div class="threshold-value">147</div>
+    <div class="threshold-limit">Required: ≥ 100 — THRESHOLD MET</div>
+  </div>
+
+NOTES AND CALLOUTS
+  <div class="note">Blue informational note — for context or methodology</div>
+  <div class="info-box">Light blue info box — for retrieved data summaries</div>
+  <div class="warn-note">Yellow warning — for conditional items or caveats</div>
+  <div class="warn-box">Yellow warning box — larger warning area</div>
+  <div class="alert-note">Red alert — for retrieval failures or critical missing items</div>
+
+SUBMISSION CHECKLIST (Part 3 — use these exact badge classes)
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-provided">✓ PROVIDED</span></h4>
+    <p>Where it appears: Section name in this document</p>
+    <p><a href="https://source-url.gov">Source: agency name</a></p>
+  </div>
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-required">◉ REQUIRED — Project Team</span></h4>
+    <p>What it is: description</p>
+    <p>Why from project team: Proprietary project document / Requires owner signature / etc.</p>
+    <p>Format required: PDF / signed letter / stamped drawing</p>
+  </div>
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-incomplete">⚠ RETRIEVAL INCOMPLETE</span></h4>
+    <p>Reason retrieval failed and what the project team should verify.</p>
+  </div>
+
+LAYOUT HELPERS (use when credit content calls for it)
+  <div class="two-col"> ... two equal columns for side-by-side data ... </div>
+  <div class="plan-section"><h4>Policy Section Heading</h4> ... policy content ... </div>
+  <div class="signature-block">Name: <span class="sig-line"></span> Date: <span class="sig-line"></span></div>
+  <div class="source-note">Source: agency.gov, retrieved 2026-05-26</div>
+  <ul class="checklist-list"><li>Item one</li><li>Item two</li></ul>
+
+PROCESSING SUMMARY (at the very end of every output)
+  <div class="processing-summary">
+    <h3>Processing Summary</h3>
+    <p><strong>Credit:</strong> LT Credit 5 — Access to Quality Transit (LEED v4.1 BD+C)</p>
+    <p><strong>Outputs generated:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
+    <p><strong>Owner confirmation items:</strong> list any [OWNER TO CONFIRM] items here</p>
+  </div>
+
+MAP INSERTION
+  <img data-map-insert="1" alt="Walking distance map">
+  ← This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
+  Never use text descriptions or .map-placeholder div for the actual map location.`;

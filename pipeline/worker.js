@@ -735,7 +735,7 @@ var init_map_generation = __esm({
 
 // pipeline/lib/make-editable.ts
 function injectTableCss(html) {
-  const tag = `<style id="liminal-table-css">${TABLE_CSS}
+  const tag = `<style id="liminal-css">${LIMINAL_CSS}
 </style>`;
   let result = html;
   const headIdx = result.indexOf("</head>");
@@ -762,32 +762,101 @@ function makeEditable(html) {
   result = addContentEditable(result);
   return result;
 }
-var TABLE_CSS, BANNER_HTML;
+var LIMINAL_CSS, BANNER_HTML;
 var init_make_editable = __esm({
   "pipeline/lib/make-editable.ts"() {
     "use strict";
-    TABLE_CSS = `
-table {
-  max-width: 100%;
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  word-wrap: break-word;
-}
-td, th {
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  max-width: 0;
-}
-@media print {
-  table {
-    max-width: 100%;
-    page-break-inside: avoid;
-  }
-  td, th {
-    word-wrap: break-word;
-  }
-}`;
+    LIMINAL_CSS = `
+  /* Base */
+  body { font-family: Arial, Helvetica, sans-serif; color: #515062; background: #ffffff; margin: 0; padding: 0; font-size: 13px; }
+  a { color: #327cb9; }
+  h2 { color: #327cb9; font-size: 15px; margin: 20px 0 6px 0; }
+  h3 { color: #515062; font-size: 13px; margin: 14px 0 4px 0; font-weight: bold; }
+  h4 { color: #515062; font-size: 0.97em; margin: 14px 0 4px 0; }
+
+  /* Page header */
+  .page-header { background: #327cb9; color: #ffffff; padding: 22px 32px 16px 32px; }
+  .page-header h1 { margin: 0 0 4px 0; font-size: 20px; font-weight: bold; color: #ffffff; }
+  .page-header .sub { font-size: 13px; opacity: 0.88; }
+
+  /* Section structure */
+  .section-header { background: #327cb9; color: #ffffff; font-weight: bold; font-size: 13px; padding: 8px 14px; margin: 22px 0 0 0; border-radius: 3px 3px 0 0; }
+  .section-subheader { background: #abcde8; color: #327cb9; font-weight: bold; font-size: 12px; padding: 6px 14px; margin: 14px 0 0 0; border-radius: 3px 3px 0 0; border: 1px solid #cccccc; border-bottom: none; }
+  .section-body { border: 1px solid #cccccc; border-top: none; padding: 16px 18px; background: #ffffff; }
+  .section-wrap { padding: 0 24px 18px 24px; }
+  .meta-bar { background: #abcde8; padding: 10px 24px; font-size: 0.92em; display: flex; flex-wrap: wrap; gap: 24px; }
+  .meta-bar span { font-weight: bold; color: #327cb9; }
+  .form-id-bar { background: #abcde8; padding: 8px 18px; font-weight: bold; font-size: 13px; color: #327cb9; border-bottom: 2px solid #327cb9; }
+  .divider { border: none; border-top: 1px solid #cccccc; margin: 18px 0; }
+
+  /* Form fields */
+  .field-row { display: flex; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
+  .field-label { font-weight: bold; color: #327cb9; min-width: 220px; font-size: 12px; }
+  .field-id { font-family: monospace; font-size: 10px; color: #888; background: #f0f4f8; border-radius: 3px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; }
+  .field-value { color: #515062; flex: 1; }
+  .field-value.filled { background: #e8f0f7; border-left: 3px solid #327cb9; padding: 5px 10px; border-radius: 0 3px 3px 0; }
+  .field-value.upload { background: #fff3cd; border-left: 3px solid #ffc107; padding: 5px 10px; border-radius: 0 3px 3px 0; color: #856404; }
+  .owner-field { background: #fff3cd; border: 1px dashed #ffc107; border-radius: 3px; padding: 4px 10px; color: #856404; font-style: italic; display: inline-block; margin: 2px 0; }
+  .radio-selected { display: inline-block; background: #327cb9; color: #fff; border-radius: 50%; width: 14px; height: 14px; text-align: center; line-height: 14px; font-size: 10px; margin-right: 6px; }
+  .radio-unselected { display: inline-block; border: 2px solid #aaa; border-radius: 50%; width: 12px; height: 12px; margin-right: 6px; vertical-align: middle; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; table-layout: fixed; word-wrap: break-word; }
+  thead tr th { background: #327cb9; color: #ffffff; font-weight: bold; padding: 8px; text-align: left; border: 1px solid #cccccc; }
+  tbody tr:nth-child(odd) { background: #ffffff; }
+  tbody tr:nth-child(even) { background: #e8f0f7; }
+  tbody tr td { padding: 7px 8px; border: 1px solid #cccccc; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word; max-width: 0; }
+  th { word-wrap: break-word; overflow-wrap: break-word; }
+  @media print { table { page-break-inside: avoid; } }
+
+  /* Calculation boxes */
+  .calc-box { background: #f4f8fc; border: 1px solid #327cb9; border-radius: 4px; padding: 14px 18px; margin: 10px 0; font-family: monospace; font-size: 12px; color: #515062; }
+  .calc-box .step { margin-bottom: 6px; }
+
+  /* Compliance results */
+  .result-pass { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px; padding: 8px 14px; font-weight: bold; display: inline-block; margin: 6px 0; }
+  .result-fail { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px; padding: 8px 14px; font-weight: bold; display: inline-block; margin: 6px 0; }
+  .result-warn { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; padding: 8px 14px; font-weight: bold; display: inline-block; margin: 6px 0; }
+  .pass { color: #155724; font-weight: bold; }
+  .fail { color: #721c24; font-weight: bold; }
+  .point-box { background: #327cb9; color: #fff; border-radius: 6px; padding: 14px 22px; display: inline-block; font-size: 16px; font-weight: bold; margin: 10px 0; }
+  .point-box-pending { background: #856404; color: #fff; border-radius: 6px; padding: 14px 22px; display: inline-block; font-size: 16px; font-weight: bold; margin: 10px 0; }
+  .score-box { background: #327cb9; color: #fff; border-radius: 6px; padding: 14px 22px; display: inline-block; font-size: 1.1em; font-weight: bold; margin: 10px 0; }
+  .compliance-threshold-box { background: #f4f8fc; border: 2px solid #327cb9; border-radius: 6px; padding: 16px 20px; margin: 14px 0; }
+  .compliance-threshold-box .threshold-label { font-weight: bold; color: #327cb9; font-size: 13px; }
+  .compliance-threshold-box .threshold-value { font-size: 22px; font-weight: bold; color: #515062; }
+  .compliance-threshold-box .threshold-limit { font-size: 13px; color: #515062; }
+
+  /* Notes and callouts */
+  .note { background: #abcde8; border-left: 4px solid #327cb9; padding: 8px 12px; margin: 8px 0; font-size: 12px; border-radius: 0 3px 3px 0; }
+  .info-box { background: #e8f0f7; border-left: 4px solid #327cb9; padding: 10px 16px; margin: 10px 0 16px 0; font-size: 0.93em; }
+  .warn-note { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin: 8px 0; font-size: 12px; border-radius: 0 3px 3px 0; }
+  .warn-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 16px; margin: 10px 0 16px 0; font-size: 0.93em; }
+  .alert-note { background: #f8d7da; border-left: 4px solid #dc3545; padding: 8px 12px; margin: 8px 0; font-size: 12px; border-radius: 0 3px 3px 0; }
+
+  /* Submission checklist badges */
+  .badge-provided { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 3px; padding: 2px 8px; font-size: 11px; font-weight: bold; display: inline-block; }
+  .badge-required { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 3px; padding: 2px 8px; font-size: 11px; font-weight: bold; display: inline-block; }
+  .badge-incomplete { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 3px; padding: 2px 8px; font-size: 11px; font-weight: bold; display: inline-block; }
+  .checklist-item { border: 1px solid #cccccc; border-radius: 4px; padding: 12px 16px; margin-bottom: 10px; }
+  .checklist-item h4 { margin: 0 0 4px 0; font-size: 13px; color: #327cb9; }
+  .checklist-item p { margin: 3px 0; font-size: 12px; }
+  .checklist-item .item-title { font-weight: bold; font-size: 0.97em; color: #327cb9; }
+  .checklist-item .item-detail { font-size: 0.91em; margin-top: 4px; color: #515062; }
+  ul.checklist-list { list-style: none; padding: 0; margin: 0; }
+  ul.checklist-list li { padding: 4px 0; border-bottom: 1px solid #e8f0f7; font-size: 12px; }
+  ul.checklist-list li:last-child { border-bottom: none; }
+
+  /* Layout helpers */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .plan-section { border: 1px solid #cccccc; border-radius: 4px; padding: 14px 18px; margin: 12px 0; }
+  .plan-section h4 { color: #327cb9; margin: 0 0 8px 0; font-size: 13px; border-bottom: 1px solid #abcde8; padding-bottom: 4px; }
+  .signature-block { border: 1px solid #cccccc; border-radius: 4px; padding: 14px 18px; margin: 12px 0; background: #f9f9f9; }
+  .sig-line { border-bottom: 1px solid #515062; min-width: 250px; display: inline-block; margin: 0 10px; height: 20px; }
+  .processing-summary { background: #f4f8fc; border: 2px solid #327cb9; border-radius: 6px; padding: 18px 22px; margin: 24px 0; }
+  .processing-summary h3 { color: #327cb9; margin: 0 0 10px 0; font-size: 14px; }
+  .source-note { font-size: 10px; color: #888; font-style: italic; }
+  .map-placeholder { background: #e8f0f7; border: 2px dashed #327cb9; border-radius: 6px; padding: 28px; text-align: center; color: #327cb9; font-size: 1em; margin: 14px 0; }`;
     BANNER_HTML = `
 <div class="liminal-edit-banner" style="background:#abcde8;color:#2b4044;padding:12px 16px;font-size:13px;font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:9999;box-shadow:0 2px 4px rgba(0,0,0,0.12);">
   <span style="flex:1;">This document is editable. Click any text to edit it directly. When finished, use <strong>File &rarr; Print &rarr; Save as PDF</strong> in your browser to save your edited version. Your edits are saved on your computer only &mdash; nothing is sent to the server.</span>
@@ -2278,27 +2347,119 @@ For each item:
 
 Never omit any Column 1 item. Never omit any Column 2 item. If a Column 2 item was not successfully retrieved, mark it \u26A0 RETRIEVAL INCOMPLETE and explain what the project team should verify.
 
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-VISUAL AND FORMATTING STANDARDS
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-- Section headers: #327cb9
-- Secondary background: #abcde8
-- Primary background: white
-- Accent / body text: #515062
-- Table header rows: #327cb9 background, white text, bold
-- Table body rows: alternating white and #e8f0f7
-- All table borders: 1px solid #cccccc
-- Font: Arial, Helvetica, sans-serif
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+HTML OUTPUT \u2014 CLASS VOCABULARY (MANDATORY)
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-For the Submission Checklist badges:
-- \u2713 PROVIDED badge: background #d4edda, color #155724, border #c3e6cb
-- \u25C9 REQUIRED badge: background #fff3cd, color #856404, border #ffc107
-- \u26A0 RETRIEVAL INCOMPLETE badge: background #f8d7da, color #721c24, border #f5c6cb
+The pipeline injects the Liminal stylesheet into every output. You MUST use these CSS class names. Do NOT write <style> blocks or inline style= attributes \u2014 the stylesheet is provided for you. Use the classes that apply to the content; unused classes are harmless.
 
-At the very end, include a Processing Summary section with:
-- Credit and program processed
-- List of all outputs generated
-- List of any [OWNER TO CONFIRM] items with descriptions`;
+DOCUMENT STRUCTURE
+Use this pattern for every credit, adapting sections as the credit requires:
+
+  <div class="page-header">
+    <h1>Credit Code \u2014 Credit Name</h1>
+    <div class="sub">Project Name \xB7 City, State \xB7 Date</div>
+  </div>
+  <div class="meta-bar"><span>Program:</span> LEED v4.1 BD+C &nbsp; <span>Credit:</span> LT Credit 5</div>
+
+  <div class="section-header">Section Title</div>
+  <div class="section-body">
+    ... section content ...
+  </div>
+
+  <div class="section-subheader">Subsection Title</div>  \u2190 lighter, nested under a section
+  <div class="section-body"> ... </div>
+
+  <div class="section-wrap"> ... padding wrapper for free-flowing content ... </div>
+  <div class="form-id-bar">LEED Online \u2014 Form Section Identifier</div>
+  <hr class="divider">
+
+FORM FIELDS (Part 1 \u2014 online form reproduction)
+  <div class="field-row">
+    <span class="field-label">Field Name</span>
+    <span class="field-value filled">Populated value here</span>
+  </div>
+  <div class="field-row">
+    <span class="field-label">Upload Field</span>
+    <span class="field-value upload">[OWNER TO CONFIRM: description of what is needed]</span>
+  </div>
+  <span class="owner-field">[OWNER TO CONFIRM: description]</span>  \u2190 inline owner item
+  <span class="field-id">field_id_123</span>  \u2190 LEED Online field ID, monospace
+  <span class="radio-selected">\u25CF</span> Selected option
+  <span class="radio-unselected"></span> Other option
+
+TABLES \u2014 always real HTML tables, never plain text or markdown
+  <table>
+    <thead><tr><th>Column</th><th>Column</th></tr></thead>
+    <tbody>
+      <tr><td>Data</td><td>Data</td></tr>
+    </tbody>
+  </table>
+  thead th: #327cb9 background, white text \u2014 automatic from stylesheet
+  tbody rows: alternating white/#e8f0f7 \u2014 automatic from stylesheet
+
+CALCULATION BOXES
+  <div class="calc-box">
+    <div class="step">Step 1: formula or value</div>
+    <div class="step">Step 2: result</div>
+  </div>
+
+COMPLIANCE RESULTS
+  <div class="result-pass">\u2713 COMPLIANT \u2014 3 Points Earned</div>
+  <div class="result-fail">\u2717 NOT COMPLIANT</div>
+  <div class="result-warn">\u26A0 CONDITIONAL \u2014 owner confirmation required</div>
+  <span class="pass">Compliant</span> / <span class="fail">Non-compliant</span>  \u2190 inline
+  <div class="point-box">3 / 5 Points</div>
+  <div class="point-box-pending">Pending Owner Confirmation</div>
+  <div class="compliance-threshold-box">
+    <div class="threshold-label">Weekday Directional Trips</div>
+    <div class="threshold-value">147</div>
+    <div class="threshold-limit">Required: \u2265 100 \u2014 THRESHOLD MET</div>
+  </div>
+
+NOTES AND CALLOUTS
+  <div class="note">Blue informational note \u2014 for context or methodology</div>
+  <div class="info-box">Light blue info box \u2014 for retrieved data summaries</div>
+  <div class="warn-note">Yellow warning \u2014 for conditional items or caveats</div>
+  <div class="warn-box">Yellow warning box \u2014 larger warning area</div>
+  <div class="alert-note">Red alert \u2014 for retrieval failures or critical missing items</div>
+
+SUBMISSION CHECKLIST (Part 3 \u2014 use these exact badge classes)
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-provided">\u2713 PROVIDED</span></h4>
+    <p>Where it appears: Section name in this document</p>
+    <p><a href="https://source-url.gov">Source: agency name</a></p>
+  </div>
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-required">\u25C9 REQUIRED \u2014 Project Team</span></h4>
+    <p>What it is: description</p>
+    <p>Why from project team: Proprietary project document / Requires owner signature / etc.</p>
+    <p>Format required: PDF / signed letter / stamped drawing</p>
+  </div>
+  <div class="checklist-item">
+    <h4>Item Name <span class="badge-incomplete">\u26A0 RETRIEVAL INCOMPLETE</span></h4>
+    <p>Reason retrieval failed and what the project team should verify.</p>
+  </div>
+
+LAYOUT HELPERS (use when credit content calls for it)
+  <div class="two-col"> ... two equal columns for side-by-side data ... </div>
+  <div class="plan-section"><h4>Policy Section Heading</h4> ... policy content ... </div>
+  <div class="signature-block">Name: <span class="sig-line"></span> Date: <span class="sig-line"></span></div>
+  <div class="source-note">Source: agency.gov, retrieved 2026-05-26</div>
+  <ul class="checklist-list"><li>Item one</li><li>Item two</li></ul>
+
+PROCESSING SUMMARY (at the very end of every output)
+  <div class="processing-summary">
+    <h3>Processing Summary</h3>
+    <p><strong>Credit:</strong> LT Credit 5 \u2014 Access to Quality Transit (LEED v4.1 BD+C)</p>
+    <p><strong>Outputs generated:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
+    <p><strong>Owner confirmation items:</strong> list any [OWNER TO CONFIRM] items here</p>
+  </div>
+
+MAP INSERTION
+  <img data-map-insert="1" alt="Walking distance map">
+  \u2190 This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
+  Never use text descriptions or .map-placeholder div for the actual map location.`;
   }
 });
 
@@ -3244,7 +3405,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     "",
     projectDataBlock,
     "",
-    "Generate PART 2 \u2014 SUPPORTING DOCUMENTATION SECTION for this credit as instructed."
+    "Generate PART 2 \u2014 SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 \u2014 COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either."
   ].join("\n");
   const systemPrompt = additionalInstructions ? `${CREDIT_SUBMISSION_PROMPT}
 
