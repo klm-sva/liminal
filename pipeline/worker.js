@@ -2961,7 +2961,7 @@ function validateAllDeliverables(params) {
 async function processOrder(orderId, runId, additionalInstructions) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk4.default({ apiKey, timeout: 18e4, maxRetries: 0 });
+  const client2 = new import_sdk4.default({ apiKey, timeout: 6e5, maxRetries: 1 });
   const supabase = createServiceClient();
   console.log(`
 [process-order] \u25B6 Order ${orderId} / Run ${runId}`);
