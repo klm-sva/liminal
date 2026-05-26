@@ -28,7 +28,14 @@ export async function validateAddress(address: string): Promise<ValidateResult> 
     url.searchParams.set("address", address);
     url.searchParams.set("key", key);
 
-    const res  = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    let res: Response;
+    try {
+      res = await fetch(url.toString(), { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     const data = await res.json() as {
       status:  string;
       results: Array<{

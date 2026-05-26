@@ -2601,7 +2601,14 @@ async function validateAddress(address) {
     const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
     url.searchParams.set("address", address);
     url.searchParams.set("key", key);
-    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(1e4) });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1e4);
+    let res;
+    try {
+      res = await fetch(url.toString(), { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     const data2 = await res.json();
     if (data2.status === "ZERO_RESULTS" || !data2.results?.length) {
       return {
