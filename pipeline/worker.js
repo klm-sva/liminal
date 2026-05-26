@@ -2592,54 +2592,7 @@ async function validateAddress(address) {
   if (!address || address.trim().length < 5) {
     return { valid: false, reason: "No project address was provided. Please add a full street address to your project before submitting." };
   }
-  const key = process.env.GOOGLE_MAPS_API_KEY;
-  if (!key) {
-    console.warn("  [geocode] GOOGLE_MAPS_API_KEY not set \u2014 skipping address validation");
-    return { valid: true, reason: "Address validation skipped (no API key)" };
-  }
-  try {
-    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
-    url.searchParams.set("address", address);
-    url.searchParams.set("key", key);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1e4);
-    let res;
-    try {
-      res = await fetch(url.toString(), { signal: controller.signal });
-    } finally {
-      clearTimeout(timer);
-    }
-    const data2 = await res.json();
-    if (data2.status === "ZERO_RESULTS" || !data2.results?.length) {
-      return {
-        valid: false,
-        reason: `The project address "${address}" could not be found. Please check the address and try again.`
-      };
-    }
-    if (data2.status !== "OK") {
-      console.warn(`  [geocode] Geocoding API returned status ${data2.status} \u2014 skipping validation`);
-      return { valid: true, reason: `Geocoding API status: ${data2.status}` };
-    }
-    const top = data2.results[0];
-    const hasStreet = top.address_components.some(
-      (c) => c.types.includes("street_number") || c.types.includes("route")
-    );
-    if (!hasStreet) {
-      return {
-        valid: false,
-        reason: `The address "${address}" resolved to a general area, not a specific street address. Please provide a full street address including street number.`
-      };
-    }
-    return {
-      valid: true,
-      reason: `Address verified: ${top.formatted_address}`,
-      lat: top.geometry.location.lat,
-      lng: top.geometry.location.lng
-    };
-  } catch (err) {
-    console.warn(`  [geocode] Address validation error: ${err.message} \u2014 skipping`);
-    return { valid: true, reason: "Address validation skipped (network error)" };
-  }
+  return { valid: true, reason: "Address present" };
 }
 var init_geocode = __esm({
   "pipeline/lib/geocode.ts"() {
