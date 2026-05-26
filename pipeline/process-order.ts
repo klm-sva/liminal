@@ -893,9 +893,12 @@ export async function processOrder(
     }],
   });
 
-  const part1TextBlock = part1Response.content.findLast?.((b: any) => b.type === "text") ?? part1Response.content.filter((b: any) => b.type === "text").pop();
-  const part1Html = scrubNarration(part1TextBlock?.text ?? "").cleaned;
-  console.log(`    Part 1 complete — ${part1Response.usage.output_tokens} output tokens`);
+  const part1AllText = (part1Response.content as any[])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text as string)
+    .join("\n");
+  const part1Html = scrubNarration(part1AllText).cleaned;
+  console.log(`    Part 1 complete — ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b: any) => b.type === "text").length} text block(s))`);
 
   // ── Step 15.7: Extract locations from Part 1 output for map generation ──────
   // Uses Claude Haiku (fast/cheap) to pull named locations from the HTML text.
@@ -993,9 +996,12 @@ ${plainText}`,
     }],
   });
 
-  const part2TextBlock = part2Response.content.findLast?.((b: any) => b.type === "text") ?? part2Response.content.filter((b: any) => b.type === "text").pop();
-  const part2Html = scrubNarration(part2TextBlock?.text ?? "").cleaned;
-  console.log(`    Part 2 complete — ${part2Response.usage.output_tokens} output tokens`);
+  const part2AllText = (part2Response.content as any[])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text as string)
+    .join("\n");
+  const part2Html = scrubNarration(part2AllText).cleaned;
+  console.log(`    Part 2 complete — ${part2Response.usage.output_tokens} output tokens (${part2Response.content.filter((b: any) => b.type === "text").length} text block(s))`);
 
   // Stitch HTML output
   let fullHtml = part1Html;
@@ -1103,9 +1109,16 @@ ${plainText}`,
       }],
     });
 
-    const correctedRaw = correctionResponse.content[0].type === "text" ? correctionResponse.content[0].text : "";
-    const htmlStart = correctedRaw.indexOf("<!DOCTYPE");
-    fullHtml = scrubNarration(htmlStart !== -1 ? correctedRaw.slice(htmlStart) : correctedRaw).cleaned;
+    const correctedRaw = (correctionResponse.content as any[])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text as string)
+      .join("\n");
+    const correctedCleaned = scrubNarration(correctedRaw).cleaned;
+    if (correctedCleaned.length >= fullHtml.length * 0.5) {
+      fullHtml = correctedCleaned;
+    } else {
+      console.warn(`    ⚠ FIX 1 correction response too short (${correctedCleaned.length} chars vs ${fullHtml.length} original) — keeping original`);
+    }
 
     const remainingViolations = validateNoUnnecessaryCustomerRequests(fullHtml);
     if (remainingViolations.length === 0) {
@@ -1152,11 +1165,16 @@ ${plainText}`,
       }],
     });
 
-    const missingCorrectedRaw = missingCorrectionResponse.content[0].type === "text"
-      ? missingCorrectionResponse.content[0].text
-      : "";
-    const missingHtmlStart = missingCorrectedRaw.indexOf("<!DOCTYPE");
-    fullHtml = scrubNarration(missingHtmlStart !== -1 ? missingCorrectedRaw.slice(missingHtmlStart) : missingCorrectedRaw).cleaned;
+    const missingCorrectedRaw = (missingCorrectionResponse.content as any[])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text as string)
+      .join("\n");
+    const missingCorrectedCleaned = scrubNarration(missingCorrectedRaw).cleaned;
+    if (missingCorrectedCleaned.length >= fullHtml.length * 0.5) {
+      fullHtml = missingCorrectedCleaned;
+    } else {
+      console.warn(`    ⚠ FIX 2 correction response too short (${missingCorrectedCleaned.length} chars vs ${fullHtml.length} original) — keeping original`);
+    }
 
     const remainingMissing = validateAllOutputsProduced(fullHtml, creditData.outputs);
     if (remainingMissing.length === 0) {

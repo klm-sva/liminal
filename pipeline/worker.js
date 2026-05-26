@@ -2208,6 +2208,9 @@ The customer provides only: proprietary project documents, owner decisions, sign
 ABSOLUTE RULES \u2014 THESE APPLY TO EVERY CREDIT, EVERY RUN
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
+OUTPUT IS BODY CONTENT ONLY \u2014 NO HTML DOCUMENT WRAPPER.
+Do not output <!DOCTYPE>, <html>, <head>, or <style> tags. The pipeline provides the complete HTML document wrapper and stylesheet. Your output is the body content only \u2014 start directly with the first content element (e.g. <div class="page-header">). Do not wrap your output in a document shell at any point, even if you are generating multiple sections across multiple searches.
+
 OUTPUT BEGINS IMMEDIATELY WITH CONTENT. NO EXCEPTIONS.
 The very first token of your response must be the first token of actual content \u2014 a heading, a form field, an HTML tag. Nothing else.
 
@@ -3436,9 +3439,9 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
       ]
     }]
   });
-  const part1TextBlock = part1Response.content.findLast?.((b) => b.type === "text") ?? part1Response.content.filter((b) => b.type === "text").pop();
-  const part1Html = scrubNarration(part1TextBlock?.text ?? "").cleaned;
-  console.log(`    Part 1 complete \u2014 ${part1Response.usage.output_tokens} output tokens`);
+  const part1AllText = part1Response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const part1Html = scrubNarration(part1AllText).cleaned;
+  console.log(`    Part 1 complete \u2014 ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b) => b.type === "text").length} text block(s))`);
   let locationsForMap = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
@@ -3520,9 +3523,9 @@ ${part1Html}` },
       ]
     }]
   });
-  const part2TextBlock = part2Response.content.findLast?.((b) => b.type === "text") ?? part2Response.content.filter((b) => b.type === "text").pop();
-  const part2Html = scrubNarration(part2TextBlock?.text ?? "").cleaned;
-  console.log(`    Part 2 complete \u2014 ${part2Response.usage.output_tokens} output tokens`);
+  const part2AllText = part2Response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const part2Html = scrubNarration(part2AllText).cleaned;
+  console.log(`    Part 2 complete \u2014 ${part2Response.usage.output_tokens} output tokens (${part2Response.content.filter((b) => b.type === "text").length} text block(s))`);
   let fullHtml = part1Html;
   const bodyCloseIdx = fullHtml.lastIndexOf("</body>");
   if (bodyCloseIdx !== -1) {
@@ -3609,9 +3612,13 @@ ${part1Html}` },
         ]
       }]
     });
-    const correctedRaw = correctionResponse.content[0].type === "text" ? correctionResponse.content[0].text : "";
-    const htmlStart = correctedRaw.indexOf("<!DOCTYPE");
-    fullHtml = scrubNarration(htmlStart !== -1 ? correctedRaw.slice(htmlStart) : correctedRaw).cleaned;
+    const correctedRaw = correctionResponse.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const correctedCleaned = scrubNarration(correctedRaw).cleaned;
+    if (correctedCleaned.length >= fullHtml.length * 0.5) {
+      fullHtml = correctedCleaned;
+    } else {
+      console.warn(`    \u26A0 FIX 1 correction response too short (${correctedCleaned.length} chars vs ${fullHtml.length} original) \u2014 keeping original`);
+    }
     const remainingViolations = validateNoUnnecessaryCustomerRequests(fullHtml);
     if (remainingViolations.length === 0) {
       console.log(`    \u2713 Correction successful \u2014 all violations resolved`);
@@ -3652,9 +3659,13 @@ ${part1Html}` },
         ]
       }]
     });
-    const missingCorrectedRaw = missingCorrectionResponse.content[0].type === "text" ? missingCorrectionResponse.content[0].text : "";
-    const missingHtmlStart = missingCorrectedRaw.indexOf("<!DOCTYPE");
-    fullHtml = scrubNarration(missingHtmlStart !== -1 ? missingCorrectedRaw.slice(missingHtmlStart) : missingCorrectedRaw).cleaned;
+    const missingCorrectedRaw = missingCorrectionResponse.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const missingCorrectedCleaned = scrubNarration(missingCorrectedRaw).cleaned;
+    if (missingCorrectedCleaned.length >= fullHtml.length * 0.5) {
+      fullHtml = missingCorrectedCleaned;
+    } else {
+      console.warn(`    \u26A0 FIX 2 correction response too short (${missingCorrectedCleaned.length} chars vs ${fullHtml.length} original) \u2014 keeping original`);
+    }
     const remainingMissing = validateAllOutputsProduced(fullHtml, creditData.outputs);
     if (remainingMissing.length === 0) {
       console.log(`    \u2713 Correction successful \u2014 all Column 4 outputs now present`);
