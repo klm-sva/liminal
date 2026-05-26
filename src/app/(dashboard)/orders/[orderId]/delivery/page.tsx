@@ -47,6 +47,21 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   const htmlPath     = runRes.data?.output_html_path ?? null;
   const editablePath = htmlPath ? htmlPath.replace("submission.html", "submission-editable.html") : null;
 
+  // List all files in the outputs folder to find policy drafts
+  const outputsFolder = htmlPath ? htmlPath.slice(0, htmlPath.lastIndexOf("/")) : null;
+  const KNOWN_FILES   = new Set(["submission.html", "submission-editable.html", "walking-distance-map.png"]);
+  const policyFiles: { name: string; path: string }[] = [];
+  if (outputsFolder) {
+    const { data: storageFiles } = await supabase.storage
+      .from("order-outputs")
+      .list(outputsFolder);
+    for (const f of storageFiles ?? []) {
+      if (!KNOWN_FILES.has(f.name) && f.name.endsWith(".html")) {
+        policyFiles.push({ name: f.name, path: `${outputsFolder}/${f.name}` });
+      }
+    }
+  }
+
   function downloadHref(storagePath: string) {
     return `/orders/${orderId}/download?path=${encodeURIComponent(storagePath)}`;
   }
@@ -137,6 +152,27 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
                       </a>
                     </div>
                   )}
+
+                  {/* Policy drafts */}
+                  {policyFiles.map((f) => (
+                    <div key={f.path} className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
+                      <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
+                        <FileText size={15} className="text-certify-blue" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-certify-deep truncate">{f.name.replace(".html", "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</p>
+                        <p className="text-xs text-certify-cool-grey">Policy draft · HTML</p>
+                      </div>
+                      <a
+                        href={downloadHref(f.path)}
+                        download
+                        className="shrink-0 flex items-center gap-1 text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors"
+                      >
+                        <Download size={13} />
+                        Download
+                      </a>
+                    </div>
+                  ))}
 
                   {/* Calculator — informational note (embedded in HTML output) */}
                   {credit.has_calculator && (

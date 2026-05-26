@@ -768,7 +768,7 @@ var init_make_editable = __esm({
     "use strict";
     LIMINAL_CSS = `
   /* Base */
-  body { font-family: Arial, Helvetica, sans-serif; color: #515062; background: #ffffff; margin: 0; padding: 0; font-size: 13px; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #515062; background: #ffffff; margin: 0 20%; padding: 40px 0; box-sizing: border-box; font-size: 13px; }
   a { color: #327cb9; }
   h2 { color: #327cb9; font-size: 15px; margin: 20px 0 6px 0; }
   h3 { color: #515062; font-size: 13px; margin: 14px 0 4px 0; font-weight: bold; }
