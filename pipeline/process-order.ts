@@ -464,7 +464,7 @@ export async function processOrder(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-  const client   = new Anthropic({ apiKey, timeout: 600000, maxRetries: 1 });
+  const client   = new Anthropic({ apiKey, timeout: 1800000, maxRetries: 1 });
   const supabase = createServiceClient();
 
   console.log(`\n[process-order] ▶ Order ${orderId} / Run ${runId}`);
