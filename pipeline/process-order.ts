@@ -852,6 +852,9 @@ export async function processOrder(
     ...Object.entries(projectProfile)
       .filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== undefined)
       .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
+    "",
+    "PROJECT ADDRESS (owner-entered — use this exact address for ALL location-based lookups including transit, walk score, distances, census data, and any web search requiring a location):",
+    `  address: ${project.address ?? "(not provided)"}`,
     ...(registrationLines.length > 0
       ? ["", "PROJECT REGISTRATION DATA (owner-entered — use these values for all occupancy calculations, do not estimate):"]
         .concat(registrationLines)

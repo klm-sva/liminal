@@ -16,19 +16,29 @@ export default async function OrderPage({
   const serviceClient = await createServiceClient();
   const { data: order } = await serviceClient
     .from("orders")
-    .select("id, customer_id, status, credits(credit_name, credit_code)")
+    .select("id, customer_id, status, project_id, credits(credit_name, credit_code)")
     .eq("id", orderId)
     .single();
 
   if (!order) notFound();
 
-  type OrderRow = typeof order & { customer_id: string; credits?: { credit_name: string; credit_code: string } | null };
+  type OrderRow = typeof order & { customer_id: string; project_id: string | null; credits?: { credit_name: string; credit_code: string } | null };
   const typed = order as unknown as OrderRow;
 
   if (typed.customer_id !== user.id) redirect("/dashboard");
 
-  const status = typed.status;
+  const status  = typed.status;
   const shortId = orderId.slice(-6).toUpperCase();
+
+  // Fetch latest run error message for failed states
+  const { data: latestRun } = await serviceClient
+    .from("runs")
+    .select("error_message")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  const runError = latestRun?.error_message as string | null ?? null;
 
   if (status === "documents_requested") {
     const { data: run } = await serviceClient
@@ -105,14 +115,49 @@ export default async function OrderPage({
     );
   }
 
+  if (status === "address_invalid") {
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Address needs correction</h1>
+          <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+            <p className="text-sm font-semibold text-amber-800 mb-2">We could not verify your project address</p>
+            <p className="text-sm text-amber-700">
+              {runError ?? "The project address could not be found. Please update it and resubmit."}
+            </p>
+          </div>
+          {typed.project_id && (
+            <Link
+              href={`/projects/${typed.project_id}/edit`}
+              className="w-full flex items-center justify-center bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all shadow-md mb-4"
+            >
+              Update project address
+            </Link>
+          )}
+          <p className="text-xs text-certify-cool-grey text-center">
+            No additional charge will apply when you resubmit after correcting the address.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (status === "failed") {
     return (
       <div className="min-h-screen bg-certify-white">
         <div className="max-w-xl mx-auto px-4 sm:px-6 py-16">
           <h1 className="font-serif text-3xl text-certify-deep mb-2">Processing failed</h1>
           <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
+          {runError && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6">
+              <p className="text-sm text-red-700">{runError}</p>
+            </div>
+          )}
           <p className="text-sm text-certify-cool-grey mb-4">
-            Something went wrong processing your order. Please contact support and reference your order number.
+            {runError
+              ? "Please contact support and reference your order number if you need assistance."
+              : "Something went wrong processing your order. Please contact support and reference your order number."}
           </p>
           <a
             href="mailto:support@liminalsva.com"
