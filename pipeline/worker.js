@@ -3218,7 +3218,11 @@ async function processOrder(orderId, runId, additionalInstructions) {
     mimeType: f.metadata?.mimetype ?? "application/octet-stream"
   }));
   console.log(`    Found ${uploads.length} uploaded file(s)`);
-  await supabase.from("orders").update({ status: "under_review" }).eq("id", orderId);
+  const { error: step5Err } = await dbCall(
+    supabase.from("orders").update({ status: "under_review" }).eq("id", orderId),
+    "update order under_review"
+  );
+  if (step5Err) console.error(`  Step 5 ERROR: ${step5Err.message}`);
   console.log(`  Step 5: Order \u2192 under_review`);
   let reviewResult = null;
   if (uploads.length > 0) {
@@ -3280,8 +3284,16 @@ async function processOrder(orderId, runId, additionalInstructions) {
     return { orderId, runId, status: "failed", issues: [addrResult.reason] };
   }
   console.log(`  Step 7.5: \u2713 ${addrResult.reason}`);
-  await supabase.from("orders").update({ status: "processing" }).eq("id", orderId);
-  await supabase.from("runs").update({ status: "processing" }).eq("id", runId);
+  const { error: step8OrderErr } = await dbCall(
+    supabase.from("orders").update({ status: "processing" }).eq("id", orderId),
+    "update order processing"
+  );
+  if (step8OrderErr) console.error(`  Step 8 ORDER ERROR: ${step8OrderErr.message}`);
+  const { error: step8RunErr } = await dbCall(
+    supabase.from("runs").update({ status: "processing" }).eq("id", runId),
+    "update run processing"
+  );
+  if (step8RunErr) console.error(`  Step 8 RUN ERROR: ${step8RunErr.message}`);
   console.log(`  Step 8: Order \u2192 processing`);
   console.log(`  Step 9: Downloading ${uploads.length} customer file(s)...`);
   const uploadBuffers = [];
@@ -3878,16 +3890,24 @@ ${part1Html}` },
   }
   console.log(`  Step 18: Marking order complete...`);
   const deliveryScheduledAt = new Date(Date.now() + 47 * 60 * 60 * 1e3);
-  await supabase.from("runs").update({
-    status: "completed",
-    completed_at: (/* @__PURE__ */ new Date()).toISOString(),
-    output_html_path: htmlPath
-  }).eq("id", runId);
-  await supabase.from("orders").update({
-    status: "complete",
-    delivery_scheduled_at: deliveryScheduledAt.toISOString(),
-    qa_status: "pending_review"
-  }).eq("id", orderId);
+  const { error: step18RunErr } = await dbCall(
+    supabase.from("runs").update({
+      status: "completed",
+      completed_at: (/* @__PURE__ */ new Date()).toISOString(),
+      output_html_path: htmlPath
+    }).eq("id", runId),
+    "update run completed"
+  );
+  if (step18RunErr) throw new Error(`Step 18: Failed to mark run completed: ${step18RunErr.message}`);
+  const { error: step18OrderErr } = await dbCall(
+    supabase.from("orders").update({
+      status: "complete",
+      delivery_scheduled_at: deliveryScheduledAt.toISOString(),
+      qa_status: "pending_review"
+    }).eq("id", orderId),
+    "update order complete"
+  );
+  if (step18OrderErr) throw new Error(`Step 18: Failed to mark order complete: ${step18OrderErr.message}`);
   const attemptFilePaths = uploads.map((u) => u.storagePath);
   if (attemptFilePaths.length > 0) {
     await supabase.from("cleanup_queue").insert({
