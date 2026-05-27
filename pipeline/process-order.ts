@@ -1166,13 +1166,15 @@ ${plainText}`,
   // ── FIX 1 — validateNoUnnecessaryCustomerRequests() ──────────────────────
   // Block delivery if output asks customer for auto-retrievable data.
   // One correction pass is attempted automatically.
+  // Skipped when the customer's documents were known-incomplete — a correction
+  // pass can't fill gaps that aren't in the source material, and would just add cost.
   const calcGuideViolations = validateCalculatorGuidePresent(fullHtml, creditDataBlock);
   if (calcGuideViolations.length > 0) {
     calcGuideViolations.forEach((v) => console.warn(`  ⚠ ${v.description}`));
   }
 
   const violations = validateNoUnnecessaryCustomerRequests(fullHtml);
-  if (violations.length > 0) {
+  if (violations.length > 0 && knownReviewIssues.length === 0) {
     console.warn(`  ⚠ FIX 1: ${violations.length} validation violation(s) detected — running correction pass`);
     violations.forEach((v) => console.warn(`    • ${v.description}`));
 
@@ -1220,6 +1222,8 @@ ${plainText}`,
     } else {
       console.warn(`    ⚠ ${remainingViolations.length} violation(s) remain after correction — delivering with warnings`);
     }
+  } else if (violations.length > 0) {
+    console.log(`  FIX 1: skipping correction pass — known document issues on this run`);
   } else {
     console.log(`  ✓ FIX 1 validation passed — no unnecessary customer requests`);
   }
@@ -1227,8 +1231,9 @@ ${plainText}`,
   // ── FIX 2 — validateAllOutputsProduced() ─────────────────────────────────
   // Block delivery if any Column 4 required output is absent from the document.
   // One correction pass is attempted automatically.
+  // Skipped when the customer's documents were known-incomplete — same reasoning as FIX 1.
   const missingOutputs = validateAllOutputsProduced(fullHtml, creditData.outputs);
-  if (missingOutputs.length > 0) {
+  if (missingOutputs.length > 0 && knownReviewIssues.length === 0) {
     console.warn(`  ⚠ FIX 2: ${missingOutputs.length} Column 4 output(s) missing — running correction pass`);
     missingOutputs.forEach((v) => console.warn(`    • ${v.description}\n      ${v.context}`));
 
@@ -1277,6 +1282,8 @@ ${plainText}`,
       console.warn(`    ⚠ ${remainingMissing.length} output(s) still missing after correction — delivering with warnings`);
       remainingMissing.forEach((v) => console.warn(`      • ${v.description}`));
     }
+  } else if (missingOutputs.length > 0) {
+    console.log(`  FIX 2: skipping correction pass — known document issues on this run`);
   } else {
     console.log(`  ✓ FIX 2 validation passed — all Column 4 outputs present`);
   }
