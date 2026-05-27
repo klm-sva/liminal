@@ -430,8 +430,9 @@ function validateAllDeliverables(params: {
     console.warn(`  [validateAllDeliverables] Map required but not generated — flagging for QA, not blocking delivery`);
   }
 
-  // Policy drafts — required when outputs mention policy, plan, or commitment
-  const policyRequired = ["policy", "plan", "commitment", "statement"].some((kw) => outputsText.includes(kw));
+  // Policy drafts — required only when Claude placed the POLICY_REQUIRED marker.
+  // Keyword matching on outputs is unreliable ("plan" appears in site plan, floor plan, etc.).
+  const policyRequired = params.htmlContent.includes("<!-- POLICY_REQUIRED -->");
   if (policyRequired) {
     checks.push({
       item: "Policy/Plan Drafts",
