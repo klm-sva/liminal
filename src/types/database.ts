@@ -148,6 +148,7 @@ export type Run = {
   created_at:             string;
   completed_at:           string | null;
   deletion_scheduled_at:  string | null;
+  compliance_path:        string | null;
 };
 
 export type CleanupQueue = {
@@ -186,9 +187,9 @@ export type RunInsert = Omit<
   Run,
   | "id" | "status" | "error_message" | "created_at" | "completed_at"
   | "output_docx_path" | "output_html_path" | "output_form_path" | "output_calculator_path"
-  | "attempt_number" | "review_issues" | "deletion_scheduled_at"
+  | "attempt_number" | "review_issues" | "deletion_scheduled_at" | "compliance_path"
 > & Partial<Pick<Run,
-  | "status" | "attempt_number" | "review_issues" | "deletion_scheduled_at"
+  | "status" | "attempt_number" | "review_issues" | "deletion_scheduled_at" | "compliance_path"
   | "output_docx_path" | "output_html_path" | "output_form_path" | "output_calculator_path"
 >>;
 
