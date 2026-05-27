@@ -27,7 +27,7 @@ type Method = "upload" | "manual";
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [method,        setMethod]        = useState<Method>("upload");
+  const [method,        setMethod]        = useState<Method>("manual");
   const [programs,      setPrograms]      = useState<string[]>(["leed_bdc_v41"]);
   const [target,        setTarget]        = useState("");
   const [dragOver,      setDragOver]      = useState(false);
@@ -162,25 +162,6 @@ export default function NewProjectPage() {
       />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Method toggle */}
-        <div className="flex rounded-xl bg-certify-white border border-certify-white p-1 mb-8">
-          {([
-            { id: "upload", icon: <Upload size={14} />, label: "Upload drawings" },
-            { id: "manual", icon: <PenLine size={14} />, label: "Enter manually" },
-          ] as const).map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setMethod(opt.id)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                method === opt.id
-                  ? "bg-white text-certify-deep shadow-sm"
-                  : "text-certify-cool-grey hover:text-certify-deep"
-              }`}
-            >
-              {opt.icon} {opt.label}
-            </button>
-          ))}
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Upload zone */}
