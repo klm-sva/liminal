@@ -2468,7 +2468,17 @@ PROCESSING SUMMARY (at the very end of every output)
 MAP INSERTION
   <img data-map-insert="1" alt="Walking distance map">
   \u2190 This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
-  Never use text descriptions or .map-placeholder div for the actual map location.`;
+  Never use text descriptions or .map-placeholder div for the actual map location.
+
+POLICY SIGNAL \u2014 REQUIRED WHEN A POLICY IS NEEDED
+If a policy, plan, or commitment document is required as part of the compliance path being documented, place exactly this HTML comment at the very end of Part 2 output, immediately before the Processing Summary:
+<!-- POLICY_REQUIRED -->
+
+Rules for this marker:
+- Include it ONLY when a policy, plan, or written commitment is a required deliverable for the specific compliance path being documented.
+- Do NOT include it when a policy is only one option among multiple compliance paths and a different path was selected.
+- Do NOT include it when a policy is mentioned in the credit language but is not required for the chosen path.
+- The pipeline reads this marker to decide whether to generate policy drafts. If the marker is absent, no policy drafts are generated. If it is present when not needed, unnecessary documents are produced. Place it accurately.`;
   }
 });
 
@@ -3786,45 +3796,49 @@ ${part1Html}` },
   } else {
     console.log(`  \u2713 FIX 2 validation passed \u2014 all Column 4 outputs present`);
   }
-  console.log(`  [policy] Running policy detection...`);
+  const policyRequired = fullHtml.includes("<!-- POLICY_REQUIRED -->");
+  console.log(`  [policy] POLICY_REQUIRED marker: ${policyRequired ? "FOUND \u2014 generating drafts" : "absent \u2014 skipping policy generation"}`);
   const policyTokens = { input: 0, output: 0 };
-  const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
   const uploadedPolicies = [];
-  for (const u of uploadBuffers) {
-    if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
-      try {
-        const extract = await extractPdfContentFromBuffer(
-          client2,
-          u.buffer,
-          u.filename,
-          "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks."
-        );
-        policyTokens.input += extract.inputTokens;
-        policyTokens.output += extract.outputTokens;
-        uploadedPolicies.push({ filename: u.filename, text: extract.text });
-      } catch (err) {
-        console.warn(`    [policy] Could not extract text from ${u.filename}: ${err.message}`);
+  let policyDrafts = [];
+  if (policyRequired) {
+    const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
+    for (const u of uploadBuffers) {
+      if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
+        try {
+          const extract = await extractPdfContentFromBuffer(
+            client2,
+            u.buffer,
+            u.filename,
+            "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks."
+          );
+          policyTokens.input += extract.inputTokens;
+          policyTokens.output += extract.outputTokens;
+          uploadedPolicies.push({ filename: u.filename, text: extract.text });
+        } catch (err) {
+          console.warn(`    [policy] Could not extract text from ${u.filename}: ${err.message}`);
+        }
       }
     }
+    const reqPdfExtract = await extractPdfContentFromBuffer(
+      client2,
+      reqPdfBuffer,
+      credit.requirements_pdf_path,
+      "Extract all credit requirements, required uploads, and documentation requirements."
+    );
+    policyTokens.input += reqPdfExtract.inputTokens;
+    policyTokens.output += reqPdfExtract.outputTokens;
+    const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
+    policyDrafts = await generatePolicyDrafts(client2, creditData.customerUploads.join("\n"), {
+      creditName: credit.credit_code,
+      certProgram: credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
+      projectAddress: project.address ?? "",
+      creditRequirementsText: reqPdfExtract.text,
+      creditSlug: credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      outputDir: tempOutputDir,
+      uploadedDocuments: uploadedPolicies
+    }, policyTokens);
   }
-  const reqPdfExtract = await extractPdfContentFromBuffer(
-    client2,
-    reqPdfBuffer,
-    credit.requirements_pdf_path,
-    "Extract all credit requirements, required uploads, and documentation requirements."
-  );
-  policyTokens.input += reqPdfExtract.inputTokens;
-  policyTokens.output += reqPdfExtract.outputTokens;
-  const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
-  const policyDrafts = await generatePolicyDrafts(client2, creditData.customerUploads.join("\n"), {
-    creditName: credit.credit_code,
-    certProgram: credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
-    projectAddress: project.address ?? "",
-    creditRequirementsText: reqPdfExtract.text,
-    creditSlug: credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    outputDir: tempOutputDir,
-    uploadedDocuments: uploadedPolicies
-  }, policyTokens);
   if (policyDrafts.length > 0) {
     const policySection = policyChecklistHtml(policyDrafts);
     const bodyClose = fullHtml.lastIndexOf("</body>");

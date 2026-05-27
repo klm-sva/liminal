@@ -332,4 +332,14 @@ PROCESSING SUMMARY (at the very end of every output)
 MAP INSERTION
   <img data-map-insert="1" alt="Walking distance map">
   ← This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
-  Never use text descriptions or .map-placeholder div for the actual map location.`;
+  Never use text descriptions or .map-placeholder div for the actual map location.
+
+POLICY SIGNAL — REQUIRED WHEN A POLICY IS NEEDED
+If a policy, plan, or commitment document is required as part of the compliance path being documented, place exactly this HTML comment at the very end of Part 2 output, immediately before the Processing Summary:
+<!-- POLICY_REQUIRED -->
+
+Rules for this marker:
+- Include it ONLY when a policy, plan, or written commitment is a required deliverable for the specific compliance path being documented.
+- Do NOT include it when a policy is only one option among multiple compliance paths and a different path was selected.
+- Do NOT include it when a policy is mentioned in the credit language but is not required for the chosen path.
+- The pipeline reads this marker to decide whether to generate policy drafts. If the marker is absent, no policy drafts are generated. If it is present when not needed, unnecessary documents are produced. Place it accurately.`;

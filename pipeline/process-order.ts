@@ -1274,49 +1274,54 @@ ${plainText}`,
   }
 
   // ── Policy drafts ─────────────────────────────────────────────────────────
-  // Detect policy requirements from Column 1. If the customer uploaded a policy
-  // document, review and update it. Otherwise generate a new draft.
-  console.log(`  [policy] Running policy detection...`);
+  // Only runs when Claude placed <!-- POLICY_REQUIRED --> in the output.
+  // This marker is set when a policy is a required deliverable for the chosen
+  // compliance path — not merely mentioned as one option among several.
+  const policyRequired = fullHtml.includes("<!-- POLICY_REQUIRED -->");
+  console.log(`  [policy] POLICY_REQUIRED marker: ${policyRequired ? "FOUND — generating drafts" : "absent — skipping policy generation"}`);
 
   const policyTokens = { input: 0, output: 0 };
-
-  // Extract text from any customer-uploaded PDFs that look like policy documents
-  const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
   const uploadedPolicies: UploadedPolicy[] = [];
+  let policyDrafts: Awaited<ReturnType<typeof generatePolicyDrafts>> = [];
 
-  for (const u of uploadBuffers) {
-    if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
-      try {
-        const extract = await extractPdfContentFromBuffer(
-          client, u.buffer, u.filename,
-          "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks.",
-        );
-        policyTokens.input  += extract.inputTokens;
-        policyTokens.output += extract.outputTokens;
-        uploadedPolicies.push({ filename: u.filename, text: extract.text });
-      } catch (err) {
-        console.warn(`    [policy] Could not extract text from ${u.filename}: ${(err as Error).message}`);
+  if (policyRequired) {
+    // Extract text from any customer-uploaded PDFs that look like policy documents
+    const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
+
+    for (const u of uploadBuffers) {
+      if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
+        try {
+          const extract = await extractPdfContentFromBuffer(
+            client, u.buffer, u.filename,
+            "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks.",
+          );
+          policyTokens.input  += extract.inputTokens;
+          policyTokens.output += extract.outputTokens;
+          uploadedPolicies.push({ filename: u.filename, text: extract.text });
+        } catch (err) {
+          console.warn(`    [policy] Could not extract text from ${u.filename}: ${(err as Error).message}`);
+        }
       }
     }
+
+    const reqPdfExtract = await extractPdfContentFromBuffer(
+      client, reqPdfBuffer, credit.requirements_pdf_path,
+      "Extract all credit requirements, required uploads, and documentation requirements.",
+    );
+    policyTokens.input  += reqPdfExtract.inputTokens;
+    policyTokens.output += reqPdfExtract.outputTokens;
+
+    const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
+    policyDrafts = await generatePolicyDrafts(client, creditData.customerUploads.join("\n"), {
+      creditName:             credit.credit_code,
+      certProgram:            credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
+      projectAddress:         project.address ?? "",
+      creditRequirementsText: reqPdfExtract.text,
+      creditSlug:             credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      outputDir:              tempOutputDir,
+      uploadedDocuments:      uploadedPolicies,
+    }, policyTokens);
   }
-
-  const reqPdfExtract = await extractPdfContentFromBuffer(
-    client, reqPdfBuffer, credit.requirements_pdf_path,
-    "Extract all credit requirements, required uploads, and documentation requirements.",
-  );
-  policyTokens.input  += reqPdfExtract.inputTokens;
-  policyTokens.output += reqPdfExtract.outputTokens;
-
-  const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
-  const policyDrafts = await generatePolicyDrafts(client, creditData.customerUploads.join("\n"), {
-    creditName:             credit.credit_code,
-    certProgram:            credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
-    projectAddress:         project.address ?? "",
-    creditRequirementsText: reqPdfExtract.text,
-    creditSlug:             credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-    outputDir:              tempOutputDir,
-    uploadedDocuments:      uploadedPolicies,
-  }, policyTokens);
 
   // Append policy checklist to HTML output and upload each draft to storage
   if (policyDrafts.length > 0) {
