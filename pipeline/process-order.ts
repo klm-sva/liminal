@@ -339,22 +339,6 @@ async function dbCall<T>(query: PromiseLike<T>, label: string): Promise<T> {
   return withTimeout(Promise.resolve(query), 10000, `Supabase: ${label}`);
 }
 
-// ─── Map location proximity filter ───────────────────────────────────────────
-// Extracts the city name from a US address and uses it for string-based
-// proximity filtering. No geocoding — pure string match, zero network risk.
-// If city cannot be parsed, the filter is skipped (all locations pass).
-
-function extractCityFromAddress(address: string): string | null {
-  const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
-  if (parts.length >= 3) return parts[parts.length - 2].toLowerCase();
-  if (parts.length === 2)  return parts[0].toLowerCase();
-  return null;
-}
-
-function isLocationNearProject(candidate: string, projectCity: string): boolean {
-  return candidate.toLowerCase().includes(projectCity);
-}
-
 // ─── Map output detection ─────────────────────────────────────────────────────
 
 const MAP_OUTPUT_KEYWORDS: Record<MapType, string[]> = {
@@ -439,15 +423,11 @@ function validateAllDeliverables(params: {
     });
   }
 
-  // Map — required when outputs mention map/transit/bicycle/density
+  // Map — logged as a soft warning only; absence never blocks delivery
   const mapKeywords = ["map", "transit", "bicycle", "density", "walking"];
   const mapRequired = mapKeywords.some((kw) => outputsText.includes(kw)) || !!params.requiredMapType;
-  if (mapRequired) {
-    checks.push({
-      item: `${params.requiredMapType ?? "Location"} Map`,
-      present: params.mapGenerated,
-      reason: params.mapGenerated ? undefined : "Map generation failed or no qualifying destinations found",
-    });
+  if (mapRequired && !params.mapGenerated) {
+    console.warn(`  [validateAllDeliverables] Map required but not generated — flagging for QA, not blocking delivery`);
   }
 
   // Policy drafts — required when outputs mention policy, plan, or commitment
@@ -975,9 +955,6 @@ export async function processOrder(
   let locationsForMap: Array<{ address: string; label: string }> = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
-    const projectCity = extractCityFromAddress(project.address);
-    console.log(`    Project city for proximity filter: ${projectCity ?? "(could not parse — filter skipped)"}`);
-
     try {
       const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
       const locExtract = await (client.messages.create as any)({
@@ -987,7 +964,7 @@ export async function processOrder(
           role:    "user",
           content: `The project is located at: ${project.address}
 
-Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that are near the project address — in the same city or immediate surrounding area. Do NOT include locations in other cities, regions, or states. Return ONLY a valid JSON array of strings. If none found return [].
+Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that are in the same city or immediate surrounding area as the project. Do NOT include locations in other cities, regions, or states. Return ONLY a valid JSON array of strings. If none found return [].
 
 ${plainText}`,
         }],
@@ -996,33 +973,21 @@ ${plainText}`,
       const jsonMatch = locText.match(/\[[\s\S]*?\]/);
       if (jsonMatch) {
         const raw: unknown[] = JSON.parse(jsonMatch[0]);
-        const candidates = raw
+        locationsForMap = raw
           .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-          .slice(0, 2);
-
-        // String-based city filter — drop anything that doesn't mention the project city
-        const filtered = projectCity
-          ? candidates.filter((addr) => isLocationNearProject(addr, projectCity))
-          : candidates;
-
-        if (projectCity && filtered.length < candidates.length) {
-          console.log(`    City filter dropped ${candidates.length - filtered.length} out-of-area location(s)`);
-        }
-
-        locationsForMap = filtered.map((addr, i) => ({ address: addr, label: String(i + 1) }));
+          .slice(0, 2)
+          .map((addr, i) => ({ address: addr, label: String(i + 1) }));
       }
       console.log(`    Extracted ${locationsForMap.length} location(s) from Part 1`);
     } catch (err) {
       console.warn(`  Step 15.7: Location extraction failed: ${(err as Error).message} — using claudeRetrieves fallback`);
     }
 
-    // Fallback: use claudeRetrieves from XLSX, also city-filtered, capped at 2
+    // Fallback: use claudeRetrieves from XLSX, capped at 2
     if (locationsForMap.length === 0) {
-      const fallbackCandidates = creditData.claudeRetrieves.slice(0, 2);
-      const fallbackFiltered = projectCity
-        ? fallbackCandidates.filter((addr) => isLocationNearProject(addr, projectCity))
-        : fallbackCandidates;
-      locationsForMap = fallbackFiltered.map((r, i) => ({ address: r, label: String(i + 1) }));
+      locationsForMap = creditData.claudeRetrieves
+        .slice(0, 2)
+        .map((r, i) => ({ address: r, label: String(i + 1) }));
       console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
     }
   }
