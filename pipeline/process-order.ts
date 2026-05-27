@@ -443,6 +443,39 @@ function validateAllDeliverables(params: {
   return { checks, cleanedHtml };
 }
 
+// ─── Partial delivery notice ──────────────────────────────────────────────────
+// Injected into the HTML output when attempt 2+ has known document issues and
+// some secondary deliverables could not be generated because of those gaps.
+
+function buildPartialDeliveryNotice(
+  missing:     DeliverableCheck[],
+  priorIssues: string[],
+): string {
+  const issueItems   = priorIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
+  const missingItems = missing.map((m) =>
+    `<li><strong>${m.item}</strong>${m.reason ? ` — ${m.reason}` : ""}</li>`
+  ).join("\n        ");
+
+  return `
+<div style="margin:32px 0;padding:20px 24px;background:#fff8f0;border-left:4px solid #e07000;border-radius:8px;font-family:sans-serif;">
+  <h3 style="margin:0 0 12px;font-size:16px;color:#7a3c00;">Partial Delivery — Incomplete Submission</h3>
+  <p style="margin:0 0 12px;font-size:14px;color:#555;">
+    The deliverables above represent the maximum that could be completed with the documentation provided.
+    The following items could not be generated due to the document issues identified during review:
+  </p>
+  <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#555;">
+        ${missingItems}
+  </ul>
+  <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#555;">Document issues identified during review:</p>
+  <ul style="margin:0 0 12px;padding-left:20px;font-size:13px;color:#555;">
+        ${issueItems}
+  </ul>
+  <p style="margin:0;font-size:13px;color:#888;font-style:italic;">
+    To complete the remaining deliverables, please resubmit with the documentation listed above.
+  </p>
+</div>`;
+}
+
 // ─── Main orchestrator ────────────────────────────────────────────────────────
 
 export interface ProcessOrderResult {
@@ -536,6 +569,10 @@ export async function processOrder(
   if (step5Err) console.error(`  Step 5 ERROR: ${step5Err.message}`);
   console.log(`  Step 5: Order → under_review`);
 
+  // Tracks document review issues from Step 7 — used at Step 16.5 to distinguish
+  // customer-caused gaps from platform failures when delivering partial output.
+  let knownReviewIssues: string[] = [];
+
   // ── Step 6: Document quality review ──────────────────────────────────────
   // Skip review entirely when customer submitted with no files — they chose to proceed without uploads.
   let reviewResult: Awaited<ReturnType<typeof reviewDocuments>> | null = null;
@@ -582,6 +619,8 @@ export async function processOrder(
     // Attempt 2+: customer was already told what was missing — run pipeline with
     // whatever was provided and surface remaining gaps in the output document.
     console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) — proceeding with best-effort run. Issues: ${issueStrings.join("; ")}`);
+
+    knownReviewIssues = issueStrings;
 
     await supabase.from("runs").update({
       review_issues: issueStrings,
@@ -1328,24 +1367,50 @@ ${plainText}`,
   missing.forEach((c) => console.warn(`    ✗ MISSING: ${c.item}${c.reason ? " — " + c.reason : ""}`));
 
   if (missing.length > 0) {
-    console.warn(`  Step 16.5: ⚠ ${missing.length} missing deliverable(s) — marking order failed`);
-    await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
-    await supabase.from("runs").update({
-      status:        "failed",
-      error_message: `Missing deliverables: ${missing.map((c) => c.item).join(", ")}`,
-      completed_at:  new Date().toISOString(),
-    }).eq("id", runId);
-    await logAuditEvent({
-      eventType:  "deliverables_incomplete",
-      entityType: "order",
-      entityId:   orderId,
-      customerId: order.customer_id,
-      metadata:   { creditCode: credit.credit_code, missing: missing.map((c) => c.item) },
-    });
-    return { orderId, runId, status: "failed", issues: missing.map((c) => `${c.item}: ${c.reason}`) };
+    // HTML itself not generated = true platform failure, always hard-fail regardless of attempt.
+    const htmlMissing    = missing.some((c) => c.item === "Online Submittal Form HTML");
+    const canDeliverPartial = attemptNumber >= 2 && knownReviewIssues.length > 0 && !htmlMissing;
+
+    if (canDeliverPartial) {
+      // Customer was told their documents were insufficient and chose to proceed anyway.
+      // Deliver everything that was generated; inject a notice for what couldn't be completed.
+      console.warn(`  Step 16.5: ⚠ ${missing.length} deliverable(s) missing — attempt ${attemptNumber}, customer-acknowledged gaps — injecting partial delivery notice`);
+      missing.forEach((c) => console.warn(`    ✗ ${c.item}${c.reason ? " — " + c.reason : ""}`));
+
+      const noticeHtml = buildPartialDeliveryNotice(missing, knownReviewIssues);
+      const bodyClose  = fullHtml.lastIndexOf("</body>");
+      fullHtml = bodyClose !== -1
+        ? fullHtml.slice(0, bodyClose) + noticeHtml + "\n</body></html>"
+        : fullHtml + noticeHtml;
+
+      await logAuditEvent({
+        eventType:  "partial_delivery",
+        entityType: "order",
+        entityId:   orderId,
+        customerId: order.customer_id,
+        metadata:   { creditCode: credit.credit_code, missing: missing.map((c) => c.item), priorIssues: knownReviewIssues },
+      });
+      // Fall through to delivery — no return.
+    } else {
+      console.warn(`  Step 16.5: ⚠ ${missing.length} missing deliverable(s) — marking order failed`);
+      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+      await supabase.from("runs").update({
+        status:        "failed",
+        error_message: `Missing deliverables: ${missing.map((c) => c.item).join(", ")}`,
+        completed_at:  new Date().toISOString(),
+      }).eq("id", runId);
+      await logAuditEvent({
+        eventType:  "deliverables_incomplete",
+        entityType: "order",
+        entityId:   orderId,
+        customerId: order.customer_id,
+        metadata:   { creditCode: credit.credit_code, missing: missing.map((c) => c.item) },
+      });
+      return { orderId, runId, status: "failed", issues: missing.map((c) => `${c.item}: ${c.reason}`) };
+    }
   }
 
-  console.log(`  Step 16.5: ✓ All deliverables confirmed — proceeding to delivery`);
+  console.log(`  Step 16.5: ✓ Deliverables check passed — proceeding to delivery`);
 
   // ── Step 17: Upload outputs to Storage ────────────────────────────────────
   console.log(`  Step 18: Uploading outputs to Storage...`);
