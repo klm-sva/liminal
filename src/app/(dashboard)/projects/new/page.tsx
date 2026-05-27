@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, PenLine, X } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { createClient } from "@/lib/supabase/client";
 import type { ProgramType } from "@/types/database";
+import { generateReactHelpers } from "@uploadthing/react";
+import type { OurFileRouter } from "@/lib/uploadthing";
+
+const { useUploadThing } = generateReactHelpers<OurFileRouter>();
 
 const PROGRAMS = [
   { id: "leed_bdc_v41", label: "LEED BD+C v4.1", desc: "Building Design + Construction" },
@@ -23,13 +27,27 @@ type Method = "upload" | "manual";
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [method,      setMethod]      = useState<Method>("upload");
-  const [programs,    setPrograms]    = useState<string[]>(["leed_bdc_v41"]);
-  const [target,      setTarget]      = useState("");
-  const [dragOver,    setDragOver]    = useState(false);
-  const [fileName,    setFileName]    = useState<string | null>(null);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
+  const [method,        setMethod]        = useState<Method>("upload");
+  const [programs,      setPrograms]      = useState<string[]>(["leed_bdc_v41"]);
+  const [target,        setTarget]        = useState("");
+  const [dragOver,      setDragOver]      = useState(false);
+  const [drawingFile,   setDrawingFile]   = useState<File | null>(null);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error,         setError]         = useState<string | null>(null);
+  const projectIdRef = useRef<string>("");
+
+  const { startUpload, isUploading } = useUploadThing("drawingSet", {
+    headers:          () => ({ "x-project-id": projectIdRef.current }),
+    onUploadProgress: (p) => setUploadProgress(p),
+    onClientUploadComplete: () => {
+      router.push(`/projects/${projectIdRef.current}/created`);
+    },
+    onUploadError: (err) => {
+      setError(err.message ?? "Drawing upload failed. Please try again.");
+      setSubmitting(false);
+    },
+  });
 
   // Manual fields
   const [name,              setName]              = useState("");
@@ -58,7 +76,7 @@ export default function NewProjectPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const projectName = method === "manual" ? name : (fileName ?? "New Project");
+      const projectName = method === "manual" ? name : (drawingFile?.name ?? "New Project");
 
       const isManual = method === "manual";
       const { data: project, error: insertError } = await supabase
@@ -114,7 +132,13 @@ export default function NewProjectPage() {
       if (insertError) throw insertError;
 
       if (method === "upload") {
-        router.push(`/projects/${project.id}/created`);
+        if (drawingFile) {
+          projectIdRef.current = project.id;
+          await startUpload([drawingFile]);
+          // redirect handled by onClientUploadComplete
+        } else {
+          router.push(`/projects/${project.id}/created`);
+        }
       } else {
         router.push(`/projects/${project.id}`);
       }
@@ -168,7 +192,7 @@ export default function NewProjectPage() {
                 e.preventDefault();
                 setDragOver(false);
                 const file = e.dataTransfer.files[0];
-                if (file) setFileName(file.name);
+                if (file) setDrawingFile(file);
               }}
               className={`relative border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 ${
                 dragOver
@@ -182,10 +206,11 @@ export default function NewProjectPage() {
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) setFileName(file.name);
+                  if (file) setDrawingFile(file);
+                  e.target.value = "";
                 }}
               />
-              {fileName ? (
+              {drawingFile ? (
                 <div className="flex items-center justify-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-certify-sage/20 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3bfa1" strokeWidth="1.75">
@@ -193,12 +218,14 @@ export default function NewProjectPage() {
                     </svg>
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-semibold text-certify-deep">{fileName}</p>
+                    <p className="text-sm font-semibold text-certify-deep">{drawingFile.name}</p>
                     <p className="text-xs text-certify-sage">Ready to extract project data</p>
                   </div>
-                  <button type="button" onClick={() => setFileName(null)} className="ml-2 text-certify-cool-grey hover:text-certify-deep">
-                    <X size={16} />
-                  </button>
+                  {!isUploading && (
+                    <button type="button" onClick={() => setDrawingFile(null)} className="ml-2 text-certify-cool-grey hover:text-certify-deep">
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -339,14 +366,32 @@ export default function NewProjectPage() {
           )}
 
           {/* Submit */}
+          {isUploading && (
+            <div>
+              <div className="flex justify-between text-xs text-certify-cool-grey mb-1.5">
+                <span>Uploading drawing…</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="h-2 bg-certify-white rounded-full overflow-hidden">
+                <div
+                  className="h-2 rounded-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%`, background: "linear-gradient(90deg, #388fa6, #1c5e70)" }}
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={submitting || programs.length === 0}
+            disabled={submitting || isUploading || programs.length === 0}
             className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
           >
-            {submitting ? (
+            {isUploading ? (
               <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              {method === "upload" ? "Extracting project data…" : "Creating project…"}</>
+              Uploading {uploadProgress}%…</>
+            ) : submitting ? (
+              <><svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              {method === "upload" ? "Creating project…" : "Creating project…"}</>
             ) : method === "upload" ? (
               "Upload & Extract Data"
             ) : (
