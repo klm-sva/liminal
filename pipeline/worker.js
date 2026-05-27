@@ -3105,6 +3105,15 @@ function drawingsPath(customerId, projectId) {
 async function dbCall(query, label) {
   return withTimeout(Promise.resolve(query), 1e4, `Supabase: ${label}`);
 }
+function extractCityFromAddress(address) {
+  const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 3) return parts[parts.length - 2].toLowerCase();
+  if (parts.length === 2) return parts[0].toLowerCase();
+  return null;
+}
+function isLocationNearProject(candidate, projectCity) {
+  return candidate.toLowerCase().includes(projectCity);
+}
 function detectRequiredMapType(outputs) {
   const combined = outputs.join(" ").toLowerCase();
   for (const [mapType, keywords] of Object.entries(MAP_OUTPUT_KEYWORDS)) {
@@ -3535,6 +3544,8 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
   let locationsForMap = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
+    const projectCity = extractCityFromAddress(project.address);
+    console.log(`    Project city for proximity filter: ${projectCity ?? "(could not parse \u2014 filter skipped)"}`);
     try {
       const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15e3);
       const locExtract = await client2.messages.create({
@@ -3542,7 +3553,9 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
         max_tokens: 512,
         messages: [{
           role: "user",
-          content: `Extract up to 5 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below. Return ONLY a valid JSON array of strings. If none found return [].
+          content: `The project is located at: ${project.address}
+
+Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that are near the project address \u2014 in the same city or immediate surrounding area. Do NOT include locations in other cities, regions, or states. Return ONLY a valid JSON array of strings. If none found return [].
 
 ${plainText}`
         }]
@@ -3551,14 +3564,21 @@ ${plainText}`
       const jsonMatch = locText.match(/\[[\s\S]*?\]/);
       if (jsonMatch) {
         const raw = JSON.parse(jsonMatch[0]);
-        locationsForMap = raw.filter((l) => typeof l === "string" && l.trim().length > 0).slice(0, 5).map((addr, i) => ({ address: addr, label: String(i + 1) }));
+        const candidates = raw.filter((l) => typeof l === "string" && l.trim().length > 0).slice(0, 2);
+        const filtered = projectCity ? candidates.filter((addr) => isLocationNearProject(addr, projectCity)) : candidates;
+        if (projectCity && filtered.length < candidates.length) {
+          console.log(`    City filter dropped ${candidates.length - filtered.length} out-of-area location(s)`);
+        }
+        locationsForMap = filtered.map((addr, i) => ({ address: addr, label: String(i + 1) }));
       }
       console.log(`    Extracted ${locationsForMap.length} location(s) from Part 1`);
     } catch (err) {
       console.warn(`  Step 15.7: Location extraction failed: ${err.message} \u2014 using claudeRetrieves fallback`);
     }
     if (locationsForMap.length === 0) {
-      locationsForMap = creditData.claudeRetrieves.slice(0, 5).map((r, i) => ({ address: r, label: String(i + 1) }));
+      const fallbackCandidates = creditData.claudeRetrieves.slice(0, 2);
+      const fallbackFiltered = projectCity ? fallbackCandidates.filter((addr) => isLocationNearProject(addr, projectCity)) : fallbackCandidates;
+      locationsForMap = fallbackFiltered.map((r, i) => ({ address: r, label: String(i + 1) }));
       console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
     }
   }
