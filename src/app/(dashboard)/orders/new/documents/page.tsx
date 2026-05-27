@@ -71,8 +71,11 @@ export default async function DocumentsNeededPage({
         {/* Optional / additional note */}
         <div className="bg-certify-beige border border-certify-sand/30 rounded-xl px-4 py-3 mb-5">
           <p className="text-xs font-semibold text-certify-dark-grey mb-1">Optional</p>
-          <p className="text-xs text-certify-cool-grey leading-relaxed">
+          <p className="text-xs text-certify-cool-grey leading-relaxed mb-2">
             If you have additional supporting materials (photos, supplementary calculations, prior correspondence with the reviewer), you can include them, but they are not required for processing.
+          </p>
+          <p className="text-xs text-certify-cool-grey leading-relaxed">
+            Choose a compliance path, if applicable. If no compliance path is chosen, we will determine the best path for you.
           </p>
         </div>
 

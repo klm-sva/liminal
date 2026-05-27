@@ -33,6 +33,8 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await params;
+  const body = await _request.json().catch(() => ({})) as { compliancePath?: string | null };
+  const compliancePath = body.compliancePath?.trim() || null;
 
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -67,11 +69,11 @@ export async function POST(
   const { data: run, error: runError } = await serviceClient
     .from("runs")
     .insert({
-      order_id:       orderId,
-      run_number:     attemptNumber,
-      attempt_number: attemptNumber,
-      status:         "pending",
-      // customer_upload_paths resolved by process-order from Storage listing
+      order_id:              orderId,
+      run_number:            attemptNumber,
+      attempt_number:        attemptNumber,
+      status:                "pending",
+      compliance_path:       compliancePath,
       customer_upload_paths: [],
     })
     .select()

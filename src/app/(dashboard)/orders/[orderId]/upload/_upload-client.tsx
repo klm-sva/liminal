@@ -21,16 +21,21 @@ interface Props {
 
 export default function UploadClient({ orderId, creditCode, creditName, requiredDocs, reviewIssues = [], isGapAnalysis, hasPreviousOrders }: Props) {
   const router = useRouter();
-  const [files,        setFiles]        = useState<File[]>([]);
-  const [dragOver,     setDragOver]     = useState(false);
-  const [progress,     setProgress]     = useState(0);
-  const [error,        setError]        = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [files,          setFiles]          = useState<File[]>([]);
+  const [dragOver,       setDragOver]       = useState(false);
+  const [progress,       setProgress]       = useState(0);
+  const [error,          setError]          = useState<string | null>(null);
+  const [isSubmitting,   setIsSubmitting]   = useState(false);
+  const [compliancePath, setCompliancePath] = useState("");
 
   async function callReady(): Promise<boolean> {
     setIsSubmitting(true);
     try {
-      const res  = await fetch(`/api/orders/${orderId}/ready`, { method: "POST" });
+      const res  = await fetch(`/api/orders/${orderId}/ready`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ compliancePath: compliancePath.trim() || null }),
+      });
       const data = await res.json() as { error?: string; status?: string };
 
       if (!res.ok) {
@@ -215,6 +220,22 @@ export default function UploadClient({ orderId, creditCode, creditName, required
               );
             })}
           </ul>
+        </div>
+
+        {/* Compliance path */}
+        <div className="bg-certify-beige border border-certify-sand/30 rounded-2xl p-5 mb-5">
+          <p className="text-xs font-bold uppercase tracking-wider text-certify-dark-grey mb-1">Compliance path</p>
+          <p className="text-xs text-certify-cool-grey leading-relaxed mb-3">
+            Optional — if this credit or feature includes compliance path options, enter your selection here using the same format as the credit language (Option 1, Option 2, etc.). If left blank and the credit includes compliance path options, we will determine the best option for you.
+          </p>
+          <input
+            type="text"
+            value={compliancePath}
+            onChange={(e) => setCompliancePath(e.target.value)}
+            placeholder="e.g., Option 1"
+            disabled={isUploading || isSubmitting}
+            className="w-full text-sm text-certify-deep bg-white border border-certify-cool-grey/30 rounded-xl px-4 py-2.5 placeholder:text-certify-cool-grey/50 focus:outline-none focus:border-certify-blue transition-colors disabled:opacity-50"
+          />
         </div>
 
         {/* Disclaimer */}

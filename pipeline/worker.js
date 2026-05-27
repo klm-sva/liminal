@@ -3478,10 +3478,17 @@ async function processOrder(orderId, runId, additionalInstructions) {
     ...specsProfileBlock ? ["", specsProfileBlock] : [],
     ...docProfilesBlock ? ["", docProfilesBlock] : []
   ].join("\n");
+  const compliancePathBlock = run.compliance_path ? [
+    "COMPLIANCE PATH (customer-selected \u2014 follow this path exclusively):",
+    `  ${run.compliance_path}`,
+    "  Do not select a different option or document multiple options. Document only the path the customer has specified.",
+    ""
+  ].join("\n") : "";
   const userPromptPart1 = [
     creditDataBlock,
     "",
     projectDataBlock,
+    ...compliancePathBlock ? ["", compliancePathBlock] : [],
     "",
     "Generate PART 1 \u2014 THE ONLINE FORM SECTION for this credit as instructed."
   ].join("\n");
@@ -3489,6 +3496,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     creditDataBlock,
     "",
     projectDataBlock,
+    ...compliancePathBlock ? ["", compliancePathBlock] : [],
     "",
     "Generate PART 2 \u2014 SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 \u2014 COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either."
   ].join("\n");
