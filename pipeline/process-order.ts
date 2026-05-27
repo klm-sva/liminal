@@ -964,7 +964,11 @@ export async function processOrder(
           role:    "user",
           content: `The project is located at: ${project.address}
 
-Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that are in the same city or immediate surrounding area as the project. Do NOT include locations in other cities, regions, or states. Return ONLY a valid JSON array of strings. If none found return [].
+Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
+1. They are documented as qualifying for points in this credit — meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
+2. They are in the same city or immediate surrounding area as the project — not in other cities, regions, or states.
+
+Return ONLY a valid JSON array of strings. If none found return [].
 
 ${plainText}`,
         }],
