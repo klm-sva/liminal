@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, FileText } from "lucide-react";
@@ -35,7 +36,7 @@ const DOCS = [
   },
 ];
 
-export default function WellHsrGapAnalysisDocumentsPage() {
+function DocumentsContent() {
   const router      = useRouter();
   const searchParams = useSearchParams();
   const projectId   = searchParams.get("project_id");
@@ -77,4 +78,8 @@ export default function WellHsrGapAnalysisDocumentsPage() {
       </div>
     </div>
   );
+}
+
+export default function WellHsrGapAnalysisDocumentsPage() {
+  return <Suspense><DocumentsContent /></Suspense>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, FileText } from "lucide-react";
@@ -35,7 +36,7 @@ const DOCS = [
   },
 ];
 
-export default function GapAnalysisDocumentsPage() {
+function DocumentsContent() {
   const router      = useRouter();
   const searchParams = useSearchParams();
   const projectId   = searchParams.get("project_id");
@@ -76,4 +77,8 @@ export default function GapAnalysisDocumentsPage() {
       </div>
     </div>
   );
+}
+
+export default function GapAnalysisDocumentsPage() {
+  return <Suspense><DocumentsContent /></Suspense>;
 }

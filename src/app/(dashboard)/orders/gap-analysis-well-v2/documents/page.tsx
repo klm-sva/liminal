@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, FileText } from "lucide-react";
@@ -39,7 +40,7 @@ const DOCS = [
   },
 ];
 
-export default function WellV2GapAnalysisDocumentsPage() {
+function DocumentsContent() {
   const router      = useRouter();
   const searchParams = useSearchParams();
   const projectId   = searchParams.get("project_id");
@@ -81,4 +82,8 @@ export default function WellV2GapAnalysisDocumentsPage() {
       </div>
     </div>
   );
+}
+
+export default function WellV2GapAnalysisDocumentsPage() {
+  return <Suspense><DocumentsContent /></Suspense>;
 }
