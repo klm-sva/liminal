@@ -5,9 +5,9 @@ import PaymentClient from "./_payment-client";
 export default async function PaymentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ credit_id?: string; project_id?: string; type?: string }>;
+  searchParams: Promise<{ credit_id?: string; project_id?: string; type?: string; program?: string }>;
 }) {
-  const { credit_id, project_id, type } = await searchParams;
+  const { credit_id, project_id, type, program } = await searchParams;
   const isGapAnalysis = type === "gap-analysis";
 
   if (!credit_id && !isGapAnalysis) notFound();
@@ -41,6 +41,7 @@ export default async function PaymentPage({
       price={creditData.price}
       projectId={project_id}
       isGapAnalysis={isGapAnalysis}
+      gapAnalysisProgram={program}
     />
   );
 }

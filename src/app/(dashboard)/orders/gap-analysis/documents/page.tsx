@@ -66,7 +66,7 @@ export default function GapAnalysisDocumentsPage() {
         </div>
 
         <button
-          onClick={() => router.push("/orders/new/payment?type=gap-analysis&price=49900")}
+          onClick={() => router.push("/orders/new/payment?type=gap-analysis&program=leed_bd_c&price=49900")}
           className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all shadow-md group"
         >
           Continue to payment <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />

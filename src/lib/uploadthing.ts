@@ -29,9 +29,11 @@ export const ourFileRouter = {
           // Fetch order to build the correct storage path
           const { data: order } = await serviceClient
             .from("orders")
-            .select("project_id, credit_id, runs_used")
+            .select("project_id, credit_id, runs_used, gap_analysis_program")
             .eq("id", orderId)
             .single();
+
+          let storagePath: string | null = null;
 
           if (order?.project_id && order?.credit_id) {
             const { data: credit } = await serviceClient
@@ -42,8 +44,14 @@ export const ourFileRouter = {
 
             if (credit?.credit_code) {
               const attemptNumber = order.runs_used + 1;
-              const storagePath   = `${userId}/${order.project_id}/orders/${orderId}-${credit.credit_code}/attempt-${attemptNumber}/${file.name}`;
+              storagePath = `${userId}/${order.project_id}/orders/${orderId}-${credit.credit_code}/attempt-${attemptNumber}/${file.name}`;
+            }
+          } else if (order?.gap_analysis_program) {
+            const attemptNumber = order.runs_used + 1;
+            storagePath = `${userId}/gap-analysis/${order.gap_analysis_program}/${orderId}/attempt-${attemptNumber}/${file.name}`;
+          }
 
+          if (storagePath) {
               const response    = await fetch(file.url);
               const arrayBuffer = await response.arrayBuffer();
 
@@ -53,7 +61,6 @@ export const ourFileRouter = {
                   contentType: file.type,
                   upsert:      true,
                 });
-            }
           }
         } catch (err) {
           console.error(`[uploadthing] creditDocument post-upload failed: ${(err as Error).message}`);

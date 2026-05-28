@@ -4,7 +4,7 @@ import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
   try {
-    const { credit_id, project_id, is_gap_analysis } = await req.json();
+    const { credit_id, project_id, is_gap_analysis, gap_analysis_program } = await req.json();
 
     if (!credit_id && !is_gap_analysis) {
       return NextResponse.json({ error: "credit_id required" }, { status: 400 });
@@ -22,13 +22,15 @@ export async function POST(req: Request) {
     // Gap analysis — no DB credit record; charge a one-off $499 via price_data
     if (is_gap_analysis) {
       // Pre-create the order so we can embed the orderId in the success_url
+      const program = gap_analysis_program ?? "leed_bd_c";
       const { data: newOrder, error: orderError } = await supabase
         .from("orders")
         .insert({
-          credit_id:  null,
-          customer_id: user.id,
-          project_id: project_id ?? null,
-          status:     "awaiting_upload",
+          credit_id:             null,
+          customer_id:           user.id,
+          project_id:            project_id ?? null,
+          status:                "awaiting_upload",
+          gap_analysis_program:  program,
         })
         .select("id")
         .single();
@@ -55,9 +57,10 @@ export async function POST(req: Request) {
         success_url: `${appUrl}/orders/${newOrder.id}/upload?type=gap-analysis`,
         cancel_url:  `${appUrl}/orders/new/payment?${cancelParams.toString()}`,
         metadata: {
-          is_gap_analysis: "true",
-          customer_id:     user.id,
-          order_id:        newOrder.id,
+          is_gap_analysis:      "true",
+          gap_analysis_program: program,
+          customer_id:          user.id,
+          order_id:             newOrder.id,
           ...(project_id ? { project_id } : {}),
         },
         allow_promotion_codes: true,

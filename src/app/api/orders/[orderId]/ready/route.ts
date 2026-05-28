@@ -88,19 +88,23 @@ export async function POST(
     );
   }
 
-  // Load customer and credit for emails
+  // Load customer (always) and credit (only for credit orders)
+  const isGapAnalysis = !order.credit_id;
+
   const [customerRes, creditRes] = await Promise.all([
     serviceClient.from("customers").select("email, name").eq("id", order.customer_id).single(),
-    serviceClient.from("credits").select("credit_name, credit_code").eq("id", order.credit_id!).single(),
+    isGapAnalysis
+      ? Promise.resolve({ data: null, error: null })
+      : serviceClient.from("credits").select("credit_name, credit_code").eq("id", order.credit_id!).single(),
   ]);
 
   const customerEmail = customerRes.data?.email ?? "";
   const customerName  = customerRes.data?.name ?? "there";
-  const creditName    = creditRes.data?.credit_name ?? "your credit";
+  const creditName    = isGapAnalysis ? "Gap Analysis" : (creditRes.data?.credit_name ?? "your credit");
   const creditCode    = creditRes.data?.credit_code ?? "";
 
-  // Send upload confirmation email now that files are in Storage
-  if (customerEmail && creditCode && order.project_id) {
+  // Send upload confirmation email for credit orders with uploaded files
+  if (!isGapAnalysis && customerEmail && creditCode && order.project_id) {
     const attemptFolder = `${order.customer_id}/${order.project_id}/orders/${orderId}-${creditCode}/attempt-${attemptNumber}`;
     const { data: storageFiles } = await serviceClient.storage
       .from("customer-uploads")

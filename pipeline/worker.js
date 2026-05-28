@@ -45,694 +45,6 @@ var init_supabase = __esm({
   }
 });
 
-// pipeline/lib/extract-xlsx-row.ts
-function creditCodeNeedles(code) {
-  const lower = code.toLowerCase();
-  const m = code.match(/^([A-Za-z]+)(c|p)(\d+)?$/i);
-  if (m) {
-    const prefix = m[1].toLowerCase();
-    const type = m[2].toLowerCase() === "c" ? "credit" : "prereq";
-    const num = m[3] ?? "";
-    const xlsxFmt = num ? `${prefix} ${type} ${num}` : `${prefix} ${type}`;
-    return [xlsxFmt, lower];
-  }
-  return [lower];
-}
-function parseList(raw) {
-  if (!raw || !raw.trim()) return [];
-  return raw.split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
-}
-function parseRows(buffer) {
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-  const headers = rows[1].map((h) => String(h ?? "").replace(/\n/g, " ").trim());
-  return { rows, headers };
-}
-function loadWorkbook() {
-  if (!fs.existsSync(AUTOMATION_XLSX)) {
-    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
-  }
-  console.log(`  [loadWorkbook] reading file from disk: ${AUTOMATION_XLSX}`);
-  const buf = fs.readFileSync(AUTOMATION_XLSX);
-  console.log(`  [loadWorkbook] file read complete \u2014 ${buf.length} bytes \u2014 parsing XLSX...`);
-  const result = parseRows(buf);
-  console.log(`  [loadWorkbook] XLSX parse complete \u2014 ${result.rows.length} rows`);
-  return result;
-}
-function extractCreditData(creditCode) {
-  const { rows } = loadWorkbook();
-  const needles = creditCodeNeedles(creditCode);
-  const dataRow = rows.slice(2).find((row) => {
-    const name = String(row[COL.creditName] ?? "").toLowerCase();
-    const num = String(row[COL.creditNumber] ?? "").toLowerCase();
-    return needles.some((n) => name.includes(n) || num.includes(n));
-  });
-  if (!dataRow) {
-    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet (tried: ${needles.join(", ")})`);
-  }
-  const get = (col) => String(dataRow[col] ?? "").trim();
-  return {
-    creditNumber: get(COL.creditNumber),
-    creditName: get(COL.creditName),
-    ptsAvailable: get(COL.ptsAvailable),
-    automatable: get(COL.automatable),
-    docTier: get(COL.docTier),
-    customerUploads: parseList(get(COL.customerUploads)),
-    claudeRetrieves: parseList(get(COL.claudeRetrieves)),
-    platformFiles: {
-      formLink: get(COL.formLink) || null,
-      calculatorInfo: get(COL.calculatorInfo) || null
-    },
-    outputs: parseList(get(COL.claudeOutputs)),
-    gbciVerification: get(COL.gbciVerification),
-    blockerNotes: get(COL.blockerNotes)
-  };
-}
-function formatCreditDataForPrompt(data2) {
-  const lines = [
-    `Credit: ${data2.creditNumber} \u2014 ${data2.creditName}`,
-    `Automatable: ${data2.automatable} | Tier: ${data2.docTier}`,
-    "",
-    "DOCUMENTS TO COLLECT FROM PROJECT TEAM:",
-    ...data2.customerUploads.map((d) => `  - ${d}`),
-    "",
-    "DOCUMENTS CLAUDE RETRIEVES AUTOMATICALLY:",
-    ...data2.claudeRetrieves.map((d) => `  - ${d}`),
-    "",
-    "OUTPUTS TO GENERATE FOR THIS CREDIT:",
-    ...data2.outputs.map((o) => `  - ${o}`),
-    "",
-    `LEED Online Form: ${data2.platformFiles.formLink ?? "N/A"}`,
-    ...data2.platformFiles.calculatorInfo ? [`Calculator: ${data2.platformFiles.calculatorInfo}`] : [],
-    ...data2.blockerNotes ? [`Notes: ${data2.blockerNotes}`] : []
-  ];
-  return lines.join("\n");
-}
-var XLSX, fs, path, AUTOMATION_XLSX, COL;
-var init_extract_xlsx_row = __esm({
-  "pipeline/lib/extract-xlsx-row.ts"() {
-    "use strict";
-    XLSX = __toESM(require("xlsx"));
-    fs = __toESM(require("fs"));
-    path = __toESM(require("path"));
-    AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
-    COL = {
-      creditNumber: 0,
-      creditName: 1,
-      ptsAvailable: 2,
-      ptsAuto: 3,
-      automatable: 4,
-      docTier: 5,
-      allDocuments: 6,
-      // full combined list
-      customerUploads: 7,
-      // Column 1: Project Team Must Upload
-      claudeRetrieves: 8,
-      // Column 2: Claude Auto-Retrieves
-      claudeOutputs: 9,
-      // Column 4: Outputs Generated
-      gbciVerification: 10,
-      blockerNotes: 11,
-      formLink: 12,
-      // Column 3 partial: LEED Online Form Link
-      calculatorInfo: 13
-      // Column 3 partial: Calculator / Worksheet
-    };
-  }
-});
-
-// pipeline/lib/pdf-to-images.ts
-function preparePdfDocument(input, title) {
-  const buf = typeof input === "string" ? fs2.readFileSync(input) : input;
-  return {
-    type: "document",
-    source: {
-      type: "base64",
-      media_type: "application/pdf",
-      data: buf.toString("base64")
-    },
-    title
-  };
-}
-var fs2;
-var init_pdf_to_images = __esm({
-  "pipeline/lib/pdf-to-images.ts"() {
-    "use strict";
-    fs2 = __toESM(require("fs"));
-  }
-});
-
-// pipeline/lib/supabase-ops.ts
-async function logAuditEvent(event) {
-  const supabase = createServiceClient();
-  const { error } = await supabase.from("audit_log").insert({
-    event_type: event.eventType,
-    entity_type: event.entityType,
-    entity_id: event.entityId,
-    customer_id: event.customerId,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metadata: event.metadata ?? {}
-  });
-  if (error) {
-    console.warn(`[audit] Failed to log ${event.eventType}: ${error.message}`);
-  }
-}
-var init_supabase_ops = __esm({
-  "pipeline/lib/supabase-ops.ts"() {
-    "use strict";
-    init_supabase();
-  }
-});
-
-// pipeline/document-review.ts
-async function reviewDocument(client2, requiredDocumentDescription, fileBuffer, filename2) {
-  const isPdf = filename2.toLowerCase().endsWith(".pdf");
-  const contentBlocks = isPdf ? [
-    preparePdfDocument(fileBuffer, filename2),
-    {
-      type: "text",
-      text: `Required document type: ${requiredDocumentDescription}
-
-Review this document and return the JSON assessment.`
-    }
-  ] : [
-    {
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/jpeg",
-        data: fileBuffer.toString("base64")
-      }
-    },
-    {
-      type: "text",
-      text: `Required document type: ${requiredDocumentDescription}
-
-Review this document and return the JSON assessment.`
-    }
-  ];
-  const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 512,
-    system: DOCUMENT_REVIEW_PROMPT,
-    messages: [{ role: "user", content: contentBlocks }]
-  });
-  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  try {
-    const json = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    return JSON.parse(json);
-  } catch {
-    console.warn(`  \u26A0 Review response was not valid JSON for ${filename2}: ${rawText.slice(0, 200)}`);
-    return { acceptable: false, issue: "Document review could not be completed \u2014 please re-upload." };
-  }
-}
-function matchUploadToRequirement(requiredDescription, uploads) {
-  const keywords = requiredDescription.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 3);
-  let bestMatch = null;
-  let bestScore = 0;
-  for (const upload of uploads) {
-    const name = upload.filename.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
-    const score = keywords.filter((kw) => name.includes(kw)).length;
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = upload;
-    }
-  }
-  return bestScore > 0 ? bestMatch : null;
-}
-async function reviewDocuments(orderId, customerId, creditCode, uploads) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk.default({ apiKey, timeout: 18e4, maxRetries: 0 });
-  const supabase = createServiceClient();
-  console.log(`[document-review] Order ${orderId} \u2014 ${creditCode} \u2014 ${uploads.length} upload(s)`);
-  const creditData = extractCreditData(creditCode);
-  const requiredDocs = creditData.customerUploads;
-  if (requiredDocs.length === 0) {
-    console.log(`  No required documents defined for ${creditCode} \u2014 auto-passing review`);
-    return {
-      orderId,
-      creditCode,
-      status: "complete",
-      issues: [],
-      reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-  console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
-  const issues = [];
-  for (const requiredDoc of requiredDocs) {
-    const matched = matchUploadToRequirement(requiredDoc, uploads);
-    if (!matched) {
-      console.log(`  \u2717 Missing: "${requiredDoc}"`);
-      issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: null,
-        issue: `Required document not uploaded: ${requiredDoc}`
-      });
-      continue;
-    }
-    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(matched.storagePath);
-    if (error || !data2) {
-      console.warn(`  \u26A0 Failed to download ${matched.storagePath}: ${error?.message}`);
-      issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: matched.filename,
-        issue: "File could not be retrieved for review \u2014 please re-upload."
-      });
-      continue;
-    }
-    const buffer = Buffer.from(await data2.arrayBuffer());
-    console.log(`  Reviewing "${matched.filename}" for: ${requiredDoc}`);
-    const review = await reviewDocument(client2, requiredDoc, buffer, matched.filename);
-    if (!review.acceptable) {
-      console.log(`  \u2717 Issue: ${review.issue}`);
-      issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: matched.filename,
-        issue: review.issue ?? "Document did not pass review."
-      });
-    } else {
-      console.log(`  \u2713 Accepted: "${matched.filename}"`);
-    }
-  }
-  const status = issues.length === 0 ? "complete" : "incomplete";
-  console.log(`  Review result: ${status} (${issues.length} issue(s))`);
-  await logAuditEvent({
-    eventType: "document_review_complete",
-    entityType: "order",
-    entityId: orderId,
-    customerId,
-    metadata: {
-      creditCode,
-      status,
-      issueCount: issues.length,
-      uploadCount: uploads.length,
-      requiredCount: requiredDocs.length
-    }
-  });
-  return {
-    orderId,
-    creditCode,
-    status,
-    issues,
-    reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-}
-var import_sdk, path2, fs3, envPath, DOCUMENT_REVIEW_PROMPT;
-var init_document_review = __esm({
-  "pipeline/document-review.ts"() {
-    "use strict";
-    import_sdk = __toESM(require("@anthropic-ai/sdk"));
-    path2 = __toESM(require("path"));
-    fs3 = __toESM(require("fs"));
-    init_supabase();
-    init_extract_xlsx_row();
-    init_pdf_to_images();
-    init_supabase_ops();
-    envPath = path2.resolve(__dirname, "../.env.local");
-    if (fs3.existsSync(envPath)) {
-      for (const line of fs3.readFileSync(envPath, "utf-8").split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-        const eqIdx = trimmed.indexOf("=");
-        if (eqIdx === -1) continue;
-        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
-      }
-    }
-    DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
-
-You will be told what document type is required. Review the provided file and determine:
-1. Is this the correct document type?
-2. Is it complete (not truncated, not blank, not corrupted)?
-3. Is it legible and professionally prepared?
-4. Does it contain the key information normally expected in this document type?
-
-Respond with a single JSON object:
-{
-  "acceptable": boolean,
-  "issue": string | null
-}
-
-Set "acceptable" to true if the document is suitable for LEED submission.
-Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
-The "issue" string must be written for the project team to read \u2014 be specific and actionable.
-Return only the JSON object.`;
-  }
-});
-
-// pipeline/drawing-analysis.ts
-async function analyzeDrawings(projectId, customerId, drawingPaths) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const supabase = createServiceClient();
-  console.log(`[drawing-analysis] project=${projectId} drawings=${drawingPaths.length}`);
-  const tmpDir = fs4.mkdtempSync(path3.join(os.tmpdir(), "certify-drawings-"));
-  const localPaths = [];
-  try {
-    for (const drawingPath of drawingPaths) {
-      const { data: data2, error } = await supabase.storage.from("customer-uploads").download(drawingPath);
-      if (error || !data2) throw new Error(`Download failed: ${drawingPath} \u2014 ${error?.message}`);
-      const filename2 = drawingPath.split("/").pop() ?? `drawing_${localPaths.length}.pdf`;
-      const localPath = path3.join(tmpDir, filename2);
-      fs4.writeFileSync(localPath, Buffer.from(await data2.arrayBuffer()));
-      localPaths.push(localPath);
-      console.log(`  \u2713 downloaded ${filename2}`);
-    }
-    const args = [
-      PYTHON_SCRIPT,
-      "--project-id",
-      projectId,
-      "--customer-id",
-      customerId,
-      "--output-dir",
-      tmpDir,
-      ...localPaths
-    ];
-    console.log(`  Running analyze_drawings.py (timeout ${TIMEOUT_MS / 1e3}s)...`);
-    let stdout = "";
-    let stderr = "";
-    try {
-      const result = await execFileAsync(PYTHON_BIN, args, {
-        timeout: TIMEOUT_MS,
-        env: { ...process.env },
-        maxBuffer: 50 * 1024 * 1024
-      });
-      stdout = result.stdout;
-      stderr = result.stderr;
-    } catch (err) {
-      stderr = err.stderr ?? "";
-      stdout = err.stdout ?? "";
-      if (stderr) console.error(`  [python stderr]
-${stderr}`);
-      throw new Error(`analyze_drawings.py failed: ${err.message}`);
-    }
-    if (stderr.trim()) console.warn(`  [python stderr]
-${stderr.trim()}`);
-    const resultMarker = "__RESULT__";
-    const markerIdx = stdout.lastIndexOf(resultMarker);
-    if (markerIdx === -1) throw new Error("analyze_drawings.py produced no __RESULT__ block");
-    const logOutput = stdout.slice(0, markerIdx).trim();
-    if (logOutput) console.log(logOutput);
-    const summary = JSON.parse(stdout.slice(markerIdx + resultMarker.length).trim());
-    if (!summary.success) throw new Error("analyze_drawings.py reported failure");
-    const profileJson = fs4.readFileSync(summary.profile_path, "utf-8");
-    const profileRemote = `${customerId}/${projectId}/project-profile.json`;
-    const { error: profileUploadErr } = await supabase.storage.from("customer-uploads").upload(profileRemote, new Blob([profileJson], { type: "application/json" }), { upsert: true });
-    if (profileUploadErr) throw new Error(`profile upload failed: ${profileUploadErr.message}`);
-    console.log(`  \u2713 uploaded project-profile.json`);
-    const annotatedRemotePaths = [];
-    for (const localAnnotated of summary.annotated_pdfs) {
-      const filename2 = path3.basename(localAnnotated);
-      const remotePath = `${customerId}/${projectId}/outputs/${filename2}`;
-      const pdfBytes = fs4.readFileSync(localAnnotated);
-      const { error: pdfUploadErr } = await supabase.storage.from("customer-uploads").upload(remotePath, new Blob([pdfBytes], { type: "application/pdf" }), { upsert: true });
-      if (pdfUploadErr) {
-        console.warn(`  [WARN] annotated PDF upload failed: ${pdfUploadErr.message}`);
-      } else {
-        annotatedRemotePaths.push(remotePath);
-        console.log(`  \u2713 uploaded ${filename2}`);
-      }
-    }
-    const profile = JSON.parse(profileJson);
-    const fixtures = profile.plumbing_fixtures ?? {};
-    const parking = profile.parking ?? {};
-    const site = profile.site ?? {};
-    const tokenUsage = profile._token_usage;
-    const updatePayload = {
-      auto_extracted: true,
-      flagged_fields: summary.flagged_fields,
-      drawings_analyzed_at: (/* @__PURE__ */ new Date()).toISOString(),
-      drawing_data: profile,
-      ...profile.project_name ? { name: profile.project_name } : {},
-      ...profile.project_address ? { address: profile.project_address } : {},
-      ...profile.building_type ? { building_type: profile.building_type } : {},
-      ...profile.primary_occupancy ? { primary_occupancy: profile.primary_occupancy } : {},
-      ...fixtures ? { plumbing_fixtures: fixtures } : {},
-      ...parking.total_spaces != null ? { total_parking: parking.total_spaces } : {},
-      ...parking.accessible_spaces != null ? { accessible_parking: parking.accessible_spaces } : {},
-      ...parking.bicycle_spaces != null ? { bicycle_parking: parking.bicycle_spaces } : {},
-      ...site.site_area_sqft != null ? { site_area_sqft: site.site_area_sqft } : {},
-      ...site.landscaping_area_sqft != null ? { landscaping_sqft: site.landscaping_area_sqft } : {},
-      ...site.impervious_surface_sqft != null ? { impervious_sqft: site.impervious_surface_sqft } : {},
-      ...site.building_footprint_sqft != null ? { building_footprint_sqft: site.building_footprint_sqft } : {}
-    };
-    const { error: updateErr } = await supabase.from("projects").update(updatePayload).eq("id", projectId);
-    if (updateErr) throw new Error(`projects update failed: ${updateErr.message}`);
-    console.log(`  \u2713 updated projects table`);
-    await logAuditEvent({
-      eventType: "drawing_analysis_complete",
-      entityType: "project",
-      entityId: projectId,
-      customerId,
-      metadata: {
-        sheetsAnalyzed: summary.sheets_analyzed,
-        flaggedFields: summary.flagged_fields,
-        annotatedPdfs: annotatedRemotePaths.length,
-        elapsedSeconds: summary.elapsed_seconds,
-        inputTokens: tokenUsage?.input_tokens ?? 0,
-        outputTokens: tokenUsage?.output_tokens ?? 0
-      }
-    });
-    return {
-      projectId,
-      sheetsAnalyzed: summary.sheets_analyzed,
-      flaggedFields: summary.flagged_fields,
-      profilePath: profileRemote,
-      annotatedPdfs: annotatedRemotePaths,
-      tokenUsage: tokenUsage ?? { input_tokens: 0, output_tokens: 0 },
-      elapsedSeconds: summary.elapsed_seconds
-    };
-  } finally {
-    try {
-      fs4.rmSync(tmpDir, { recursive: true, force: true });
-    } catch {
-    }
-  }
-}
-var path3, fs4, os, import_child_process, import_util, execFileAsync, PYTHON_SCRIPT, PYTHON_BIN, TIMEOUT_MS;
-var init_drawing_analysis = __esm({
-  "pipeline/drawing-analysis.ts"() {
-    "use strict";
-    path3 = __toESM(require("path"));
-    fs4 = __toESM(require("fs"));
-    os = __toESM(require("os"));
-    import_child_process = require("child_process");
-    import_util = require("util");
-    init_supabase();
-    init_supabase_ops();
-    execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
-    PYTHON_SCRIPT = path3.resolve(__dirname, "lib/analyze_drawings.py");
-    PYTHON_BIN = process.env.PYTHON_BIN ?? "python3";
-    TIMEOUT_MS = 18e4;
-  }
-});
-
-// pipeline/lib/pipeline-utils.ts
-async function withTimeout(promise, ms, label) {
-  let timer;
-  const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`Timeout after ${ms}ms: ${label}`)),
-      ms
-    );
-  });
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timer !== void 0) clearTimeout(timer);
-  }
-}
-async function axiosGetWithRetry(url, options = {}, timeoutMs = 1e4, label = "HTTP GET") {
-  const opts = { ...options, timeout: timeoutMs };
-  try {
-    return await import_axios.default.get(url, opts);
-  } catch (err) {
-    console.warn(`  \u26A0 ${label} failed \u2014 retrying after 2 s: ${err.message}`);
-    await new Promise((r) => setTimeout(r, 2e3));
-    return import_axios.default.get(url, opts);
-  }
-}
-var import_axios;
-var init_pipeline_utils = __esm({
-  "pipeline/lib/pipeline-utils.ts"() {
-    "use strict";
-    import_axios = __toESM(require("axios"));
-  }
-});
-
-// pipeline/map-generation.ts
-function decodePolyline(encoded) {
-  const points = [];
-  let index = 0, lat = 0, lng = 0;
-  while (index < encoded.length) {
-    let b, shift = 0, result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 31) << shift;
-      shift += 5;
-    } while (b >= 32);
-    lat += result & 1 ? ~(result >> 1) : result >> 1;
-    shift = 0;
-    result = 0;
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 31) << shift;
-      shift += 5;
-    } while (b >= 32);
-    lng += result & 1 ? ~(result >> 1) : result >> 1;
-    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
-  }
-  return points;
-}
-async function getRoute(origin, dest, mode = "walking") {
-  const key = MAPS_API_KEY();
-  const res = await axiosGetWithRetry(
-    "https://maps.googleapis.com/maps/api/directions/json",
-    { params: { origin, destination: dest.address, mode, alternatives: false, key } },
-    1e4,
-    `Directions API (${mode}): ${dest.address}`
-  );
-  const data2 = res.data;
-  if (data2.status !== "OK" || !data2.routes?.length) {
-    console.warn(`  \u26A0 No route: ${origin} \u2192 ${dest.address} (${data2.status})`);
-    return null;
-  }
-  const route = data2.routes[0];
-  const leg = route.legs[0];
-  const encodedPolyline = route.overview_polyline.points;
-  return {
-    destination: dest,
-    distanceFeet: Math.round(leg.distance.value * 3.28084),
-    distanceMiles: parseFloat((leg.distance.value / 1609.34).toFixed(2)),
-    durationMinutes: Math.round(leg.duration.value / 60),
-    encodedPolyline,
-    polylinePoints: decodePolyline(encodedPolyline),
-    originLatLng: { lat: leg.start_location.lat, lng: leg.start_location.lng },
-    destLatLng: { lat: leg.end_location.lat, lng: leg.end_location.lng }
-  };
-}
-async function getWalkingRoute(origin, dest) {
-  return getRoute(origin, dest, "walking");
-}
-async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
-  const key = MAPS_API_KEY();
-  const scale = 2;
-  const base = "https://maps.googleapis.com/maps/api/staticmap";
-  const params = [
-    `size=${imgWidth / scale}x${imgHeight / scale}`,
-    `scale=${scale}`,
-    `maptype=roadmap`,
-    `style=feature:poi|visibility:off`,
-    `style=feature:transit|element:labels|visibility:off`,
-    `key=${key}`
-  ];
-  for (const pt of visibleCorners) {
-    params.push(`visible=${pt.lat},${pt.lng}`);
-  }
-  const origin = routes[0].originLatLng;
-  params.push(`markers=color:0x2b4044|size:mid|label:S|${origin.lat},${origin.lng}`);
-  for (const route of routes) {
-    const label = route.destination.label.slice(0, 1);
-    params.push(`markers=color:0x327cb9|size:mid|label:${label}|${route.destLatLng.lat},${route.destLatLng.lng}`);
-  }
-  for (const route of routes) {
-    params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
-  }
-  const url = `${base}?${params.join("&")}`;
-  const res = await axiosGetWithRetry(url, { responseType: "arraybuffer" }, 1e4, "Static Maps API");
-  return Buffer.from(res.data);
-}
-async function addCitationOverlay(imageBuffer, citationText, width, height) {
-  const sharp = (await import("sharp")).default;
-  const lines = citationText.split("\n");
-  const lineH = 14;
-  const padding = 6;
-  const boxH = lines.length * lineH + padding * 2;
-  const boxW = Math.max(...lines.map((l) => l.length)) * 6.5 + padding * 2;
-  const boxX = width - boxW - 8;
-  const boxY = height - boxH - 8;
-  const textEls = lines.map(
-    (line, i) => `<text x="${boxX + padding}" y="${boxY + padding + lineH * i + 10}"
-           font-family="Arial, sans-serif" font-size="10" fill="#444444">${line}</text>`
-  ).join("");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="3" fill="white" opacity="0.82"/>
-    ${textEls}
-  </svg>`;
-  return sharp(imageBuffer).resize(width, height, { fit: "cover" }).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
-}
-async function generateMap(request) {
-  const WIDTH = 1200;
-  const HEIGHT = 900;
-  console.log(`[map-generation] ${request.mapType} \u2014 ${request.destinations.length} destination(s)`);
-  const routes = [];
-  for (const dest of request.destinations) {
-    const route = await getWalkingRoute(request.originAddress, dest);
-    if (route) routes.push(route);
-  }
-  if (routes.length === 0) throw new Error("No walking routes returned from Google Maps Directions API");
-  const allPoints = routes.flatMap((r) => r.polylinePoints);
-  allPoints.push(routes[0].originLatLng);
-  routes.forEach((r) => allPoints.push(r.destLatLng));
-  const lats = allPoints.map((p) => p.lat);
-  const lngs = allPoints.map((p) => p.lng);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const latPad = (maxLat - minLat) * 0.15;
-  const lngPad = (maxLng - minLng) * 0.15;
-  const visibleCorners = [
-    { lat: minLat - latPad, lng: minLng - lngPad },
-    { lat: minLat - latPad, lng: maxLng + lngPad },
-    { lat: maxLat + latPad, lng: minLng - lngPad },
-    { lat: maxLat + latPad, lng: maxLng + lngPad }
-  ];
-  const centerLat = (minLat + maxLat) / 2;
-  const centerLng = (minLng + maxLng) / 2;
-  console.log(`  Center: ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}  bounds: \xB1${(latPad * 111).toFixed(2)}km lat / \xB1${(lngPad * 111 * Math.cos(centerLat * Math.PI / 180)).toFixed(2)}km lng padding`);
-  console.log(`  Fetching map with ${routes.length} encoded polyline route(s)...`);
-  const mapImage = await fetchMapWithRoutes(routes, visibleCorners, WIDTH, HEIGHT);
-  const today = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  const citationText = `Source: Google Maps \u2014 Walking distances along pedestrian routes.
-${today}`;
-  const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
-  if (request.outputPath) {
-    const { mkdirSync, writeFileSync: writeFileSync4 } = await import("fs");
-    mkdirSync(path4.dirname(request.outputPath), { recursive: true });
-    writeFileSync4(request.outputPath, pngBuffer);
-    console.log(`  \u2713 Map saved: ${request.outputPath}`);
-  }
-  console.log(`  \u2713 Map generated (${Math.round(pngBuffer.length / 1024)} KB PNG)`);
-  routes.forEach(
-    (r) => console.log(`    \u2022 ${r.destination.label}: ${r.distanceFeet.toLocaleString()} ft (${r.durationMinutes} min walk)`)
-  );
-  return { pngBuffer, routes, mapType: request.mapType };
-}
-var path4, fs5, envPath2, MAPS_API_KEY;
-var init_map_generation = __esm({
-  "pipeline/map-generation.ts"() {
-    "use strict";
-    path4 = __toESM(require("path"));
-    fs5 = __toESM(require("fs"));
-    init_pipeline_utils();
-    envPath2 = path4.resolve(__dirname, "../.env.local");
-    if (fs5.existsSync(envPath2)) {
-      for (const line of fs5.readFileSync(envPath2, "utf-8").split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-        const eqIdx = trimmed.indexOf("=");
-        if (eqIdx === -1) continue;
-        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
-      }
-    }
-    MAPS_API_KEY = () => {
-      const key = process.env.GOOGLE_MAPS_API_KEY;
-      if (!key) throw new Error("GOOGLE_MAPS_API_KEY not set in .env.local");
-      return key;
-    };
-  }
-});
-
 // pipeline/lib/make-editable.ts
 function injectTableCss(html) {
   const tag = `<style id="liminal-css">${LIMINAL_CSS}
@@ -877,6 +189,1454 @@ var init_make_editable = __esm({
     min-height: 1em;
   }
 </style>`;
+  }
+});
+
+// pipeline/lib/pdf-extract.ts
+async function renderPdfToTiles(pdfBuffer, cols = 2, rows = 2, dpi = 200, tileMaxSide = 2500) {
+  const _req = eval("require");
+  const pdfjsLib = _req("pdfjs-dist/legacy/build/pdf.mjs");
+  const { createCanvas } = _req("@napi-rs/canvas");
+  const sharp = (await import("sharp")).default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${_req.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")}`;
+  const data = new Uint8Array(pdfBuffer);
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const scale = dpi / 72;
+  const tiles = [];
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+    const width = Math.round(viewport.width);
+    const height = Math.round(viewport.height);
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    const fullPng = canvas.toBuffer("image/png");
+    const tileW = Math.ceil(width / cols);
+    const tileH = Math.ceil(height / rows);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const left = c * tileW;
+        const top = r * tileH;
+        const tw = Math.min(tileW, width - left);
+        const th = Math.min(tileH, height - top);
+        const longest = Math.max(tw, th);
+        const resizeOpts = longest > tileMaxSide ? tw >= th ? { width: tileMaxSide } : { height: tileMaxSide } : {};
+        const jpegBuf = await sharp(fullPng).extract({ left, top, width: tw, height: th }).resize(resizeOpts).jpeg({ quality: 92 }).toBuffer();
+        const quadrant = ["top-left", "top-right", "bottom-left", "bottom-right"][r * cols + c] ?? `r${r}c${c}`;
+        tiles.push({ buffer: jpegBuf, label: `Page ${pageNum}, tile ${r * cols + c + 1}/${rows * cols} (${quadrant})` });
+      }
+    }
+  }
+  return tiles;
+}
+async function _extract(client2, pdfBuffer2, filename2, extractionPrompt, renderMode, cacheKey) {
+  const t0 = Date.now();
+  let content;
+  if (renderMode === "tiled-image") {
+    console.log(`  [pdf-extract] Rendering tiles: ${filename2}...`);
+    const tiles2 = await renderPdfToTiles(pdfBuffer2);
+    console.log(`  [pdf-extract] ${tiles2.length} tiles ready \u2014 sending to Claude`);
+    content = [
+      ...tiles2.map((tile) => ({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: "image/jpeg",
+          data: tile.buffer.toString("base64")
+        }
+      })),
+      {
+        type: "text",
+        text: `The above ${tiles2.length} images are tiles from the same drawing sheet, arranged in a 2-column \xD7 2-row grid (left-to-right, top-to-bottom). Together they form the complete sheet at higher resolution than a single image allows.
+
+` + extractionPrompt
+      }
+    ];
+  } else {
+    const pdfB64 = pdfBuffer2.toString("base64");
+    content = [
+      { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfB64 } },
+      { type: "text", text: extractionPrompt }
+    ];
+  }
+  const response = await client2.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8e3,
+    temperature: 0,
+    messages: [{ role: "user", content }]
+  });
+  const text = response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  const elapsedMs = Date.now() - t0;
+  console.log(
+    `  [pdf-extract] \u2713 ${filename2} [${renderMode}] \u2014 ${(elapsedMs / 1e3).toFixed(1)}s  in:${response.usage.input_tokens.toLocaleString()} out:${response.usage.output_tokens.toLocaleString()}`
+  );
+  _cache.set(cacheKey, text);
+  return { text, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens, elapsedMs, cacheHit: false };
+}
+async function extractPdfContent(client2, pdfPath, extractionPrompt, renderMode = "document") {
+  const cacheKey = `${pdfPath}::${renderMode}::${extractionPrompt}`;
+  if (_cache.has(cacheKey)) {
+    console.log(`  [pdf-extract] Cache hit: ${path.basename(pdfPath)}`);
+    return { text: _cache.get(cacheKey), inputTokens: 0, outputTokens: 0, elapsedMs: 0, cacheHit: true };
+  }
+  console.log(`  [pdf-extract] Extracting from ${path.basename(pdfPath)} [${renderMode}]...`);
+  const pdfBuffer2 = fs.readFileSync(pdfPath);
+  return _extract(client2, pdfBuffer2, path.basename(pdfPath), extractionPrompt, renderMode, cacheKey);
+}
+async function extractPdfContentFromBuffer(client2, pdfBuffer2, filename2, extractionPrompt, renderMode = "document") {
+  const cacheKey = `buffer::${filename2}::${pdfBuffer2.length}::${renderMode}::${extractionPrompt}`;
+  if (_cache.has(cacheKey)) {
+    console.log(`  [pdf-extract] Cache hit: ${filename2}`);
+    return { text: _cache.get(cacheKey), inputTokens: 0, outputTokens: 0, elapsedMs: 0, cacheHit: true };
+  }
+  console.log(`  [pdf-extract] Extracting from ${filename2} [${renderMode}]...`);
+  return _extract(client2, pdfBuffer2, filename2, extractionPrompt, renderMode, cacheKey);
+}
+var fs, path, _cache, EXTRACT_PROMPTS;
+var init_pdf_extract = __esm({
+  "pipeline/lib/pdf-extract.ts"() {
+    "use strict";
+    fs = __toESM(require("fs"));
+    path = __toESM(require("path"));
+    _cache = /* @__PURE__ */ new Map();
+    EXTRACT_PROMPTS = {
+      CIVIL_DRAWING: `Extract all of the following from this civil drawing set:
+- Project name
+- Project address (full street address, city, state, zip)
+- Owner / developer name (if shown)
+- Project description / building type
+- Site area (total lot area in sq ft and/or acres)
+- Development footprint area (building footprint + impervious area if shown)
+- Site boundary description
+- Any noted land features: wetlands, floodplain notes, water bodies, detention/retention areas, easements
+- Zoning designation (if noted)
+- Any environmental or permitting notes
+- Benchmark / datum and coordinate system if shown
+- Any slope or grading notes relevant to sensitive land classification
+Output as structured plain text. Be thorough \u2014 include every data point visible.`,
+      CREDIT_REQUIREMENTS: `Extract all of the following from this LEED credit guide:
+- Credit name and number
+- Points available
+- All compliance options with their full thresholds and requirements
+- All items that must be documented or calculated
+- All items listed as required uploads or submittals
+- Items that can be retrieved from public databases (FEMA, NWI, Census, etc.)
+- Items that require owner input or site-specific data
+- All LEED Online form fields described or referenced
+- Any definitions or special terms
+Output as structured plain text. Be complete \u2014 every requirement matters.`,
+      GEOTECHNICAL_REPORT: `Extract all of the following from this geotechnical report:
+- Project name and address
+- Report date and author
+- Soil classifications (USCS or ASTM) for each boring or test pit
+- Prime farmland soil types identified (if any)
+- Groundwater depth observations
+- Any notes on wetlands, fill, or sensitive soil conditions
+- Bearing capacity values
+- Any environmental observations
+Output as structured plain text.`
+    };
+  }
+});
+
+// pipeline/prompts/gap-analysis-leed.ts
+function buildLeedGapAnalysisPrompt(params) {
+  const r = params.responses;
+  const docs = params.documentContext;
+  return `You are a LEED BD+C v4.1 consultant producing a Gap Analysis Report for a project team.
+
+Your output is a complete, standalone HTML document using the Liminal design system CSS classes defined below. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+PROJECT DATA (from intake questionnaire)
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Building name:       ${r.buildingName || "Not provided"}
+Address:             ${r.buildingAddress || "Not provided"}
+Building type:       ${r.buildingType || "Not specified"}
+Gross floor area:    ${r.gfa ? `${parseInt(r.gfa).toLocaleString()} SF` : "Not provided"}
+Floors:              ${r.floors || "Not provided"}
+Parking spaces:      ${r.parking || "Not provided"}
+Target level:        ${r.targetLevel || "Not specified"}
+LEED AP on team:     ${r.leedAp || "Unknown"}
+
+ENERGY & MECHANICAL
+Energy target:            ${r.energyTarget || "Not set"}
+Heating fuel:             ${r.heatingFuel || "Unknown"}
+Cooling system:           ${r.coolingSystem || "Unknown"}
+Renewable energy:         ${r.renewableEnergy || "Unknown"}${r.renewableDetail ? `
+Renewable detail: ${r.renewableDetail}` : ""}
+Enhanced commissioning:   ${r.enhancedCommissioning || "Unknown"}
+Refrigerant approach:     ${r.refrigerantApproach || "Unknown"}
+
+WATER
+Irrigation:               ${r.irrigation || "Unknown"}
+Water reuse systems:      ${Array.isArray(r.waterReuse) ? r.waterReuse.join(", ") || "None" : r.waterReuse || "Unknown"}
+Cooling tower:            ${r.coolingTower || "Unknown"}
+Fixture intent:           ${r.fixtureIntent || "Unknown"}
+
+SITE & LOCATION
+Previously developed:     ${r.previouslyDeveloped || "Unknown"}
+Existing structure:       ${r.existingStructure || "Unknown"}
+Site area:                ${r.siteArea ? `${r.siteArea} acres` : "Not provided"}
+Bicycle storage:          ${r.bicycleStorage || "Unknown"}
+EV charging:              ${r.evCharging || "Unknown"}
+Exterior lighting:        ${r.exteriorLighting || "Unknown"}
+
+MATERIALS
+EPDs:                     ${r.epds || "Unknown"}
+FSC-certified wood:       ${r.fscWood || "Unknown"}
+Waste management plan:    ${r.wasteManagement || "Unknown"}
+Low-emitting materials:   ${r.lowEmitting || "Unknown"}
+
+INDOOR ENVIRONMENT
+Ventilation strategy:     ${r.ventilation || "Unknown"}
+Daylighting priority:     ${r.daylighting || "Unknown"}
+Acoustic standards:       ${r.acoustic || "Unknown"}
+Construction IAQ plan:    ${r.constructionIaq || "Unknown"}
+
+TEAM & PROCESS
+Pre-design charrette:     ${r.charrette || "Unknown"}
+Commissioning authority:  ${r.cxAuthority || "Unknown"}
+Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `
+Contractor LEED experience: ${r.contractorLeedExperience}` : ""}
+
+${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+UPLOADED DOCUMENTS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+OUTPUT INSTRUCTIONS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Produce a LEED BD+C v4.1 Gap Analysis Report as HTML. This is a RECOMMENDATIONS REPORT \u2014 it identifies which credits to pursue, estimates their point potential, and frames each recommendation around this specific project's characteristics. It is NOT a compliance guide and must NOT explain how to achieve credits in detail.
+
+DESIGN RULES:
+- Use Liminal CSS classes throughout (section-header, section-body, section-wrap, page-header, field-row, field-label, field-value, note, info-box, warn-note, checklist-item, result-pass, result-warn, badge-provided, badge-required, two-col, point-box)
+- Every section-header must be immediately followed by a section-body
+- Use the point-box class for point totals
+- Use result-pass for strong opportunities, result-warn for gaps
+
+REPORT STRUCTURE \u2014 produce all sections in this order:
+
+1. PAGE HEADER
+   <div class="page-header">
+     <h1>LEED BD+C v4.1 Gap Analysis</h1>
+     <div class="sub">[Building name] \xB7 [Address] \xB7 [Building type] \xB7 [GFA] SF</div>
+   </div>
+
+2. META BAR \u2014 show: Target Level, GFA, Building Type, LEED AP status
+
+3. EXECUTIVE SUMMARY SECTION
+   - 2\u20133 sentences on overall readiness based on questionnaire
+   - Estimated point range (format: "X\u2013Y estimated points")
+   - Whether target level appears achievable, ambitious, or out of reach
+   - Use point-box for the estimate
+
+4. CREDIT RECOMMENDATIONS \u2014 one section per LEED category below.
+   For each category, analyze the questionnaire data and recommend specific credits.
+   For each credit:
+   - Use a checklist-item div
+   - Credit name and code (e.g., "EA Credit: Optimize Energy Performance")
+   - 1\u20132 sentences explaining why this credit fits THIS project based on questionnaire answers
+   - Point value or range in brackets (e.g., [1\u201318 pts])
+   - Effort level badge: <span class="badge-provided">LOW EFFORT</span>, <span class="badge-required">MEDIUM EFFORT</span>, or <span class="badge-incomplete">HIGH EFFORT</span>
+   - Only recommend credits with a realistic path given the questionnaire data
+   - Do NOT explain compliance requirements or how to achieve the credit
+
+   Categories to cover (use section-header for each):
+   - Location & Transportation (LT) \u2014 use address data, transit access, bicycle storage, EV charging
+   - Sustainable Sites (SS) \u2014 site development, previously developed status, open space
+   - Water Efficiency (WE) \u2014 fixture intent, irrigation, water reuse, cooling tower
+   - Energy & Atmosphere (EA) \u2014 energy target, fuel type, renewables, commissioning, refrigerant
+   - Materials & Resources (MR) \u2014 EPDs, FSC wood, waste management, existing structure reuse
+   - Indoor Environmental Quality (IEQ) \u2014 ventilation, daylighting, acoustics, low-emitting, IAQ
+   - Innovation (IN) \u2014 LEED AP, any standout strategies identified
+   - Regional Priority (RP) \u2014 note that RP credits are location-specific and will be assessed during credit work
+
+5. POINT SUMMARY SECTION
+   Table showing: Category | Recommended Credits | Estimated Points
+   Show a total row with the overall estimated point range.
+   Add a note that this is an estimate \u2014 exact points depend on design decisions and documentation.
+
+6. RECOMMENDED SERVICES SECTION (section-header: "Recommended Credit Services")
+   A clear list of the specific credits recommended for ordering from Liminal, presented as:
+   <div class="info-box">
+     <strong>Based on this gap analysis, the following LEED credit services are recommended for your project.</strong>
+     Each service includes a complete credit submission package \u2014 GBCI calculator, compliance narrative, and all required documentation.
+   </div>
+   Then list each recommended credit as a checklist-item with the credit name and a one-line reason.
+
+IMPORTANT CONSTRAINTS:
+- Do NOT say "contact us," "reach out," or mention support
+- Do NOT give step-by-step compliance instructions or thresholds
+- Do NOT make up data not in the questionnaire
+- If a field is "Unknown" or missing, note it briefly but do not fabricate an answer
+- Keep each credit rationale to 1\u20132 sentences max
+- The tone is that of a knowledgeable consultant \u2014 confident, specific, and action-oriented
+- Use the project's actual building name and address throughout`;
+}
+var init_gap_analysis_leed = __esm({
+  "pipeline/prompts/gap-analysis-leed.ts"() {
+    "use strict";
+  }
+});
+
+// pipeline/prompts/gap-analysis-well-v2.ts
+function buildWellV2GapAnalysisPrompt(params) {
+  const r = params.responses;
+  const docs = params.documentContext;
+  return `You are a WELL v2 consultant producing a Gap Analysis Report for a project team.
+
+Your output is a complete, standalone HTML document using the Liminal design system CSS classes. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+PROJECT DATA (from intake questionnaire)
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Building name:       ${r.buildingName || "Not provided"}
+Address:             ${r.buildingAddress || "Not provided"}
+Building type:       ${r.buildingType || "Not specified"}
+Certification type:  ${r.certType || "Not specified"}
+GFA:                 ${r.gfa ? `${parseInt(r.gfa).toLocaleString()} SF` : "Not provided"}
+Floors:              ${r.floors || "Not provided"}
+Regular occupants:   ${r.regularOccupants || "Not provided"}
+Peak visitors:       ${r.peakVisitors || "Not provided"}
+Target level:        ${r.targetLevel || "Not specified"}
+WELL AP on team:     ${r.wellAp || "Unknown"}
+
+AIR (Concept A)
+Ventilation strategy:      ${r.ventilationStrategy || "Unknown"}
+Air filtration:            ${r.airFiltration || "Unknown"}
+IAQ monitoring:            ${r.airQualityMonitoring || "Unknown"}
+Smoking policy:            ${r.smokingPolicy || "Unknown"}
+Combustion appliances:     ${r.combustionAppliances || "Unknown"}
+
+WATER (Concept W)
+Water source:              ${r.waterSource || "Unknown"}
+Point-of-use filtration:   ${r.waterFiltration || "Unknown"}
+Legionella assessment:     ${r.legionellaAssessment || "Unknown"}
+Cooling tower:             ${r.coolingTower || "Unknown"}
+
+NOURISHMENT (Concept N)
+Food facilities:           ${r.foodFacilities || "Unknown"}
+Healthy food access:       ${r.healthyFoodAccess || "Unknown"}
+Vending machines:          ${r.vendingMachines || "Unknown"}
+
+LIGHT (Concept L)
+Circadian lighting:        ${r.circanianLighting || "Unknown"}
+Window / view access:      ${r.windowViewAccess || "Unknown"}
+Lighting controls:         ${r.lightingControls || "Unknown"}
+
+MOVEMENT (Concept V)
+Staircase design:          ${r.staircaseDesign || "Unknown"}
+Fitness amenities:         ${r.fitnessAmenities || "Unknown"}
+Showers / changing:        ${r.showersChanging || "Unknown"}
+Outdoor recreation:        ${r.outdoorRecreation || "Unknown"}
+
+THERMAL COMFORT (Concept T)
+Individual thermal control: ${r.thermalControl || "Unknown"}
+Radiant system:            ${r.radiantSystem || "Unknown"}
+Humidity control:          ${r.humidityControl || "Unknown"}
+
+SOUND (Concept S)
+Acoustic standards:        ${r.acousticStandards || "Unknown"}
+Background noise target:   ${r.backgroundNoiseTarget || "Unknown"}
+Acoustic windows:          ${r.acousticWindows || "Unknown"}
+
+MATERIALS (Concept X)
+Cleaning products policy:  ${r.cleaningProductsPolicy || "Unknown"}
+Hazardous material survey: ${r.hazardousMaterialSurvey || "Unknown"}
+IPM policy:                ${r.ipmPolicy || "Unknown"}
+
+MIND (Concept M)
+Biophilic design:          ${r.biophilicDesign || "Unknown"}
+Wellness spaces:           ${r.wellnessSpaces || "Unknown"}
+Mental health programs:    ${r.mentalHealthPrograms || "Unknown"}
+
+COMMUNITY (Concept C)
+Universal design:          ${r.universalDesign || "Unknown"}
+Equity policy:             ${r.equityPolicy || "Unknown"}
+Community spaces:          ${r.communitySpaces || "Unknown"}
+
+${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+UPLOADED DOCUMENTS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+OUTPUT INSTRUCTIONS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Produce a WELL v2 Gap Analysis Report as HTML. This is a RECOMMENDATIONS REPORT \u2014 it identifies which WELL features to pursue, distinguishes preconditions from optimizations, and frames each recommendation around this project's specific characteristics. It is NOT a compliance guide and must NOT explain how to achieve features in detail.
+
+DESIGN RULES:
+- Use Liminal CSS classes throughout
+- Every section-header must be immediately followed by a section-body
+- Use result-pass for strong readiness, result-warn for gaps, result-fail for missing preconditions
+- Use badge-provided for "PRECONDITION MET" indicators, badge-required for "PURSUE", badge-incomplete for "GAP"
+
+REPORT STRUCTURE:
+
+1. PAGE HEADER
+   <div class="page-header">
+     <h1>WELL v2 Gap Analysis</h1>
+     <div class="sub">[Building name] \xB7 [Address] \xB7 [Certification type] \xB7 [GFA] SF</div>
+   </div>
+
+2. META BAR \u2014 show: Target Level, Regular Occupants, Certification Type, WELL AP status
+
+3. EXECUTIVE SUMMARY
+   - 2\u20133 sentences on overall readiness
+   - Note whether preconditions appear achievable
+   - Identify the 2\u20133 concepts where the project is strongest
+   - Identify the 1\u20132 concepts needing the most attention
+
+4. CONCEPT RECOMMENDATIONS \u2014 one section per WELL concept below.
+   For each concept, analyze the questionnaire and recommend specific features.
+   Distinguish between:
+   - Preconditions (required for certification \u2014 flag any gaps as urgent)
+   - Optimizations (point-earning features \u2014 recommend based on project fit)
+   For each feature:
+   - Use a checklist-item div
+   - Feature name and number (e.g., "A01: Air Quality Standards")
+   - PRECONDITION or OPTIMIZATION label
+   - 1\u20132 sentences explaining why this feature fits or where a gap exists
+   - Readiness badge: badge-provided (strong position), badge-required (pursue), badge-incomplete (gap identified)
+   - Do NOT explain compliance requirements or thresholds in detail
+
+   Concepts to cover (use section-header for each):
+   - Air (Concept A) \u2014 ventilation, filtration, IAQ monitoring, smoking, combustion
+   - Water (Concept W) \u2014 source, filtration, legionella, cooling tower
+   - Nourishment (Concept N) \u2014 food facilities, healthy options, vending
+   - Light (Concept L) \u2014 circadian, views, controls
+   - Movement (Concept V) \u2014 stairs, fitness, showers, outdoor access; use address for Walk/Transit Score context
+   - Thermal Comfort (Concept T) \u2014 individual control, radiant, humidity
+   - Sound (Concept S) \u2014 acoustic standards, background noise, windows
+   - Materials (Concept X) \u2014 cleaning products, hazardous materials, IPM
+   - Mind (Concept M) \u2014 biophilic design, wellness spaces, mental health
+   - Community (Concept C) \u2014 universal design, equity, community spaces
+
+5. READINESS SUMMARY TABLE
+   Table: Concept | Preconditions Status | Optimizations Potential | Priority
+   Use color-coded status (result-pass / result-warn / result-fail spans)
+
+6. RECOMMENDED SERVICES SECTION (section-header: "Recommended WELL Feature Services")
+   <div class="info-box">
+     <strong>Based on this gap analysis, the following WELL v2 feature services are recommended.</strong>
+     Each service includes a complete feature submission package \u2014 compliance narrative, supporting documentation, and IWBI submission guidance.
+   </div>
+   List each recommended feature as a checklist-item.
+
+IMPORTANT CONSTRAINTS:
+- Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
+- Do NOT say "contact us" or mention support
+- Do NOT fabricate data not in the questionnaire
+- Keep rationale to 1\u20132 sentences per feature
+- Be specific about this project \u2014 reference actual answers from the questionnaire
+- Tone: knowledgeable WELL consultant \u2014 precise, health-focused, action-oriented`;
+}
+var init_gap_analysis_well_v2 = __esm({
+  "pipeline/prompts/gap-analysis-well-v2.ts"() {
+    "use strict";
+  }
+});
+
+// pipeline/prompts/gap-analysis-well-hsr.ts
+function buildWellHsrGapAnalysisPrompt(params) {
+  const r = params.responses;
+  const docs = params.documentContext;
+  return `You are a WELL Health-Safety Rating (HSR) consultant producing a Gap Analysis Report for a building operations team.
+
+Your output is a complete, standalone HTML document using the Liminal design system CSS classes. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+BUILDING DATA (from intake questionnaire)
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Building name:        ${r.buildingName || "Not provided"}
+Address:              ${r.buildingAddress || "Not provided"}
+Building type:        ${r.buildingType || "Not specified"}
+GFA:                  ${r.gfa ? `${parseInt(r.gfa).toLocaleString()} SF` : "Not provided"}
+Regular occupants:    ${r.regularOccupants || "Not provided"}
+Management type:      ${r.managementType || "Not specified"}
+Existing or new:      ${r.existingOrNew || "Not specified"}
+Previous HSR cert:    ${r.previousCertification || "Unknown"}
+
+CLEANING & SANITIZATION (SC)
+Cleaning frequency:            ${r.cleaningFrequency || "Unknown"}
+Cleaning products:             ${r.cleaningProducts || "Unknown"}
+Protocols documented:          ${r.cleaningProtocolsDocumented || "Unknown"}
+Handwashing support:           ${r.handwashingSupport || "Unknown"}
+Hand sanitizer dispensers:     ${r.handSanitizerDispensers || "Unknown"}
+Cleaning staff trained:        ${r.cleaningStaffTrained || "Unknown"}
+
+EMERGENCY PREPAREDNESS (SE)
+Emergency plan:                ${r.emergencyPlan || "Unknown"}${r.emergencyPlanUpdated ? `
+Last updated: ${r.emergencyPlanUpdated}` : ""}
+Staff trained:                 ${r.emergencyTraining || "Unknown"}
+Response team / wardens:       ${r.emergencyResponseTeam || "Unknown"}
+Emergency supplies:            ${r.emergencySupplies || "Unknown"}
+Business continuity plan:      ${r.businessContinuityPlan || "Unknown"}
+
+HEALTH SERVICES (SH)
+AEDs installed:                ${r.aeds || "Unknown"}
+First aid kits:                ${r.firstAidKits || "Unknown"}
+Health clinic on-site:         ${r.healthClinic || "Unknown"}
+CPR-trained staff:             ${r.cprTrainedStaff || "Unknown"}
+Mental health resources:       ${r.mentalHealthResources || "Unknown"}
+
+AIR QUALITY (SA)
+HVAC filtration:               ${r.hvacFiltration || "Unknown"}
+HVAC maintenance schedule:     ${r.hvacMaintenanceSchedule || "Unknown"}
+Outdoor air compliance:        ${r.outdoorAirCompliance || "Unknown"}
+Smoking prohibited:            ${r.smokingProhibited || "Unknown"}
+IAQ monitoring:                ${r.iaqMonitoring || "Unknown"}
+Combustion in spaces:          ${r.combustionInSpaces || "Unknown"}
+
+WATER QUALITY (SS)
+Water supply:                  ${r.waterSupply || "Unknown"}
+Last water test:               ${r.lastWaterTest || "Unknown"}
+Water management plan:         ${r.waterManagementPlan || "Unknown"}
+Cooling tower:                 ${r.coolingTower || "Unknown"}
+Drinking water filters:        ${r.drinkingWaterFilters || "Unknown"}
+
+STAKEHOLDER ENGAGEMENT (SI)
+Occupant communications:       ${r.occupantCommunications || "Unknown"}
+Feedback mechanism:            ${r.occupantFeedbackMechanism || "Unknown"}
+Occupant surveys:              ${r.occupantSurveys || "Unknown"}
+Wellness programs:             ${r.wellnessPrograms || "Unknown"}
+Wellness champion:             ${r.wellnessChampion || "Unknown"}
+HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
+
+${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+UPLOADED DOCUMENTS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+OUTPUT INSTRUCTIONS
+\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+
+Produce a WELL HSR Gap Analysis Report as HTML. This is an OPERATIONAL READINESS REPORT \u2014 it assesses current building practices against HSR requirements, identifies gaps, and recommends specific feature services to pursue. It is NOT a compliance guide and must NOT explain in detail how to achieve each feature.
+
+The WELL HSR uses a point-based system with a 100-point threshold to achieve the rating. Features are worth 1\u20133 points each. The report should assess readiness and estimate a likely current score range.
+
+DESIGN RULES:
+- Use Liminal CSS classes throughout
+- Use result-pass for features where current practice already meets requirements
+- Use result-warn for features needing moderate improvement
+- Use result-fail for significant gaps or missing requirements
+- Use badge-provided for "MEETS REQUIREMENT", badge-required for "PURSUE", badge-incomplete for "GAP IDENTIFIED"
+
+REPORT STRUCTURE:
+
+1. PAGE HEADER
+   <div class="page-header">
+     <h1>WELL Health-Safety Rating Gap Analysis</h1>
+     <div class="sub">[Building name] \xB7 [Address] \xB7 [Building type]</div>
+   </div>
+
+2. META BAR \u2014 show: Building Type, Occupants, Management Type, Existing/New
+
+3. EXECUTIVE SUMMARY
+   - Current readiness assessment (2\u20133 sentences based on questionnaire)
+   - Estimated current score range out of 100 (e.g., "Estimated current position: 45\u201355 points")
+   - The 100-point threshold is required for HSR achievement
+   - Identify the 2 strongest concepts and 2 largest gaps
+   - Use point-box for the estimate
+
+4. CONCEPT ASSESSMENTS \u2014 one section per HSR concept.
+   For each concept, assess current status and recommend specific features.
+   For each feature:
+   - Feature name and code (e.g., "SC01: Cleaning and Disinfection Protocols")
+   - Current status based on questionnaire answers (be specific \u2014 reference actual answers)
+   - Gap identified (what's missing or needs improvement) \u2014 1 sentence max
+   - Badge: badge-provided (likely meets requirement), badge-required (pursue), badge-incomplete (significant gap)
+   - Points available in brackets
+   - Do NOT detail the compliance requirement or how to achieve it
+
+   Concepts to cover:
+   - Cleaning & Sanitization (SC) \u2014 cleaning frequency, products, protocols, handwashing, training
+   - Emergency Preparedness (SE) \u2014 emergency plan, training, response team, supplies, business continuity
+   - Health Services (SH) \u2014 AEDs, first aid, health clinic, CPR training, mental health
+   - Air Quality (SA) \u2014 filtration, maintenance, outdoor air, smoking, IAQ monitoring, combustion
+   - Water Quality (SS) \u2014 supply, testing, management plan, cooling tower, drinking water filters
+   - Stakeholder Engagement (SI) \u2014 communications, feedback, surveys, wellness programs, HSR visibility
+
+5. SCORE ESTIMATE TABLE
+   Table: Concept | Features Likely Met | Features with Gaps | Est. Points Available
+   Show total row with estimated current position vs. 100-point threshold.
+   Add a note that exact scoring requires formal documentation review.
+
+6. RECOMMENDED SERVICES SECTION (section-header: "Recommended HSR Feature Services")
+   <div class="info-box">
+     <strong>Based on this gap analysis, the following WELL HSR feature services are recommended to close identified gaps and achieve the 100-point threshold.</strong>
+     Each service includes a complete feature submission package \u2014 compliance documentation, operational policy templates, and IWBI submission guidance.
+   </div>
+   List each recommended feature service as a checklist-item, prioritized by impact (highest gap \u2192 highest priority).
+
+IMPORTANT CONSTRAINTS:
+- Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
+- Do NOT say "contact us" or mention support
+- Do NOT fabricate data not in the questionnaire
+- Reference actual questionnaire answers throughout \u2014 be specific, not generic
+- Tone: operational building consultant \u2014 practical, compliance-aware, action-focused
+- Prioritize features where questionnaire answers show clear gaps`;
+}
+var init_gap_analysis_well_hsr = __esm({
+  "pipeline/prompts/gap-analysis-well-hsr.ts"() {
+    "use strict";
+  }
+});
+
+// pipeline/process-gap-analysis.ts
+var process_gap_analysis_exports = {};
+__export(process_gap_analysis_exports, {
+  processGapAnalysis: () => processGapAnalysis
+});
+function gapUploadFolder(customerId, program, orderId, attempt) {
+  return `${customerId}/gap-analysis/${program}/${orderId}/attempt-${attempt}`;
+}
+function gapOutputFolder(customerId, program, orderId) {
+  return `${customerId}/gap-analysis/${program}/${orderId}/outputs`;
+}
+async function processGapAnalysis(orderId, runId) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const client2 = new import_sdk.default({ apiKey, timeout: 6e5, maxRetries: 1 });
+  const supabase = createServiceClient();
+  console.log(`
+[gap-analysis] \u25B6 Order ${orderId} / Run ${runId}`);
+  const [runRes, orderRes] = await Promise.all([
+    supabase.from("runs").select("*").eq("id", runId).single(),
+    supabase.from("orders").select("*").eq("id", orderId).single()
+  ]);
+  if (runRes.error) throw new Error(`Run not found: ${runRes.error.message}`);
+  if (orderRes.error) throw new Error(`Order not found: ${orderRes.error.message}`);
+  const run = runRes.data;
+  const order = orderRes.data;
+  const program = order.gap_analysis_program ?? "leed_bd_c";
+  const customerRes = await supabase.from("customers").select("*").eq("id", order.customer_id).single();
+  if (customerRes.error) throw new Error(`Customer not found: ${customerRes.error.message}`);
+  const customer = customerRes.data;
+  console.log(`  Step 1: Order loaded \u2014 program=${program} customer=${customer.email}`);
+  const { data: responseRow, error: responseError } = await supabase.from("gap_analysis_responses").select("responses").eq("customer_id", order.customer_id).eq("program", program).order("created_at", { ascending: false }).limit(1).single();
+  if (responseError || !responseRow) {
+    console.warn(`  Step 2: No questionnaire responses found for customer=${order.customer_id} program=${program}`);
+  }
+  const responses = responseRow?.responses ?? {};
+  console.log(`  Step 2: Questionnaire responses loaded \u2014 ${Object.keys(responses).length} fields`);
+  await supabase.from("orders").update({ status: "under_review" }).eq("id", orderId);
+  console.log(`  Step 3: Order \u2192 under_review`);
+  const attemptNumber = run.attempt_number ?? run.run_number ?? 1;
+  const uploadsFolder = gapUploadFolder(order.customer_id, program, orderId, attemptNumber);
+  const { data: storageFiles } = await supabase.storage.from(UPLOADS_BUCKET).list(uploadsFolder);
+  const uploads = (storageFiles ?? []).filter((f) => f.name && !f.name.endsWith("/")).map((f) => ({ path: `${uploadsFolder}/${f.name}`, name: f.name }));
+  console.log(`  Step 4: Found ${uploads.length} uploaded file(s)`);
+  let documentContext = "";
+  for (const upload of uploads) {
+    try {
+      const { data: fileData } = await supabase.storage.from(UPLOADS_BUCKET).download(upload.path);
+      if (!fileData) continue;
+      const buffer = Buffer.from(await fileData.arrayBuffer());
+      const isPdf = upload.name.toLowerCase().endsWith(".pdf");
+      if (isPdf) {
+        const text = await extractPdfContentFromBuffer(buffer);
+        if (text?.trim()) {
+          documentContext += `
+--- ${upload.name} ---
+${text.slice(0, 8e3)}
+`;
+        }
+      }
+    } catch (err) {
+      console.warn(`  Step 5: Failed to extract ${upload.name}: ${err.message}`);
+    }
+  }
+  console.log(`  Step 5: Document context \u2014 ${documentContext.length} chars`);
+  const promptFn = program === "well_v2" ? buildWellV2GapAnalysisPrompt : program === "well_hsr" ? buildWellHsrGapAnalysisPrompt : buildLeedGapAnalysisPrompt;
+  const prompt = promptFn({ responses, documentContext });
+  console.log(`  Step 6: Prompt built \u2014 ${prompt.length} chars`);
+  console.log(`  Step 7: Calling Claude...`);
+  const message = await client2.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 16e3,
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ]
+  });
+  const rawHtml = message.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  console.log(`  Step 7: Claude returned ${rawHtml.length} chars`);
+  if (rawHtml.length < 200) {
+    throw new Error(`Gap analysis output too short (${rawHtml.length} chars) \u2014 likely a prompt failure`);
+  }
+  const programLabel = PROGRAM_LABELS[program] ?? program;
+  const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${programLabel} Gap Analysis</title>
+</head>
+<body>
+${rawHtml}
+</body>
+</html>`;
+  const standardHtml = injectTableCss(fullHtml);
+  const editableHtml = makeEditable(fullHtml);
+  const outputFolder = gapOutputFolder(order.customer_id, program, orderId);
+  const htmlPath = `${outputFolder}/gap-analysis.html`;
+  const editablePath = `${outputFolder}/gap-analysis-editable.html`;
+  const [uploadStd, uploadEdit] = await Promise.all([
+    supabase.storage.from(OUTPUTS_BUCKET).upload(
+      htmlPath,
+      new Blob([standardHtml], { type: "text/html" }),
+      { upsert: true }
+    ),
+    supabase.storage.from(OUTPUTS_BUCKET).upload(
+      editablePath,
+      new Blob([editableHtml], { type: "text/html" }),
+      { upsert: true }
+    )
+  ]);
+  if (uploadStd.error) console.error(`  Step 9: standard upload failed: ${uploadStd.error.message}`);
+  if (uploadEdit.error) console.error(`  Step 9: editable upload failed: ${uploadEdit.error.message}`);
+  console.log(`  Step 9: Outputs uploaded`);
+  const TTL = 7 * 24 * 3600;
+  const [signedStd, signedEdit] = await Promise.all([
+    supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(htmlPath, TTL),
+    supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(editablePath, TTL)
+  ]);
+  await supabase.from("runs").update({
+    status: "completed",
+    completed_at: (/* @__PURE__ */ new Date()).toISOString(),
+    output_html_path: htmlPath,
+    output_html_url: signedStd.data?.signedUrl ?? null,
+    output_editable_path: editablePath,
+    output_editable_url: signedEdit.data?.signedUrl ?? null
+  }).eq("id", runId);
+  await supabase.from("orders").update({
+    status: "delivered",
+    delivered_at: (/* @__PURE__ */ new Date()).toISOString()
+  }).eq("id", orderId);
+  console.log(`  Step 12: Order \u2192 delivered`);
+  console.log(`[gap-analysis] \u2713 Complete`);
+  return { status: "delivered" };
+}
+var import_sdk, UPLOADS_BUCKET, OUTPUTS_BUCKET, PROGRAM_LABELS;
+var init_process_gap_analysis = __esm({
+  "pipeline/process-gap-analysis.ts"() {
+    "use strict";
+    import_sdk = __toESM(require("@anthropic-ai/sdk"));
+    init_supabase();
+    init_make_editable();
+    init_pdf_extract();
+    init_gap_analysis_leed();
+    init_gap_analysis_well_v2();
+    init_gap_analysis_well_hsr();
+    UPLOADS_BUCKET = "customer-uploads";
+    OUTPUTS_BUCKET = "order-outputs";
+    PROGRAM_LABELS = {
+      leed_bd_c: "LEED BD+C v4.1",
+      well_v2: "WELL v2",
+      well_hsr: "WELL Health-Safety Rating"
+    };
+  }
+});
+
+// pipeline/lib/extract-xlsx-row.ts
+function creditCodeNeedles(code) {
+  const lower = code.toLowerCase();
+  const m = code.match(/^([A-Za-z]+)(c|p)(\d+)?$/i);
+  if (m) {
+    const prefix = m[1].toLowerCase();
+    const type = m[2].toLowerCase() === "c" ? "credit" : "prereq";
+    const num = m[3] ?? "";
+    const xlsxFmt = num ? `${prefix} ${type} ${num}` : `${prefix} ${type}`;
+    return [xlsxFmt, lower];
+  }
+  return [lower];
+}
+function parseList(raw) {
+  if (!raw || !raw.trim()) return [];
+  return raw.split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
+}
+function parseRows(buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows2 = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const headers = rows2[1].map((h) => String(h ?? "").replace(/\n/g, " ").trim());
+  return { rows: rows2, headers };
+}
+function loadWorkbook() {
+  if (!fs2.existsSync(AUTOMATION_XLSX)) {
+    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
+  }
+  console.log(`  [loadWorkbook] reading file from disk: ${AUTOMATION_XLSX}`);
+  const buf = fs2.readFileSync(AUTOMATION_XLSX);
+  console.log(`  [loadWorkbook] file read complete \u2014 ${buf.length} bytes \u2014 parsing XLSX...`);
+  const result = parseRows(buf);
+  console.log(`  [loadWorkbook] XLSX parse complete \u2014 ${result.rows.length} rows`);
+  return result;
+}
+function extractCreditData(creditCode) {
+  const { rows: rows2 } = loadWorkbook();
+  const needles = creditCodeNeedles(creditCode);
+  const dataRow = rows2.slice(2).find((row) => {
+    const name = String(row[COL.creditName] ?? "").toLowerCase();
+    const num = String(row[COL.creditNumber] ?? "").toLowerCase();
+    return needles.some((n) => name.includes(n) || num.includes(n));
+  });
+  if (!dataRow) {
+    throw new Error(`Credit "${creditCode}" not found in automation analysis spreadsheet (tried: ${needles.join(", ")})`);
+  }
+  const get = (col) => String(dataRow[col] ?? "").trim();
+  return {
+    creditNumber: get(COL.creditNumber),
+    creditName: get(COL.creditName),
+    ptsAvailable: get(COL.ptsAvailable),
+    automatable: get(COL.automatable),
+    docTier: get(COL.docTier),
+    customerUploads: parseList(get(COL.customerUploads)),
+    claudeRetrieves: parseList(get(COL.claudeRetrieves)),
+    platformFiles: {
+      formLink: get(COL.formLink) || null,
+      calculatorInfo: get(COL.calculatorInfo) || null
+    },
+    outputs: parseList(get(COL.claudeOutputs)),
+    gbciVerification: get(COL.gbciVerification),
+    blockerNotes: get(COL.blockerNotes)
+  };
+}
+function formatCreditDataForPrompt(data2) {
+  const lines = [
+    `Credit: ${data2.creditNumber} \u2014 ${data2.creditName}`,
+    `Automatable: ${data2.automatable} | Tier: ${data2.docTier}`,
+    "",
+    "DOCUMENTS TO COLLECT FROM PROJECT TEAM:",
+    ...data2.customerUploads.map((d) => `  - ${d}`),
+    "",
+    "DOCUMENTS CLAUDE RETRIEVES AUTOMATICALLY:",
+    ...data2.claudeRetrieves.map((d) => `  - ${d}`),
+    "",
+    "OUTPUTS TO GENERATE FOR THIS CREDIT:",
+    ...data2.outputs.map((o) => `  - ${o}`),
+    "",
+    `LEED Online Form: ${data2.platformFiles.formLink ?? "N/A"}`,
+    ...data2.platformFiles.calculatorInfo ? [`Calculator: ${data2.platformFiles.calculatorInfo}`] : [],
+    ...data2.blockerNotes ? [`Notes: ${data2.blockerNotes}`] : []
+  ];
+  return lines.join("\n");
+}
+var XLSX, fs2, path2, AUTOMATION_XLSX, COL;
+var init_extract_xlsx_row = __esm({
+  "pipeline/lib/extract-xlsx-row.ts"() {
+    "use strict";
+    XLSX = __toESM(require("xlsx"));
+    fs2 = __toESM(require("fs"));
+    path2 = __toESM(require("path"));
+    AUTOMATION_XLSX = path2.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
+    COL = {
+      creditNumber: 0,
+      creditName: 1,
+      ptsAvailable: 2,
+      ptsAuto: 3,
+      automatable: 4,
+      docTier: 5,
+      allDocuments: 6,
+      // full combined list
+      customerUploads: 7,
+      // Column 1: Project Team Must Upload
+      claudeRetrieves: 8,
+      // Column 2: Claude Auto-Retrieves
+      claudeOutputs: 9,
+      // Column 4: Outputs Generated
+      gbciVerification: 10,
+      blockerNotes: 11,
+      formLink: 12,
+      // Column 3 partial: LEED Online Form Link
+      calculatorInfo: 13
+      // Column 3 partial: Calculator / Worksheet
+    };
+  }
+});
+
+// pipeline/lib/pdf-to-images.ts
+function preparePdfDocument(input, title) {
+  const buf = typeof input === "string" ? fs3.readFileSync(input) : input;
+  return {
+    type: "document",
+    source: {
+      type: "base64",
+      media_type: "application/pdf",
+      data: buf.toString("base64")
+    },
+    title
+  };
+}
+var fs3;
+var init_pdf_to_images = __esm({
+  "pipeline/lib/pdf-to-images.ts"() {
+    "use strict";
+    fs3 = __toESM(require("fs"));
+  }
+});
+
+// pipeline/lib/supabase-ops.ts
+async function logAuditEvent(event) {
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("audit_log").insert({
+    event_type: event.eventType,
+    entity_type: event.entityType,
+    entity_id: event.entityId,
+    customer_id: event.customerId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    metadata: event.metadata ?? {}
+  });
+  if (error) {
+    console.warn(`[audit] Failed to log ${event.eventType}: ${error.message}`);
+  }
+}
+var init_supabase_ops = __esm({
+  "pipeline/lib/supabase-ops.ts"() {
+    "use strict";
+    init_supabase();
+  }
+});
+
+// pipeline/document-review.ts
+async function reviewDocument(client2, requiredDocumentDescription, fileBuffer, filename2) {
+  const isPdf = filename2.toLowerCase().endsWith(".pdf");
+  const contentBlocks = isPdf ? [
+    preparePdfDocument(fileBuffer, filename2),
+    {
+      type: "text",
+      text: `Required document type: ${requiredDocumentDescription}
+
+Review this document and return the JSON assessment.`
+    }
+  ] : [
+    {
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: "image/jpeg",
+        data: fileBuffer.toString("base64")
+      }
+    },
+    {
+      type: "text",
+      text: `Required document type: ${requiredDocumentDescription}
+
+Review this document and return the JSON assessment.`
+    }
+  ];
+  const response = await client2.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 512,
+    system: DOCUMENT_REVIEW_PROMPT,
+    messages: [{ role: "user", content: contentBlocks }]
+  });
+  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+  try {
+    const json = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    return JSON.parse(json);
+  } catch {
+    console.warn(`  \u26A0 Review response was not valid JSON for ${filename2}: ${rawText.slice(0, 200)}`);
+    return { acceptable: false, issue: "Document review could not be completed \u2014 please re-upload." };
+  }
+}
+function matchUploadToRequirement(requiredDescription, uploads) {
+  const keywords = requiredDescription.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 3);
+  let bestMatch = null;
+  let bestScore = 0;
+  for (const upload of uploads) {
+    const name = upload.filename.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+    const score = keywords.filter((kw) => name.includes(kw)).length;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = upload;
+    }
+  }
+  return bestScore > 0 ? bestMatch : null;
+}
+async function reviewDocuments(orderId, customerId, creditCode, uploads) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const client2 = new import_sdk2.default({ apiKey, timeout: 18e4, maxRetries: 0 });
+  const supabase = createServiceClient();
+  console.log(`[document-review] Order ${orderId} \u2014 ${creditCode} \u2014 ${uploads.length} upload(s)`);
+  const creditData = extractCreditData(creditCode);
+  const requiredDocs = creditData.customerUploads;
+  if (requiredDocs.length === 0) {
+    console.log(`  No required documents defined for ${creditCode} \u2014 auto-passing review`);
+    return {
+      orderId,
+      creditCode,
+      status: "complete",
+      issues: [],
+      reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+  console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
+  const issues = [];
+  for (const requiredDoc of requiredDocs) {
+    const matched = matchUploadToRequirement(requiredDoc, uploads);
+    if (!matched) {
+      console.log(`  \u2717 Missing: "${requiredDoc}"`);
+      issues.push({
+        requiredDocument: requiredDoc,
+        uploadedFilename: null,
+        issue: `Required document not uploaded: ${requiredDoc}`
+      });
+      continue;
+    }
+    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(matched.storagePath);
+    if (error || !data2) {
+      console.warn(`  \u26A0 Failed to download ${matched.storagePath}: ${error?.message}`);
+      issues.push({
+        requiredDocument: requiredDoc,
+        uploadedFilename: matched.filename,
+        issue: "File could not be retrieved for review \u2014 please re-upload."
+      });
+      continue;
+    }
+    const buffer = Buffer.from(await data2.arrayBuffer());
+    console.log(`  Reviewing "${matched.filename}" for: ${requiredDoc}`);
+    const review = await reviewDocument(client2, requiredDoc, buffer, matched.filename);
+    if (!review.acceptable) {
+      console.log(`  \u2717 Issue: ${review.issue}`);
+      issues.push({
+        requiredDocument: requiredDoc,
+        uploadedFilename: matched.filename,
+        issue: review.issue ?? "Document did not pass review."
+      });
+    } else {
+      console.log(`  \u2713 Accepted: "${matched.filename}"`);
+    }
+  }
+  const status = issues.length === 0 ? "complete" : "incomplete";
+  console.log(`  Review result: ${status} (${issues.length} issue(s))`);
+  await logAuditEvent({
+    eventType: "document_review_complete",
+    entityType: "order",
+    entityId: orderId,
+    customerId,
+    metadata: {
+      creditCode,
+      status,
+      issueCount: issues.length,
+      uploadCount: uploads.length,
+      requiredCount: requiredDocs.length
+    }
+  });
+  return {
+    orderId,
+    creditCode,
+    status,
+    issues,
+    reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+var import_sdk2, path3, fs4, envPath, DOCUMENT_REVIEW_PROMPT;
+var init_document_review = __esm({
+  "pipeline/document-review.ts"() {
+    "use strict";
+    import_sdk2 = __toESM(require("@anthropic-ai/sdk"));
+    path3 = __toESM(require("path"));
+    fs4 = __toESM(require("fs"));
+    init_supabase();
+    init_extract_xlsx_row();
+    init_pdf_to_images();
+    init_supabase_ops();
+    envPath = path3.resolve(__dirname, "../.env.local");
+    if (fs4.existsSync(envPath)) {
+      for (const line of fs4.readFileSync(envPath, "utf-8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+    DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
+
+You will be told what document type is required. Review the provided file and determine:
+1. Is this the correct document type?
+2. Is it complete (not truncated, not blank, not corrupted)?
+3. Is it legible and professionally prepared?
+4. Does it contain the key information normally expected in this document type?
+
+Respond with a single JSON object:
+{
+  "acceptable": boolean,
+  "issue": string | null
+}
+
+Set "acceptable" to true if the document is suitable for LEED submission.
+Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
+The "issue" string must be written for the project team to read \u2014 be specific and actionable.
+Return only the JSON object.`;
+  }
+});
+
+// pipeline/drawing-analysis.ts
+async function analyzeDrawings(projectId, customerId, drawingPaths) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const supabase = createServiceClient();
+  console.log(`[drawing-analysis] project=${projectId} drawings=${drawingPaths.length}`);
+  const tmpDir = fs5.mkdtempSync(path4.join(os.tmpdir(), "certify-drawings-"));
+  const localPaths = [];
+  try {
+    for (const drawingPath of drawingPaths) {
+      const { data: data2, error } = await supabase.storage.from("customer-uploads").download(drawingPath);
+      if (error || !data2) throw new Error(`Download failed: ${drawingPath} \u2014 ${error?.message}`);
+      const filename2 = drawingPath.split("/").pop() ?? `drawing_${localPaths.length}.pdf`;
+      const localPath = path4.join(tmpDir, filename2);
+      fs5.writeFileSync(localPath, Buffer.from(await data2.arrayBuffer()));
+      localPaths.push(localPath);
+      console.log(`  \u2713 downloaded ${filename2}`);
+    }
+    const args = [
+      PYTHON_SCRIPT,
+      "--project-id",
+      projectId,
+      "--customer-id",
+      customerId,
+      "--output-dir",
+      tmpDir,
+      ...localPaths
+    ];
+    console.log(`  Running analyze_drawings.py (timeout ${TIMEOUT_MS / 1e3}s)...`);
+    let stdout = "";
+    let stderr = "";
+    try {
+      const result = await execFileAsync(PYTHON_BIN, args, {
+        timeout: TIMEOUT_MS,
+        env: { ...process.env },
+        maxBuffer: 50 * 1024 * 1024
+      });
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } catch (err) {
+      stderr = err.stderr ?? "";
+      stdout = err.stdout ?? "";
+      if (stderr) console.error(`  [python stderr]
+${stderr}`);
+      throw new Error(`analyze_drawings.py failed: ${err.message}`);
+    }
+    if (stderr.trim()) console.warn(`  [python stderr]
+${stderr.trim()}`);
+    const resultMarker = "__RESULT__";
+    const markerIdx = stdout.lastIndexOf(resultMarker);
+    if (markerIdx === -1) throw new Error("analyze_drawings.py produced no __RESULT__ block");
+    const logOutput = stdout.slice(0, markerIdx).trim();
+    if (logOutput) console.log(logOutput);
+    const summary = JSON.parse(stdout.slice(markerIdx + resultMarker.length).trim());
+    if (!summary.success) throw new Error("analyze_drawings.py reported failure");
+    const profileJson = fs5.readFileSync(summary.profile_path, "utf-8");
+    const profileRemote = `${customerId}/${projectId}/project-profile.json`;
+    const { error: profileUploadErr } = await supabase.storage.from("customer-uploads").upload(profileRemote, new Blob([profileJson], { type: "application/json" }), { upsert: true });
+    if (profileUploadErr) throw new Error(`profile upload failed: ${profileUploadErr.message}`);
+    console.log(`  \u2713 uploaded project-profile.json`);
+    const annotatedRemotePaths = [];
+    for (const localAnnotated of summary.annotated_pdfs) {
+      const filename2 = path4.basename(localAnnotated);
+      const remotePath = `${customerId}/${projectId}/outputs/${filename2}`;
+      const pdfBytes = fs5.readFileSync(localAnnotated);
+      const { error: pdfUploadErr } = await supabase.storage.from("customer-uploads").upload(remotePath, new Blob([pdfBytes], { type: "application/pdf" }), { upsert: true });
+      if (pdfUploadErr) {
+        console.warn(`  [WARN] annotated PDF upload failed: ${pdfUploadErr.message}`);
+      } else {
+        annotatedRemotePaths.push(remotePath);
+        console.log(`  \u2713 uploaded ${filename2}`);
+      }
+    }
+    const profile = JSON.parse(profileJson);
+    const fixtures = profile.plumbing_fixtures ?? {};
+    const parking = profile.parking ?? {};
+    const site = profile.site ?? {};
+    const tokenUsage = profile._token_usage;
+    const updatePayload = {
+      auto_extracted: true,
+      flagged_fields: summary.flagged_fields,
+      drawings_analyzed_at: (/* @__PURE__ */ new Date()).toISOString(),
+      drawing_data: profile,
+      ...profile.project_name ? { name: profile.project_name } : {},
+      ...profile.project_address ? { address: profile.project_address } : {},
+      ...profile.building_type ? { building_type: profile.building_type } : {},
+      ...profile.primary_occupancy ? { primary_occupancy: profile.primary_occupancy } : {},
+      ...fixtures ? { plumbing_fixtures: fixtures } : {},
+      ...parking.total_spaces != null ? { total_parking: parking.total_spaces } : {},
+      ...parking.accessible_spaces != null ? { accessible_parking: parking.accessible_spaces } : {},
+      ...parking.bicycle_spaces != null ? { bicycle_parking: parking.bicycle_spaces } : {},
+      ...site.site_area_sqft != null ? { site_area_sqft: site.site_area_sqft } : {},
+      ...site.landscaping_area_sqft != null ? { landscaping_sqft: site.landscaping_area_sqft } : {},
+      ...site.impervious_surface_sqft != null ? { impervious_sqft: site.impervious_surface_sqft } : {},
+      ...site.building_footprint_sqft != null ? { building_footprint_sqft: site.building_footprint_sqft } : {}
+    };
+    const { error: updateErr } = await supabase.from("projects").update(updatePayload).eq("id", projectId);
+    if (updateErr) throw new Error(`projects update failed: ${updateErr.message}`);
+    console.log(`  \u2713 updated projects table`);
+    await logAuditEvent({
+      eventType: "drawing_analysis_complete",
+      entityType: "project",
+      entityId: projectId,
+      customerId,
+      metadata: {
+        sheetsAnalyzed: summary.sheets_analyzed,
+        flaggedFields: summary.flagged_fields,
+        annotatedPdfs: annotatedRemotePaths.length,
+        elapsedSeconds: summary.elapsed_seconds,
+        inputTokens: tokenUsage?.input_tokens ?? 0,
+        outputTokens: tokenUsage?.output_tokens ?? 0
+      }
+    });
+    return {
+      projectId,
+      sheetsAnalyzed: summary.sheets_analyzed,
+      flaggedFields: summary.flagged_fields,
+      profilePath: profileRemote,
+      annotatedPdfs: annotatedRemotePaths,
+      tokenUsage: tokenUsage ?? { input_tokens: 0, output_tokens: 0 },
+      elapsedSeconds: summary.elapsed_seconds
+    };
+  } finally {
+    try {
+      fs5.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+    }
+  }
+}
+var path4, fs5, os, import_child_process, import_util, execFileAsync, PYTHON_SCRIPT, PYTHON_BIN, TIMEOUT_MS;
+var init_drawing_analysis = __esm({
+  "pipeline/drawing-analysis.ts"() {
+    "use strict";
+    path4 = __toESM(require("path"));
+    fs5 = __toESM(require("fs"));
+    os = __toESM(require("os"));
+    import_child_process = require("child_process");
+    import_util = require("util");
+    init_supabase();
+    init_supabase_ops();
+    execFileAsync = (0, import_util.promisify)(import_child_process.execFile);
+    PYTHON_SCRIPT = path4.resolve(__dirname, "lib/analyze_drawings.py");
+    PYTHON_BIN = process.env.PYTHON_BIN ?? "python3";
+    TIMEOUT_MS = 18e4;
+  }
+});
+
+// pipeline/lib/pipeline-utils.ts
+async function withTimeout(promise, ms, label) {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`Timeout after ${ms}ms: ${label}`)),
+      ms
+    );
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer !== void 0) clearTimeout(timer);
+  }
+}
+async function axiosGetWithRetry(url, options = {}, timeoutMs = 1e4, label = "HTTP GET") {
+  const opts = { ...options, timeout: timeoutMs };
+  try {
+    return await import_axios.default.get(url, opts);
+  } catch (err) {
+    console.warn(`  \u26A0 ${label} failed \u2014 retrying after 2 s: ${err.message}`);
+    await new Promise((r) => setTimeout(r, 2e3));
+    return import_axios.default.get(url, opts);
+  }
+}
+var import_axios;
+var init_pipeline_utils = __esm({
+  "pipeline/lib/pipeline-utils.ts"() {
+    "use strict";
+    import_axios = __toESM(require("axios"));
+  }
+});
+
+// pipeline/map-generation.ts
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 31) << shift;
+      shift += 5;
+    } while (b >= 32);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 31) << shift;
+      shift += 5;
+    } while (b >= 32);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+async function getRoute(origin, dest, mode = "walking") {
+  const key = MAPS_API_KEY();
+  const res = await axiosGetWithRetry(
+    "https://maps.googleapis.com/maps/api/directions/json",
+    { params: { origin, destination: dest.address, mode, alternatives: false, key } },
+    1e4,
+    `Directions API (${mode}): ${dest.address}`
+  );
+  const data2 = res.data;
+  if (data2.status !== "OK" || !data2.routes?.length) {
+    console.warn(`  \u26A0 No route: ${origin} \u2192 ${dest.address} (${data2.status})`);
+    return null;
+  }
+  const route = data2.routes[0];
+  const leg = route.legs[0];
+  const encodedPolyline = route.overview_polyline.points;
+  return {
+    destination: dest,
+    distanceFeet: Math.round(leg.distance.value * 3.28084),
+    distanceMiles: parseFloat((leg.distance.value / 1609.34).toFixed(2)),
+    durationMinutes: Math.round(leg.duration.value / 60),
+    encodedPolyline,
+    polylinePoints: decodePolyline(encodedPolyline),
+    originLatLng: { lat: leg.start_location.lat, lng: leg.start_location.lng },
+    destLatLng: { lat: leg.end_location.lat, lng: leg.end_location.lng }
+  };
+}
+async function getWalkingRoute(origin, dest) {
+  return getRoute(origin, dest, "walking");
+}
+async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
+  const key = MAPS_API_KEY();
+  const scale2 = 2;
+  const base = "https://maps.googleapis.com/maps/api/staticmap";
+  const params = [
+    `size=${imgWidth / scale2}x${imgHeight / scale2}`,
+    `scale=${scale2}`,
+    `maptype=roadmap`,
+    `style=feature:poi|visibility:off`,
+    `style=feature:transit|element:labels|visibility:off`,
+    `key=${key}`
+  ];
+  for (const pt of visibleCorners) {
+    params.push(`visible=${pt.lat},${pt.lng}`);
+  }
+  const origin = routes[0].originLatLng;
+  params.push(`markers=color:0x2b4044|size:mid|label:S|${origin.lat},${origin.lng}`);
+  for (const route of routes) {
+    const label = route.destination.label.slice(0, 1);
+    params.push(`markers=color:0x327cb9|size:mid|label:${label}|${route.destLatLng.lat},${route.destLatLng.lng}`);
+  }
+  for (const route of routes) {
+    params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
+  }
+  const url = `${base}?${params.join("&")}`;
+  const res = await axiosGetWithRetry(url, { responseType: "arraybuffer" }, 1e4, "Static Maps API");
+  return Buffer.from(res.data);
+}
+async function addCitationOverlay(imageBuffer, citationText, width, height) {
+  const sharp2 = (await import("sharp")).default;
+  const lines = citationText.split("\n");
+  const lineH = 14;
+  const padding = 6;
+  const boxH = lines.length * lineH + padding * 2;
+  const boxW = Math.max(...lines.map((l) => l.length)) * 6.5 + padding * 2;
+  const boxX = width - boxW - 8;
+  const boxY = height - boxH - 8;
+  const textEls = lines.map(
+    (line, i) => `<text x="${boxX + padding}" y="${boxY + padding + lineH * i + 10}"
+           font-family="Arial, sans-serif" font-size="10" fill="#444444">${line}</text>`
+  ).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="3" fill="white" opacity="0.82"/>
+    ${textEls}
+  </svg>`;
+  return sharp2(imageBuffer).resize(width, height, { fit: "cover" }).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
+}
+async function generateMap(request) {
+  const WIDTH = 1200;
+  const HEIGHT = 900;
+  console.log(`[map-generation] ${request.mapType} \u2014 ${request.destinations.length} destination(s)`);
+  const routes = [];
+  for (const dest of request.destinations) {
+    const route = await getWalkingRoute(request.originAddress, dest);
+    if (route) routes.push(route);
+  }
+  if (routes.length === 0) throw new Error("No walking routes returned from Google Maps Directions API");
+  const allPoints = routes.flatMap((r) => r.polylinePoints);
+  allPoints.push(routes[0].originLatLng);
+  routes.forEach((r) => allPoints.push(r.destLatLng));
+  const lats = allPoints.map((p) => p.lat);
+  const lngs = allPoints.map((p) => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const latPad = (maxLat - minLat) * 0.15;
+  const lngPad = (maxLng - minLng) * 0.15;
+  const visibleCorners = [
+    { lat: minLat - latPad, lng: minLng - lngPad },
+    { lat: minLat - latPad, lng: maxLng + lngPad },
+    { lat: maxLat + latPad, lng: minLng - lngPad },
+    { lat: maxLat + latPad, lng: maxLng + lngPad }
+  ];
+  const centerLat = (minLat + maxLat) / 2;
+  const centerLng = (minLng + maxLng) / 2;
+  console.log(`  Center: ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}  bounds: \xB1${(latPad * 111).toFixed(2)}km lat / \xB1${(lngPad * 111 * Math.cos(centerLat * Math.PI / 180)).toFixed(2)}km lng padding`);
+  console.log(`  Fetching map with ${routes.length} encoded polyline route(s)...`);
+  const mapImage = await fetchMapWithRoutes(routes, visibleCorners, WIDTH, HEIGHT);
+  const today = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const citationText = `Source: Google Maps \u2014 Walking distances along pedestrian routes.
+${today}`;
+  const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
+  if (request.outputPath) {
+    const { mkdirSync, writeFileSync: writeFileSync4 } = await import("fs");
+    mkdirSync(path5.dirname(request.outputPath), { recursive: true });
+    writeFileSync4(request.outputPath, pngBuffer);
+    console.log(`  \u2713 Map saved: ${request.outputPath}`);
+  }
+  console.log(`  \u2713 Map generated (${Math.round(pngBuffer.length / 1024)} KB PNG)`);
+  routes.forEach(
+    (r) => console.log(`    \u2022 ${r.destination.label}: ${r.distanceFeet.toLocaleString()} ft (${r.durationMinutes} min walk)`)
+  );
+  return { pngBuffer, routes, mapType: request.mapType };
+}
+var path5, fs6, envPath2, MAPS_API_KEY;
+var init_map_generation = __esm({
+  "pipeline/map-generation.ts"() {
+    "use strict";
+    path5 = __toESM(require("path"));
+    fs6 = __toESM(require("fs"));
+    init_pipeline_utils();
+    envPath2 = path5.resolve(__dirname, "../.env.local");
+    if (fs6.existsSync(envPath2)) {
+      for (const line of fs6.readFileSync(envPath2, "utf-8").split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx === -1) continue;
+        process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+    MAPS_API_KEY = () => {
+      const key = process.env.GOOGLE_MAPS_API_KEY;
+      if (!key) throw new Error("GOOGLE_MAPS_API_KEY not set in .env.local");
+      return key;
+    };
   }
 });
 
@@ -1041,7 +1801,7 @@ function renderGuideHtml(schema, entries, creditRow) {
     let contextBlocks = "";
     for (const [ctx, ctxEntries] of byContext) {
       const ctxHeader = ctx ? `<tr><td colspan="5" style="background:${LIGHT_BG};font-weight:600;padding:6px 10px;font-size:12px;color:${BODY_TEXT};">${esc(ctx)}</td></tr>` : "";
-      const rows = ctxEntries.map((e) => {
+      const rows2 = ctxEntries.map((e) => {
         const valueDisplay = e.value === null ? `<span style="color:#856404;">\u2014</span>` : `<strong>${esc(e.value)}</strong>`;
         return `<tr>
             <td style="padding:6px 10px;border-bottom:1px solid #e0eaf4;color:${BODY_TEXT};font-size:13px;">${esc(e.field_label)}</td>
@@ -1050,7 +1810,7 @@ function renderGuideHtml(schema, entries, creditRow) {
             <td style="padding:6px 10px;border-bottom:1px solid #e0eaf4;font-size:12px;">${sourceLabel(e.source)}</td>
           </tr>`;
       }).join("\n");
-      contextBlocks += ctxHeader + rows;
+      contextBlocks += ctxHeader + rows2;
     }
     renderedTabs.push(`
       <div style="margin-bottom:24px;">
@@ -1150,7 +1910,7 @@ async function generateCalculatorGuide(client2, creditRow, creditName, projectDa
   if (!creditRow.toLowerCase().includes("calculator")) {
     return null;
   }
-  const rawSchemas = fs6.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs6.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
+  const rawSchemas = fs7.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs7.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
   const schemas = rawSchemas.calculators ?? {};
   const schema = findSchemaForCredit(creditName, schemas);
   if (!schema) {
@@ -1195,13 +1955,13 @@ function skippedHtml(creditName, reason) {
   </span>
 </div>`;
 }
-var fs6, path5, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
+var fs7, path6, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
 var init_calculator_guide = __esm({
   "pipeline/lib/calculator-guide.ts"() {
     "use strict";
-    fs6 = __toESM(require("fs"));
-    path5 = __toESM(require("path"));
-    CALC_SCHEMA_PATH = path5.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
+    fs7 = __toESM(require("fs"));
+    path6 = __toESM(require("path"));
+    CALC_SCHEMA_PATH = path6.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
     PRIMARY = "#327cb9";
     LIGHT_BG = "#abcde8";
     PALE_BG = "#f7fafd";
@@ -1212,10 +1972,10 @@ var init_calculator_guide = __esm({
 
 // pipeline/lib/specs-extract.ts
 function convertToText(buffer, filename2) {
-  const ext = path6.extname(filename2).toLowerCase();
-  const tmp = path6.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
+  const ext = path7.extname(filename2).toLowerCase();
+  const tmp = path7.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
   try {
-    fs7.writeFileSync(tmp, buffer);
+    fs8.writeFileSync(tmp, buffer);
     if (ext === ".rtf") {
       return (0, import_child_process2.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
     }
@@ -1232,7 +1992,7 @@ function convertToText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs7.unlinkSync(tmp);
+      fs8.unlinkSync(tmp);
     } catch {
     }
   }
@@ -1328,7 +2088,7 @@ async function extractSpecsContent(files, client2, usage2) {
   const summaries2 = [];
   const sourceFiles = [];
   for (const file of files) {
-    const ext = path6.extname(file.filename).toLowerCase();
+    const ext = path7.extname(file.filename).toLowerCase();
     sourceFiles.push(file.filename);
     if (file.mimeType === "application/pdf" || ext === ".pdf") {
       const result = await extractPdfChunked(client2, file.buffer, file.filename, usage2);
@@ -1365,12 +2125,12 @@ ${EXTRACTION_PROMPT}` }
 async function extractSpecs(projectId, customerId, files) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk2.default({ apiKey });
+  const client2 = new import_sdk3.default({ apiKey });
   const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractSpecsContent(files, client2, usage2);
   const storagePath = `${customerId}/${projectId}/${PROFILE_FILENAME}`;
-  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET).upload(storagePath, JSON.stringify(profile, null, 2), {
+  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET2).upload(storagePath, JSON.stringify(profile, null, 2), {
     contentType: "application/json",
     upsert: true
   });
@@ -1384,7 +2144,7 @@ async function extractSpecs(projectId, customerId, files) {
 async function loadSpecsProfile(customerId, projectId) {
   const supabase = createServiceClient();
   const storagePath = `${customerId}/${projectId}/${PROFILE_FILENAME}`;
-  const { data: data2, error } = await supabase.storage.from(UPLOADS_BUCKET).download(storagePath);
+  const { data: data2, error } = await supabase.storage.from(UPLOADS_BUCKET2).download(storagePath);
   if (error || !data2) return null;
   try {
     return JSON.parse(await data2.text());
@@ -1411,17 +2171,17 @@ function formatSpecsProfileForContext(profile) {
   }
   return lines.filter((l) => l !== void 0).join("\n");
 }
-var import_sdk2, fs7, path6, os2, import_child_process2, UPLOADS_BUCKET, PROFILE_FILENAME, EXTRACTION_PROMPT;
+var import_sdk3, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET2, PROFILE_FILENAME, EXTRACTION_PROMPT;
 var init_specs_extract = __esm({
   "pipeline/lib/specs-extract.ts"() {
     "use strict";
-    import_sdk2 = __toESM(require("@anthropic-ai/sdk"));
-    fs7 = __toESM(require("fs"));
-    path6 = __toESM(require("path"));
+    import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
+    fs8 = __toESM(require("fs"));
+    path7 = __toESM(require("path"));
     os2 = __toESM(require("os"));
     import_child_process2 = require("child_process");
     init_supabase();
-    UPLOADS_BUCKET = "customer-uploads";
+    UPLOADS_BUCKET2 = "customer-uploads";
     PROFILE_FILENAME = "specs-profile.json";
     EXTRACTION_PROMPT = `You are extracting a compact product and material inventory from a construction specification document.
 
@@ -1456,10 +2216,10 @@ Return ONLY the JSON \u2014 no markdown, no explanation.`;
 
 // pipeline/lib/document-extract.ts
 function toText(buffer, filename2) {
-  const ext = path7.extname(filename2).toLowerCase();
-  const tmp = path7.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
+  const ext = path8.extname(filename2).toLowerCase();
+  const tmp = path8.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
   try {
-    fs8.writeFileSync(tmp, buffer);
+    fs9.writeFileSync(tmp, buffer);
     if ([".rtf", ".docx", ".doc"].includes(ext)) {
       try {
         return (0, import_child_process3.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
@@ -1470,13 +2230,13 @@ function toText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs8.unlinkSync(tmp);
+      fs9.unlinkSync(tmp);
     } catch {
     }
   }
 }
 function buildContentBlocks(buffer, filename2) {
-  const ext = path7.extname(filename2).toLowerCase();
+  const ext = path8.extname(filename2).toLowerCase();
   if (ext === ".pdf") {
     return [{
       type: "document",
@@ -1555,12 +2315,12 @@ async function extractDocumentContent(file, client2, usage2) {
 async function extractDocument(projectId, customerId, file) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk3.default({ apiKey });
+  const client2 = new import_sdk4.default({ apiKey });
   const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractDocumentContent(file, client2, usage2);
   const storagePath = `${customerId}/${projectId}/doc-profiles/${profile.type_slug}.json`;
-  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET2).upload(storagePath, JSON.stringify(profile, null, 2), { contentType: "application/json", upsert: true });
+  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET3).upload(storagePath, JSON.stringify(profile, null, 2), { contentType: "application/json", upsert: true });
   if (uploadError) throw new Error(`Failed to upload ${profile.type_slug} profile: ${uploadError.message}`);
   await supabase.from("projects").select("doc_profiles_extracted").eq("id", projectId).single().then(({ data: data2 }) => {
     const current = data2?.doc_profiles_extracted ?? {};
@@ -1573,11 +2333,11 @@ async function extractDocument(projectId, customerId, file) {
 async function loadAllDocumentProfiles(customerId, projectId) {
   const supabase = createServiceClient();
   const prefix = `${customerId}/${projectId}/doc-profiles`;
-  const { data: files, error } = await supabase.storage.from(UPLOADS_BUCKET2).list(prefix);
+  const { data: files, error } = await supabase.storage.from(UPLOADS_BUCKET3).list(prefix);
   if (error || !files?.length) return [];
   const profiles = await Promise.all(
     files.filter((f) => f.name.endsWith(".json")).map(async (f) => {
-      const { data: data2, error: dlErr } = await supabase.storage.from(UPLOADS_BUCKET2).download(`${prefix}/${f.name}`);
+      const { data: data2, error: dlErr } = await supabase.storage.from(UPLOADS_BUCKET3).download(`${prefix}/${f.name}`);
       if (dlErr || !data2) return null;
       try {
         return JSON.parse(await data2.text());
@@ -1596,17 +2356,17 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
-var import_sdk3, fs8, path7, os3, import_child_process3, UPLOADS_BUCKET2, EXTRACTION_PROMPT2;
+var import_sdk4, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
 var init_document_extract = __esm({
   "pipeline/lib/document-extract.ts"() {
     "use strict";
-    import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
-    fs8 = __toESM(require("fs"));
-    path7 = __toESM(require("path"));
+    import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
+    fs9 = __toESM(require("fs"));
+    path8 = __toESM(require("path"));
     os3 = __toESM(require("os"));
     import_child_process3 = require("child_process");
     init_supabase();
-    UPLOADS_BUCKET2 = "customer-uploads";
+    UPLOADS_BUCKET3 = "customer-uploads";
     EXTRACTION_PROMPT2 = `You are analyzing a professional document uploaded as part of a LEED v4.1 building certification project.
 
 Read this document carefully and extract all information relevant to LEED credit submissions.
@@ -2495,9 +3255,9 @@ function buildExpectedPdfName(program, creditCode, creditName) {
   return `WELL_HSR_${code}_${name}.pdf`;
 }
 function findCategoryFolder(programDir, category, creditCode) {
-  if (!fs9.existsSync(programDir)) return void 0;
-  const allFolders = fs9.readdirSync(programDir).filter(
-    (d) => fs9.statSync(path8.join(programDir, d)).isDirectory()
+  if (!fs10.existsSync(programDir)) return void 0;
+  const allFolders = fs10.readdirSync(programDir).filter(
+    (d) => fs10.statSync(path9.join(programDir, d)).isDirectory()
   );
   const categoryLow = category.toLowerCase();
   const exact = allFolders.find((d) => d.toLowerCase() === categoryLow);
@@ -2519,23 +3279,23 @@ function findCategoryFolder(programDir, category, creditCode) {
 function findCreditPdfBuffer(program, category, creditCode, creditName) {
   const subdir = PROGRAM_REF_SUBDIR[program];
   if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
-  const programDir = path8.join(REF_BASE, subdir);
+  const programDir = path9.join(REF_BASE, subdir);
   const categoryDir = findCategoryFolder(programDir, category, creditCode);
-  const searchedDir = categoryDir ? path8.join(programDir, categoryDir) : path8.join(programDir, category);
+  const searchedDir = categoryDir ? path9.join(programDir, categoryDir) : path9.join(programDir, category);
   if (!categoryDir) return { found: false, searchedDir, filesFound: [] };
-  const folderPath = path8.join(programDir, categoryDir);
-  const allFiles = fs9.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
+  const folderPath = path9.join(programDir, categoryDir);
+  const allFiles = fs10.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
   const expectedName = buildExpectedPdfName(program, creditCode, creditName);
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
-    const fullPath = path8.join(folderPath, exact);
-    return { buffer: fs9.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path9.join(folderPath, exact);
+    return { buffer: fs10.readFileSync(fullPath), resolvedPath: fullPath };
   }
   const nameLower = creditName.toLowerCase();
   const match = allFiles.find((f) => f.includes(creditCode)) ?? allFiles.find((f) => f.toLowerCase().includes(nameLower));
   if (match) {
-    const fullPath = path8.join(folderPath, match);
-    return { buffer: fs9.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path9.join(folderPath, match);
+    return { buffer: fs10.readFileSync(fullPath), resolvedPath: fullPath };
   }
   return { found: false, searchedDir, filesFound: allFiles };
 }
@@ -2551,8 +3311,8 @@ function scanPdfForAppendixRefs(buffer) {
   return [...nums].sort((a, b) => a - b);
 }
 function loadLeedAppendices(referencedNums) {
-  const leedDir = path8.join(REF_BASE, "leed");
-  const allFiles = fs9.existsSync(leedDir) ? fs9.readdirSync(leedDir) : [];
+  const leedDir = path9.join(REF_BASE, "leed");
+  const allFiles = fs10.existsSync(leedDir) ? fs10.readdirSync(leedDir) : [];
   const appendixFiles = allFiles.filter((f) => {
     const fl = f.toLowerCase();
     return fl.startsWith("appendix") && fl.endsWith(".pdf");
@@ -2564,7 +3324,7 @@ function loadLeedAppendices(referencedNums) {
       return fl.includes(`appendix ${num} `) || fl.includes(`appendix ${num}.`);
     });
     if (match) {
-      results.push({ num, buffer: fs9.readFileSync(path8.join(leedDir, match)), filename: match });
+      results.push({ num, buffer: fs10.readFileSync(path9.join(leedDir, match)), filename: match });
     } else {
       console.warn(`  Step 12.7: Appendix ${num} referenced but not found in pipeline/reference/leed/`);
     }
@@ -2588,9 +3348,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     "for any form field ID, calculator input label, or credit requirement.",
     ""
   ];
-  const formSchemaPath = path8.join(REF_BASE, "leed/leed_v41_form_schemas.json");
+  const formSchemaPath = path9.join(REF_BASE, "leed/leed_v41_form_schemas.json");
   try {
-    const allSchemas = JSON.parse(fs9.readFileSync(formSchemaPath, "utf-8"));
+    const allSchemas = JSON.parse(fs10.readFileSync(formSchemaPath, "utf-8"));
     const formKey = creditCodeToFormKey(creditCode);
     const creditSchema = allSchemas.credits?.[formKey] ?? Object.values(allSchemas.credits ?? {}).find(
       (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -2606,9 +3366,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     lines.push(`FORM FIELD SCHEMA: failed to load \u2014 ${err.message}`);
   }
   if (hasCalculator) {
-    const calcSchemaPath = path8.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
+    const calcSchemaPath = path9.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
     try {
-      const allCalcSchemas = JSON.parse(fs9.readFileSync(calcSchemaPath, "utf-8"));
+      const allCalcSchemas = JSON.parse(fs10.readFileSync(calcSchemaPath, "utf-8"));
       const formKey = creditCodeToFormKey(creditCode);
       const calcSchema = allCalcSchemas.calculators?.[formKey] ?? Object.values(allCalcSchemas.calculators ?? {}).find(
         (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -2671,7 +3431,7 @@ function validateAllDeliverables(params) {
 async function processOrder(orderId, runId, additionalInstructions) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk4.default({ apiKey, timeout: 18e5, maxRetries: 1 });
+  const client2 = new import_sdk5.default({ apiKey, timeout: 18e5, maxRetries: 1 });
   const supabase = createServiceClient();
   console.log(`
 [process-order] \u25B6 Order ${orderId} / Run ${runId}`);
@@ -2710,7 +3470,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 3: Attempt ${attemptNumber} \u2014 folder: ${attemptFolder}`);
   console.log(`  Step 4: Listing uploads from Storage...`);
   const { data: storageFiles, error: listError } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET3).list(attemptFolder),
+    supabase.storage.from(UPLOADS_BUCKET4).list(attemptFolder),
     "list uploads"
   );
   if (listError) throw new Error(`Failed to list uploads: ${listError.message}`);
@@ -2803,7 +3563,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   const uploadBuffers = [];
   for (const upload of uploads) {
     const { data: data2, error } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET3).download(upload.storagePath),
+      supabase.storage.from(UPLOADS_BUCKET4).download(upload.storagePath),
       `download ${upload.filename}`
     );
     if (error || !data2) throw new Error(`Failed to download ${upload.storagePath}: ${error?.message}`);
@@ -2817,7 +3577,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 10: Checking drawing analysis status...`);
   if (!project.auto_extracted) {
     const { data: drawingFiles } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET3).list(drawingsPath(order.customer_id, order.project_id)),
+      supabase.storage.from(UPLOADS_BUCKET4).list(drawingsPath(order.customer_id, order.project_id)),
       "list drawings"
     );
     const drawingPaths = (drawingFiles ?? []).filter((f) => f.name?.endsWith(".pdf")).map((f) => `${drawingsPath(order.customer_id, order.project_id)}/${f.name}`);
@@ -2833,7 +3593,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 10.5: Checking specs extraction status...`);
   let specsProfileBlock = "";
   const specFiles = uploadBuffers.filter((u) => {
-    const ext = path8.extname(u.filename).toLowerCase();
+    const ext = path9.extname(u.filename).toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc", ".txt"].includes(ext) && !u.filename.toLowerCase().includes("drawing") && !u.filename.toLowerCase().includes("annotated");
   });
   if (!project.specs_extracted && specFiles.length > 0) {
@@ -2863,7 +3623,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   let docProfilesBlock = "";
   const docProfiles = project.doc_profiles_extracted ?? {};
   const docFiles = uploadBuffers.filter((u) => {
-    const ext = path8.extname(u.filename).toLowerCase();
+    const ext = path9.extname(u.filename).toLowerCase();
     const name = u.filename.toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc"].includes(ext) && !name.includes("drawing") && !name.includes("annotated") && !name.includes("spec") && !name.includes("specification");
   });
@@ -2895,7 +3655,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   const profilePath = `${order.customer_id}/${order.project_id}/project-profile.json`;
   let projectProfile = {};
   const { data: profileData } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET3).download(profilePath),
+    supabase.storage.from(UPLOADS_BUCKET4).download(profilePath),
     "download project profile"
   );
   if (profileData) {
@@ -2929,7 +3689,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     return { orderId, runId, status: "failed", issues: [errMsg] };
   }
   const reqPdfBuffer = pdfLookup.buffer;
-  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path8.sep, "")}`);
+  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path9.sep, "")}`);
   const appendixDocBlocks = [];
   if (isLeed(credit.credit_code)) {
     const appendixNums = scanPdfForAppendixRefs(reqPdfBuffer);
@@ -3239,7 +3999,7 @@ ${part1Html}` },
   const editableHtml = makeEditable(fullHtml);
   const htmlPath = `${outputsFolder}/submission.html`;
   const { error: htmlErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true }),
+    supabase.storage.from(OUTPUTS_BUCKET2).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true }),
     "upload submission.html"
   );
   if (htmlErr) throw new Error(`Failed to upload HTML output: ${htmlErr.message}`);
@@ -3247,7 +4007,7 @@ ${part1Html}` },
   console.log(`    \u2713 submission.html`);
   const editablePath = `${outputsFolder}/submission-editable.html`;
   const { error: editErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true }),
+    supabase.storage.from(OUTPUTS_BUCKET2).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true }),
     "upload submission-editable.html"
   );
   if (editErr) console.warn(`    Editable HTML upload failed: ${editErr.message}`);
@@ -3258,7 +4018,7 @@ ${part1Html}` },
   if (mapBuffer) {
     const mapPath = `${outputsFolder}/walking-distance-map.png`;
     const { error: mapErr } = await dbCall(
-      supabase.storage.from(OUTPUTS_BUCKET).upload(mapPath, new Blob([new Uint8Array(mapBuffer)], { type: "image/png" }), { upsert: true }),
+      supabase.storage.from(OUTPUTS_BUCKET2).upload(mapPath, new Blob([new Uint8Array(mapBuffer)], { type: "image/png" }), { upsert: true }),
       "upload map PNG"
     );
     if (mapErr) console.warn(`    Map upload failed: ${mapErr.message}`);
@@ -3298,8 +4058,8 @@ ${part1Html}` },
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
     const token = signQaToken(orderId);
     const [standardUrlRes, editableUrlRes] = await Promise.all([
-      supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(htmlPath, 7 * 24 * 3600),
-      supabase.storage.from(OUTPUTS_BUCKET).createSignedUrl(editablePath, 7 * 24 * 3600)
+      supabase.storage.from(OUTPUTS_BUCKET2).createSignedUrl(htmlPath, 7 * 24 * 3600),
+      supabase.storage.from(OUTPUTS_BUCKET2).createSignedUrl(editablePath, 7 * 24 * 3600)
     ]);
     await sendQAReviewEmail({
       customerName: customer.name ?? "Customer",
@@ -3339,13 +4099,13 @@ ${part1Html}` },
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
-var import_sdk4, path8, fs9, envPath3, UPLOADS_BUCKET3, OUTPUTS_BUCKET, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var import_sdk5, path9, fs10, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
 var init_process_order = __esm({
   "pipeline/process-order.ts"() {
     "use strict";
-    import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
-    path8 = __toESM(require("path"));
-    fs9 = __toESM(require("fs"));
+    import_sdk5 = __toESM(require("@anthropic-ai/sdk"));
+    path9 = __toESM(require("path"));
+    fs10 = __toESM(require("fs"));
     init_supabase();
     init_extract_xlsx_row();
     init_document_review();
@@ -3364,9 +4124,9 @@ var init_process_order = __esm({
     init_validate_output();
     init_pipeline_utils();
     init_output_cleaner();
-    envPath3 = path8.resolve(__dirname, "../.env.local");
-    if (fs9.existsSync(envPath3)) {
-      for (const line of fs9.readFileSync(envPath3, "utf-8").split("\n")) {
+    envPath3 = path9.resolve(__dirname, "../.env.local");
+    if (fs10.existsSync(envPath3)) {
+      for (const line of fs10.readFileSync(envPath3, "utf-8").split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
         const eqIdx = trimmed.indexOf("=");
@@ -3374,9 +4134,9 @@ var init_process_order = __esm({
         process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
       }
     }
-    UPLOADS_BUCKET3 = "customer-uploads";
-    OUTPUTS_BUCKET = "order-outputs";
-    REF_BASE = path8.join(process.cwd(), "pipeline/reference");
+    UPLOADS_BUCKET4 = "customer-uploads";
+    OUTPUTS_BUCKET2 = "order-outputs";
+    REF_BASE = path9.join(process.cwd(), "pipeline/reference");
     PROGRAM_REF_SUBDIR = {
       leed_bdc_v41: "leed",
       well_v2: "well-v2",
@@ -3394,13 +4154,13 @@ var init_process_order = __esm({
 });
 
 // pipeline/worker.ts
-var path9 = __toESM(require("path"));
-var fs10 = __toESM(require("fs"));
+var path10 = __toESM(require("path"));
+var fs11 = __toESM(require("fs"));
 console.log("[worker] starting up...");
 try {
-  const envPath4 = path9.resolve(__dirname, "../.env.local");
-  if (fs10.existsSync(envPath4)) {
-    for (const line of fs10.readFileSync(envPath4, "utf-8").split("\n")) {
+  const envPath4 = path10.resolve(__dirname, "../.env.local");
+  if (fs11.existsSync(envPath4)) {
+    for (const line of fs11.readFileSync(envPath4, "utf-8").split("\n")) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");
@@ -3456,8 +4216,20 @@ app.post("/process", async (req, res) => {
   const startedAt = Date.now();
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
   try {
-    const { processOrder: processOrder2 } = (init_process_order(), __toCommonJS(process_order_exports));
-    const result = await processOrder2(orderId, runId);
+    const { createClient: createClient2 } = require("@supabase/supabase-js");
+    const supabase = createClient2(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const { data: order } = await supabase.from("orders").select("credit_id").eq("id", orderId).single();
+    let result;
+    if (!order?.credit_id) {
+      const { processGapAnalysis: processGapAnalysis2 } = (init_process_gap_analysis(), __toCommonJS(process_gap_analysis_exports));
+      result = await processGapAnalysis2(orderId, runId);
+    } else {
+      const { processOrder: processOrder2 } = (init_process_order(), __toCommonJS(process_order_exports));
+      result = await processOrder2(orderId, runId);
+    }
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
   } catch (err) {

@@ -94,9 +94,27 @@ app.post("/process", async (req: any, res: any) => {
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
 
   try {
-    // Dynamic import so pipeline packages are loaded on first job, not at startup
-    const { processOrder } = require("./process-order");
-    const result = await processOrder(orderId, runId);
+    // Route to gap analysis or credit pipeline based on order type
+    const { createClient } = require("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const { data: order } = await supabase
+      .from("orders")
+      .select("credit_id")
+      .eq("id", orderId)
+      .single();
+
+    let result: { status: string };
+    if (!order?.credit_id) {
+      const { processGapAnalysis } = require("./process-gap-analysis");
+      result = await processGapAnalysis(orderId, runId);
+    } else {
+      const { processOrder } = require("./process-order");
+      result = await processOrder(orderId, runId);
+    }
+
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
   } catch (err) {

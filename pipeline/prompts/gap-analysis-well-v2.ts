@@ -1,0 +1,157 @@
+export function buildWellV2GapAnalysisPrompt(params: {
+  responses: Record<string, unknown>;
+  documentContext: string;
+}): string {
+  const r = params.responses as Record<string, string>;
+  const docs = params.documentContext;
+
+  return `You are a WELL v2 consultant producing a Gap Analysis Report for a project team.
+
+Your output is a complete, standalone HTML document using the Liminal design system CSS classes. Do not include <html>, <head>, or <body> tags — output the body content only, starting with the page-header div.
+
+═══════════════════════════════════════════════════════════
+PROJECT DATA (from intake questionnaire)
+═══════════════════════════════════════════════════════════
+
+Building name:       ${r.buildingName || "Not provided"}
+Address:             ${r.buildingAddress || "Not provided"}
+Building type:       ${r.buildingType || "Not specified"}
+Certification type:  ${r.certType || "Not specified"}
+GFA:                 ${r.gfa ? `${parseInt(r.gfa).toLocaleString()} SF` : "Not provided"}
+Floors:              ${r.floors || "Not provided"}
+Regular occupants:   ${r.regularOccupants || "Not provided"}
+Peak visitors:       ${r.peakVisitors || "Not provided"}
+Target level:        ${r.targetLevel || "Not specified"}
+WELL AP on team:     ${r.wellAp || "Unknown"}
+
+AIR (Concept A)
+Ventilation strategy:      ${r.ventilationStrategy || "Unknown"}
+Air filtration:            ${r.airFiltration || "Unknown"}
+IAQ monitoring:            ${r.airQualityMonitoring || "Unknown"}
+Smoking policy:            ${r.smokingPolicy || "Unknown"}
+Combustion appliances:     ${r.combustionAppliances || "Unknown"}
+
+WATER (Concept W)
+Water source:              ${r.waterSource || "Unknown"}
+Point-of-use filtration:   ${r.waterFiltration || "Unknown"}
+Legionella assessment:     ${r.legionellaAssessment || "Unknown"}
+Cooling tower:             ${r.coolingTower || "Unknown"}
+
+NOURISHMENT (Concept N)
+Food facilities:           ${r.foodFacilities || "Unknown"}
+Healthy food access:       ${r.healthyFoodAccess || "Unknown"}
+Vending machines:          ${r.vendingMachines || "Unknown"}
+
+LIGHT (Concept L)
+Circadian lighting:        ${r.circanianLighting || "Unknown"}
+Window / view access:      ${r.windowViewAccess || "Unknown"}
+Lighting controls:         ${r.lightingControls || "Unknown"}
+
+MOVEMENT (Concept V)
+Staircase design:          ${r.staircaseDesign || "Unknown"}
+Fitness amenities:         ${r.fitnessAmenities || "Unknown"}
+Showers / changing:        ${r.showersChanging || "Unknown"}
+Outdoor recreation:        ${r.outdoorRecreation || "Unknown"}
+
+THERMAL COMFORT (Concept T)
+Individual thermal control: ${r.thermalControl || "Unknown"}
+Radiant system:            ${r.radiantSystem || "Unknown"}
+Humidity control:          ${r.humidityControl || "Unknown"}
+
+SOUND (Concept S)
+Acoustic standards:        ${r.acousticStandards || "Unknown"}
+Background noise target:   ${r.backgroundNoiseTarget || "Unknown"}
+Acoustic windows:          ${r.acousticWindows || "Unknown"}
+
+MATERIALS (Concept X)
+Cleaning products policy:  ${r.cleaningProductsPolicy || "Unknown"}
+Hazardous material survey: ${r.hazardousMaterialSurvey || "Unknown"}
+IPM policy:                ${r.ipmPolicy || "Unknown"}
+
+MIND (Concept M)
+Biophilic design:          ${r.biophilicDesign || "Unknown"}
+Wellness spaces:           ${r.wellnessSpaces || "Unknown"}
+Mental health programs:    ${r.mentalHealthPrograms || "Unknown"}
+
+COMMUNITY (Concept C)
+Universal design:          ${r.universalDesign || "Unknown"}
+Equity policy:             ${r.equityPolicy || "Unknown"}
+Community spaces:          ${r.communitySpaces || "Unknown"}
+
+${docs ? `═══════════════════════════════════════════════════════════
+UPLOADED DOCUMENTS
+═══════════════════════════════════════════════════════════
+${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+
+═══════════════════════════════════════════════════════════
+OUTPUT INSTRUCTIONS
+═══════════════════════════════════════════════════════════
+
+Produce a WELL v2 Gap Analysis Report as HTML. This is a RECOMMENDATIONS REPORT — it identifies which WELL features to pursue, distinguishes preconditions from optimizations, and frames each recommendation around this project's specific characteristics. It is NOT a compliance guide and must NOT explain how to achieve features in detail.
+
+DESIGN RULES:
+- Use Liminal CSS classes throughout
+- Every section-header must be immediately followed by a section-body
+- Use result-pass for strong readiness, result-warn for gaps, result-fail for missing preconditions
+- Use badge-provided for "PRECONDITION MET" indicators, badge-required for "PURSUE", badge-incomplete for "GAP"
+
+REPORT STRUCTURE:
+
+1. PAGE HEADER
+   <div class="page-header">
+     <h1>WELL v2 Gap Analysis</h1>
+     <div class="sub">[Building name] · [Address] · [Certification type] · [GFA] SF</div>
+   </div>
+
+2. META BAR — show: Target Level, Regular Occupants, Certification Type, WELL AP status
+
+3. EXECUTIVE SUMMARY
+   - 2–3 sentences on overall readiness
+   - Note whether preconditions appear achievable
+   - Identify the 2–3 concepts where the project is strongest
+   - Identify the 1–2 concepts needing the most attention
+
+4. CONCEPT RECOMMENDATIONS — one section per WELL concept below.
+   For each concept, analyze the questionnaire and recommend specific features.
+   Distinguish between:
+   - Preconditions (required for certification — flag any gaps as urgent)
+   - Optimizations (point-earning features — recommend based on project fit)
+   For each feature:
+   - Use a checklist-item div
+   - Feature name and number (e.g., "A01: Air Quality Standards")
+   - PRECONDITION or OPTIMIZATION label
+   - 1–2 sentences explaining why this feature fits or where a gap exists
+   - Readiness badge: badge-provided (strong position), badge-required (pursue), badge-incomplete (gap identified)
+   - Do NOT explain compliance requirements or thresholds in detail
+
+   Concepts to cover (use section-header for each):
+   - Air (Concept A) — ventilation, filtration, IAQ monitoring, smoking, combustion
+   - Water (Concept W) — source, filtration, legionella, cooling tower
+   - Nourishment (Concept N) — food facilities, healthy options, vending
+   - Light (Concept L) — circadian, views, controls
+   - Movement (Concept V) — stairs, fitness, showers, outdoor access; use address for Walk/Transit Score context
+   - Thermal Comfort (Concept T) — individual control, radiant, humidity
+   - Sound (Concept S) — acoustic standards, background noise, windows
+   - Materials (Concept X) — cleaning products, hazardous materials, IPM
+   - Mind (Concept M) — biophilic design, wellness spaces, mental health
+   - Community (Concept C) — universal design, equity, community spaces
+
+5. READINESS SUMMARY TABLE
+   Table: Concept | Preconditions Status | Optimizations Potential | Priority
+   Use color-coded status (result-pass / result-warn / result-fail spans)
+
+6. RECOMMENDED SERVICES SECTION (section-header: "Recommended WELL Feature Services")
+   <div class="info-box">
+     <strong>Based on this gap analysis, the following WELL v2 feature services are recommended.</strong>
+     Each service includes a complete feature submission package — compliance narrative, supporting documentation, and IWBI submission guidance.
+   </div>
+   List each recommended feature as a checklist-item.
+
+IMPORTANT CONSTRAINTS:
+- Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
+- Do NOT say "contact us" or mention support
+- Do NOT fabricate data not in the questionnaire
+- Keep rationale to 1–2 sentences per feature
+- Be specific about this project — reference actual answers from the questionnaire
+- Tone: knowledgeable WELL consultant — precise, health-focused, action-oriented`;
+}

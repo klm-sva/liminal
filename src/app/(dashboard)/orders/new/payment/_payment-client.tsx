@@ -7,17 +7,18 @@ import StepProgress from "@/components/ui/StepProgress";
 const STEPS = ["Program", "Credit", "Details", "Documents", "Payment"];
 
 interface Props {
-  creditId:    string;
-  creditName:  string;
-  creditCode:  string;
-  category:    string;
-  price:       number; // in cents
-  projectId?:  string;
-  isGapAnalysis?: boolean;
+  creditId:             string;
+  creditName:           string;
+  creditCode:           string;
+  category:             string;
+  price:                number; // in cents
+  projectId?:           string;
+  isGapAnalysis?:       boolean;
+  gapAnalysisProgram?:  string;
 }
 
 export default function PaymentClient({
-  creditId, creditName, creditCode, category, price, projectId, isGapAnalysis,
+  creditId, creditName, creditCode, category, price, projectId, isGapAnalysis, gapAnalysisProgram,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
@@ -33,9 +34,10 @@ export default function PaymentClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          credit_id:       isGapAnalysis ? undefined : creditId,
-          is_gap_analysis: isGapAnalysis || undefined,
-          project_id:      projectId,
+          credit_id:            isGapAnalysis ? undefined : creditId,
+          is_gap_analysis:      isGapAnalysis || undefined,
+          gap_analysis_program: isGapAnalysis ? (gapAnalysisProgram ?? "leed_bd_c") : undefined,
+          project_id:           projectId,
         }),
       });
       const data = await res.json();

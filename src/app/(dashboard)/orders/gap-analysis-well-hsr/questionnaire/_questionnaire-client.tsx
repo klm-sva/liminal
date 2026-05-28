@@ -210,22 +210,31 @@ export default function WellHsrQuestionnaireClient({ project }: Props) {
   const set = (key: keyof Form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
   async function handleContinue() {
-    if (project) {
-      setSaving(true);
-      const updates: Record<string, unknown> = {};
-      if (form.buildingName)     updates.name              = form.buildingName;
-      if (form.buildingAddress)  updates.address           = form.buildingAddress;
-      if (form.buildingType)     updates.building_type     = form.buildingType;
-      if (form.gfa)              updates.gross_sqft        = parseInt(form.gfa, 10);
-      if (form.regularOccupants) updates.regular_occupants = parseInt(form.regularOccupants, 10);
+    setSaving(true);
+    try {
+      if (project) {
+        const updates: Record<string, unknown> = {};
+        if (form.buildingName)     updates.name              = form.buildingName;
+        if (form.buildingAddress)  updates.address           = form.buildingAddress;
+        if (form.buildingType)     updates.building_type     = form.buildingType;
+        if (form.gfa)              updates.gross_sqft        = parseInt(form.gfa, 10);
+        if (form.regularOccupants) updates.regular_occupants = parseInt(form.regularOccupants, 10);
 
-      if (Object.keys(updates).length > 0) {
-        await fetch(`/api/projects/${project.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
-        });
+        if (Object.keys(updates).length > 0) {
+          await fetch(`/api/projects/${project.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          });
+        }
       }
+
+      await fetch("/api/gap-analysis/responses", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ program: "well_hsr", responses: form }),
+      });
+    } finally {
       setSaving(false);
     }
     router.push(`/orders/gap-analysis-well-hsr/documents${project ? `?project_id=${project.id}` : ""}`);
