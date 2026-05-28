@@ -2653,68 +2653,20 @@ function detectRequiredMapType(outputs) {
   return null;
 }
 function validateAllDeliverables(params) {
-  const checks = [];
-  const outputsText = params.outputs.join(" ").toLowerCase();
-  checks.push({
-    item: "Online Submittal Form HTML",
-    present: params.htmlGenerated,
-    reason: params.htmlGenerated ? void 0 : "Claude API did not return HTML output"
-  });
   let cleanedHtml = params.htmlContent;
-  if (params.htmlGenerated && containsNarration(cleanedHtml)) {
-    console.warn(`  [validateAllDeliverables] Narration detected in HTML \u2014 running second scrub`);
+  if (containsNarration(cleanedHtml)) {
+    console.warn(`  [validateAllDeliverables] Narration detected \u2014 running second scrub`);
     const rerun = scrubNarration(cleanedHtml);
     cleanedHtml = rerun.cleaned;
-    if (rerun.total > 0) console.warn(`    Removed ${rerun.total} additional narration instance(s) in deliverable gate`);
+    if (rerun.total > 0) console.warn(`    Removed ${rerun.total} additional narration instance(s)`);
     if (containsNarration(cleanedHtml)) {
-      checks.push({
-        item: "HTML Narration-Free",
-        present: false,
-        reason: "Process narration survived two scrub passes \u2014 file flagged for admin review"
-      });
-      console.error(`  \u2717 Narration still present after second scrub \u2014 marking needs_review`);
-    } else {
-      console.log(`    \u2713 Narration cleared by second scrub`);
+      console.warn(`  [validateAllDeliverables] Narration survived second scrub \u2014 delivering with QA flag`);
     }
   }
-  if (params.hasCalculator) {
-    const calcPresent = !!(params.calcGuide && !params.calcGuide.skipped);
-    checks.push({
-      item: `USGBC Calculator Input Guide (${params.calcGuide?.calculatorName ?? "required"})`,
-      present: calcPresent,
-      reason: calcPresent ? void 0 : params.calcGuide?.skipReason ?? "Calculator Guide generation failed"
-    });
+  if (params.requiredMapType && !params.mapGenerated) {
+    console.warn(`  [validateAllDeliverables] Map required but not generated \u2014 QA flag only`);
   }
-  const mapKeywords = ["map", "transit", "bicycle", "density", "walking"];
-  const mapRequired = mapKeywords.some((kw) => outputsText.includes(kw)) || !!params.requiredMapType;
-  if (mapRequired && !params.mapGenerated) {
-    console.warn(`  [validateAllDeliverables] Map required but not generated \u2014 flagging for QA, not blocking delivery`);
-  }
-  return { checks, cleanedHtml };
-}
-function buildPartialDeliveryNotice(missing2, priorIssues) {
-  const issueItems = priorIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
-  const missingItems = missing2.map(
-    (m) => `<li><strong>${m.item}</strong>${m.reason ? ` \u2014 ${m.reason}` : ""}</li>`
-  ).join("\n        ");
-  return `
-<div style="margin:32px 0;padding:20px 24px;background:#fff8f0;border-left:4px solid #e07000;border-radius:8px;font-family:sans-serif;">
-  <h3 style="margin:0 0 12px;font-size:16px;color:#7a3c00;">Partial Delivery \u2014 Incomplete Submission</h3>
-  <p style="margin:0 0 12px;font-size:14px;color:#555;">
-    The deliverables above represent the maximum that could be completed with the documentation provided.
-    The following items could not be generated due to the document issues identified during review:
-  </p>
-  <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#555;">
-        ${missingItems}
-  </ul>
-  <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#555;">Document issues identified during review:</p>
-  <ul style="margin:0 0 12px;padding-left:20px;font-size:13px;color:#555;">
-        ${issueItems}
-  </ul>
-  <p style="margin:0;font-size:13px;color:#888;font-style:italic;">
-    To complete the remaining deliverables, please resubmit with the documentation listed above.
-  </p>
-</div>`;
+  return { cleanedHtml };
 }
 async function processOrder(orderId, runId, additionalInstructions) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -3190,6 +3142,7 @@ ${part1Html}` },
   }
   let calcGuide = null;
   const hasCalculator = !!creditData.platformFiles.calculatorInfo;
+  let calcGuideAppended = false;
   if (hasCalculator) {
     console.log(`  Step 15.5: Generating Calculator Input Guide \u2014 ${creditData.platformFiles.calculatorInfo}`);
     try {
@@ -3212,15 +3165,27 @@ ${part1Html}` },
         console.log(`  Step 15.5: \u2713 Calculator Input Guide \u2014 ${calcGuide.calculatorName} (${calcGuide.fieldCount} fields, ${calcGuide.tabCount} tabs)`);
         const bodyClose = fullHtml.lastIndexOf("</body>");
         fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + calcGuide.html + "\n</body></html>" : fullHtml + calcGuide.html;
+        calcGuideAppended = true;
       } else {
         console.warn(`  Step 15.5: \u26A0 Calculator Guide skipped \u2014 ${calcGuide?.skipReason ?? "unknown reason"}`);
         if (calcGuide?.html) {
           const bodyClose = fullHtml.lastIndexOf("</body>");
           fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + calcGuide.html + "\n</body></html>" : fullHtml + calcGuide.html;
+          calcGuideAppended = true;
         }
       }
     } catch (err) {
       console.error(`  Step 15.5: \u2717 Calculator Guide error \u2014 ${err.message}`);
+    }
+    if (!calcGuideAppended) {
+      console.warn(`  Step 15.5: Calculator guide not appended \u2014 injecting placeholder`);
+      const placeholder = `
+<div class="section-header">USGBC Calculator Input Guide</div>
+<div class="section-body">
+  <div class="warn-note">This item could not be completed. See the document review summary below.</div>
+</div>`;
+      const bodyClose = fullHtml.lastIndexOf("</body>");
+      fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + placeholder + "\n</body></html>" : fullHtml + placeholder;
     }
   } else {
     console.log(`  Step 15.5: No calculator required for ${creditData.creditNumber}`);
@@ -3231,61 +3196,43 @@ ${part1Html}` },
   violations.forEach((v) => console.warn(`  \u26A0 QA: unnecessary customer request \u2014 ${v.description}`));
   const missingOutputs = validateAllOutputsProduced(fullHtml, creditData.outputs);
   missingOutputs.forEach((v) => console.warn(`  \u26A0 QA: output may be missing \u2014 ${v.description}`));
-  if (violations.length === 0 && missingOutputs.length === 0 && calcGuideViolations.length === 0) {
-    console.log(`  \u2713 QA signals clear`);
+  if (knownReviewIssues.length > 0) {
+    console.log(`  Appending document review summary (${knownReviewIssues.length} issue(s))`);
+    const issueItems = knownReviewIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
+    const reviewSummary = `
+<div class="section-header">Document Review Summary</div>
+<div class="section-body">
+  <div class="warn-box">
+    <p>This submission was processed with the following document deficiencies identified during review:</p>
+    <ul>
+        ${issueItems}
+    </ul>
+    <p>Items marked "could not be completed" within this document were not generated due to these deficiencies. Reprocessing with complete documentation requires a new order.</p>
+  </div>
+</div>`;
+    const bodyClose = fullHtml.lastIndexOf("</body>");
+    fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + reviewSummary + "\n</body></html>" : fullHtml + reviewSummary;
   }
-  fullHtml = scrubNarration(fullHtml).cleaned;
-  const { checks: deliverableChecks, cleanedHtml: gatedHtml } = validateAllDeliverables({
-    creditCode: credit.credit_code,
-    outputs: creditData.outputs,
-    hasCalculator,
-    htmlGenerated: fullHtml.length > 100,
+  const { cleanedHtml: gatedHtml } = validateAllDeliverables({
     htmlContent: fullHtml,
-    calcGuide,
-    mapGenerated: !!mapBuffer,
-    requiredMapType
+    requiredMapType,
+    mapGenerated: !!mapBuffer
   });
   fullHtml = gatedHtml;
-  const missing2 = deliverableChecks.filter((c) => !c.present);
-  const found = deliverableChecks.filter((c) => c.present);
-  console.log(`  Step 16.5: Deliverables check for ${credit.credit_code}:`);
-  found.forEach((c) => console.log(`    \u2713 ${c.item}`));
-  missing2.forEach((c) => console.warn(`    \u2717 MISSING: ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
-  if (missing2.length > 0) {
-    const htmlMissing = missing2.some((c) => c.item === "Online Submittal Form HTML");
-    const canDeliverPartial = attemptNumber >= 2 && knownReviewIssues.length > 0 && !htmlMissing;
-    if (canDeliverPartial) {
-      console.warn(`  Step 16.5: \u26A0 ${missing2.length} deliverable(s) missing \u2014 attempt ${attemptNumber}, customer-acknowledged gaps \u2014 injecting partial delivery notice`);
-      missing2.forEach((c) => console.warn(`    \u2717 ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
-      const noticeHtml = buildPartialDeliveryNotice(missing2, knownReviewIssues);
-      const bodyClose = fullHtml.lastIndexOf("</body>");
-      fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + noticeHtml + "\n</body></html>" : fullHtml + noticeHtml;
-      await logAuditEvent({
-        eventType: "partial_delivery",
-        entityType: "order",
-        entityId: orderId,
-        customerId: order.customer_id,
-        metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item), priorIssues: knownReviewIssues }
-      });
-    } else {
-      console.warn(`  Step 16.5: \u26A0 ${missing2.length} missing deliverable(s) \u2014 marking order failed`);
-      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
-      await supabase.from("runs").update({
-        status: "failed",
-        error_message: `Missing deliverables: ${missing2.map((c) => c.item).join(", ")}`,
-        completed_at: (/* @__PURE__ */ new Date()).toISOString()
-      }).eq("id", runId);
-      await logAuditEvent({
-        eventType: "deliverables_incomplete",
-        entityType: "order",
-        entityId: orderId,
-        customerId: order.customer_id,
-        metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item) }
-      });
-      return { orderId, runId, status: "failed", issues: missing2.map((c) => `${c.item}: ${c.reason}`) };
-    }
+  if (containsNarration(fullHtml)) {
+    console.warn(`  Step 16.5: Narration survived final scrub \u2014 delivering with QA flag`);
   }
-  console.log(`  Step 16.5: \u2713 Deliverables check passed \u2014 proceeding to delivery`);
+  if (fullHtml.length <= 100) {
+    console.error(`  Step 16.5: \u2717 No HTML generated \u2014 hard failing`);
+    await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+    await supabase.from("runs").update({
+      status: "failed",
+      error_message: "Claude API did not return HTML output",
+      completed_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", runId);
+    return { orderId, runId, status: "failed", issues: ["Claude API did not return HTML output"] };
+  }
+  console.log(`  Step 16.5: \u2713 HTML confirmed \u2014 proceeding to delivery`);
   console.log(`  Step 18: Uploading outputs to Storage...`);
   const outputPaths = [];
   const standardHtml = injectTableCss(fullHtml);

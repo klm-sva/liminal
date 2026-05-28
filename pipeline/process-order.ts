@@ -373,95 +373,29 @@ interface DeliverableCheck {
 }
 
 function validateAllDeliverables(params: {
-  creditCode:       string;
-  outputs:          string[];       // Column J from automation analysis
-  hasCalculator:    boolean;        // whether calculator column is non-empty
-  htmlGenerated:    boolean;
-  htmlContent:      string;         // actual HTML — scanned for residual narration
-  calcGuide:        CalcGuideResult | null;
-  mapGenerated:     boolean;
-  requiredMapType:  string | null;
-}): { checks: DeliverableCheck[]; cleanedHtml: string } {
-  const checks: DeliverableCheck[] = [];
-  const outputsText = params.outputs.join(" ").toLowerCase();
-
-  // HTML form output — always required
-  checks.push({
-    item: "Online Submittal Form HTML",
-    present: params.htmlGenerated,
-    reason: params.htmlGenerated ? undefined : "Claude API did not return HTML output",
-  });
-
-  // Narration scan — scrub again and flag if any survived the earlier passes
+  htmlContent:     string;
+  requiredMapType: string | null;
+  mapGenerated:    boolean;
+}): { cleanedHtml: string } {
   let cleanedHtml = params.htmlContent;
-  if (params.htmlGenerated && containsNarration(cleanedHtml)) {
-    console.warn(`  [validateAllDeliverables] Narration detected in HTML — running second scrub`);
+
+  // Narration scrub — second pass, soft warning only
+  if (containsNarration(cleanedHtml)) {
+    console.warn(`  [validateAllDeliverables] Narration detected — running second scrub`);
     const rerun = scrubNarration(cleanedHtml);
     cleanedHtml = rerun.cleaned;
-    if (rerun.total > 0) console.warn(`    Removed ${rerun.total} additional narration instance(s) in deliverable gate`);
+    if (rerun.total > 0) console.warn(`    Removed ${rerun.total} additional narration instance(s)`);
     if (containsNarration(cleanedHtml)) {
-      checks.push({
-        item: "HTML Narration-Free",
-        present: false,
-        reason: "Process narration survived two scrub passes — file flagged for admin review",
-      });
-      console.error(`  ✗ Narration still present after second scrub — marking needs_review`);
-    } else {
-      console.log(`    ✓ Narration cleared by second scrub`);
+      console.warn(`  [validateAllDeliverables] Narration survived second scrub — delivering with QA flag`);
     }
   }
 
-  // Calculator — required when calculatorInfo column is non-empty
-  if (params.hasCalculator) {
-    const calcPresent = !!(params.calcGuide && !params.calcGuide.skipped);
-    checks.push({
-      item: `USGBC Calculator Input Guide (${params.calcGuide?.calculatorName ?? "required"})`,
-      present: calcPresent,
-      reason: calcPresent ? undefined : (params.calcGuide?.skipReason ?? "Calculator Guide generation failed"),
-    });
+  // Map — soft warning only
+  if (params.requiredMapType && !params.mapGenerated) {
+    console.warn(`  [validateAllDeliverables] Map required but not generated — QA flag only`);
   }
 
-  // Map — logged as a soft warning only; absence never blocks delivery
-  const mapKeywords = ["map", "transit", "bicycle", "density", "walking"];
-  const mapRequired = mapKeywords.some((kw) => outputsText.includes(kw)) || !!params.requiredMapType;
-  if (mapRequired && !params.mapGenerated) {
-    console.warn(`  [validateAllDeliverables] Map required but not generated — flagging for QA, not blocking delivery`);
-  }
-
-  return { checks, cleanedHtml };
-}
-
-// ─── Partial delivery notice ──────────────────────────────────────────────────
-// Injected into the HTML output when attempt 2+ has known document issues and
-// some secondary deliverables could not be generated because of those gaps.
-
-function buildPartialDeliveryNotice(
-  missing:     DeliverableCheck[],
-  priorIssues: string[],
-): string {
-  const issueItems   = priorIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
-  const missingItems = missing.map((m) =>
-    `<li><strong>${m.item}</strong>${m.reason ? ` — ${m.reason}` : ""}</li>`
-  ).join("\n        ");
-
-  return `
-<div style="margin:32px 0;padding:20px 24px;background:#fff8f0;border-left:4px solid #e07000;border-radius:8px;font-family:sans-serif;">
-  <h3 style="margin:0 0 12px;font-size:16px;color:#7a3c00;">Partial Delivery — Incomplete Submission</h3>
-  <p style="margin:0 0 12px;font-size:14px;color:#555;">
-    The deliverables above represent the maximum that could be completed with the documentation provided.
-    The following items could not be generated due to the document issues identified during review:
-  </p>
-  <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#555;">
-        ${missingItems}
-  </ul>
-  <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#555;">Document issues identified during review:</p>
-  <ul style="margin:0 0 12px;padding-left:20px;font-size:13px;color:#555;">
-        ${issueItems}
-  </ul>
-  <p style="margin:0;font-size:13px;color:#888;font-style:italic;">
-    To complete the remaining deliverables, please resubmit with the documentation listed above.
-  </p>
-</div>`;
+  return { cleanedHtml };
 }
 
 // ─── Main orchestrator ────────────────────────────────────────────────────────
@@ -1104,9 +1038,9 @@ ${plainText}`,
   }
 
   // ── Step 15.5: Generate Calculator Input Guide if required ───────────────────
-  // Replaces all Excel population attempts. HTML guide is appended to fullHtml.
   let calcGuide: CalcGuideResult | null = null;
   const hasCalculator = !!creditData.platformFiles.calculatorInfo;
+  let calcGuideAppended = false;
 
   if (hasCalculator) {
     console.log(`  Step 15.5: Generating Calculator Input Guide — ${creditData.platformFiles.calculatorInfo}`);
@@ -1130,11 +1064,11 @@ ${plainText}`,
 
       if (calcGuide && !calcGuide.skipped) {
         console.log(`  Step 15.5: ✓ Calculator Input Guide — ${calcGuide.calculatorName} (${calcGuide.fieldCount} fields, ${calcGuide.tabCount} tabs)`);
-        // Append guide HTML inline — no Excel file produced or uploaded
         const bodyClose = fullHtml.lastIndexOf("</body>");
         fullHtml = bodyClose !== -1
           ? fullHtml.slice(0, bodyClose) + calcGuide.html + "\n</body></html>"
           : fullHtml + calcGuide.html;
+        calcGuideAppended = true;
       } else {
         console.warn(`  Step 15.5: ⚠ Calculator Guide skipped — ${calcGuide?.skipReason ?? "unknown reason"}`);
         if (calcGuide?.html) {
@@ -1142,99 +1076,85 @@ ${plainText}`,
           fullHtml = bodyClose !== -1
             ? fullHtml.slice(0, bodyClose) + calcGuide.html + "\n</body></html>"
             : fullHtml + calcGuide.html;
+          calcGuideAppended = true;
         }
       }
     } catch (err) {
       console.error(`  Step 15.5: ✗ Calculator Guide error — ${(err as Error).message}`);
     }
+
+    if (!calcGuideAppended) {
+      console.warn(`  Step 15.5: Calculator guide not appended — injecting placeholder`);
+      const placeholder = `
+<div class="section-header">USGBC Calculator Input Guide</div>
+<div class="section-body">
+  <div class="warn-note">This item could not be completed. See the document review summary below.</div>
+</div>`;
+      const bodyClose = fullHtml.lastIndexOf("</body>");
+      fullHtml = bodyClose !== -1
+        ? fullHtml.slice(0, bodyClose) + placeholder + "\n</body></html>"
+        : fullHtml + placeholder;
+    }
   } else {
     console.log(`  Step 15.5: No calculator required for ${creditData.creditNumber}`);
   }
 
-  // ── QA signals — logged for reviewer, never block delivery or trigger Claude calls ──
+  // ── QA signals — logged only, never block delivery ───────────────────────
   const calcGuideViolations = validateCalculatorGuidePresent(fullHtml, creditDataBlock);
   calcGuideViolations.forEach((v) => console.warn(`  ⚠ QA: ${v.description}`));
-
   const violations = validateNoUnnecessaryCustomerRequests(fullHtml);
   violations.forEach((v) => console.warn(`  ⚠ QA: unnecessary customer request — ${v.description}`));
-
   const missingOutputs = validateAllOutputsProduced(fullHtml, creditData.outputs);
   missingOutputs.forEach((v) => console.warn(`  ⚠ QA: output may be missing — ${v.description}`));
 
-  if (violations.length === 0 && missingOutputs.length === 0 && calcGuideViolations.length === 0) {
-    console.log(`  ✓ QA signals clear`);
+  // ── Document review summary — appended when review found issues ───────────
+  // Explains to the customer why items marked "could not be completed" were not generated.
+  if (knownReviewIssues.length > 0) {
+    console.log(`  Appending document review summary (${knownReviewIssues.length} issue(s))`);
+    const issueItems = knownReviewIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
+    const reviewSummary = `
+<div class="section-header">Document Review Summary</div>
+<div class="section-body">
+  <div class="warn-box">
+    <p>This submission was processed with the following document deficiencies identified during review:</p>
+    <ul>
+        ${issueItems}
+    </ul>
+    <p>Items marked "could not be completed" within this document were not generated due to these deficiencies. Reprocessing with complete documentation requires a new order.</p>
+  </div>
+</div>`;
+    const bodyClose = fullHtml.lastIndexOf("</body>");
+    fullHtml = bodyClose !== -1
+      ? fullHtml.slice(0, bodyClose) + reviewSummary + "\n</body></html>"
+      : fullHtml + reviewSummary;
   }
 
-  // Step 16: Map already generated at Step 15.8 — no action needed here.
-
-  // ── Step 16.5: Validate all deliverables before delivery ─────────────────
-  // Hard gate — nothing is delivered if required outputs are missing.
-  // Narration scan runs here as a second gate; narration is re-scrubbed or flagged.
-  fullHtml = scrubNarration(fullHtml).cleaned; // final pre-gate scrub
-  const { checks: deliverableChecks, cleanedHtml: gatedHtml } = validateAllDeliverables({
-    creditCode:       credit.credit_code,
-    outputs:          creditData.outputs,
-    hasCalculator,
-    htmlGenerated:    fullHtml.length > 100,
-    htmlContent:      fullHtml,
-    calcGuide,
-    mapGenerated:     !!mapBuffer,
+  // ── Step 16.5: Final scrub and delivery gate ──────────────────────────────
+  // Only hard-fail when no HTML was generated at all — nothing to deliver.
+  // Everything else delivers; placeholders and review summary explain any gaps.
+  const { cleanedHtml: gatedHtml } = validateAllDeliverables({
+    htmlContent:     fullHtml,
     requiredMapType,
+    mapGenerated:    !!mapBuffer,
   });
-  fullHtml = gatedHtml; // use version that may have been re-scrubbed in gate
+  fullHtml = gatedHtml;
 
-  const missing = deliverableChecks.filter((c) => !c.present);
-  const found   = deliverableChecks.filter((c) =>  c.present);
-
-  console.log(`  Step 16.5: Deliverables check for ${credit.credit_code}:`);
-  found.forEach((c)   => console.log(`    ✓ ${c.item}`));
-  missing.forEach((c) => console.warn(`    ✗ MISSING: ${c.item}${c.reason ? " — " + c.reason : ""}`));
-
-  if (missing.length > 0) {
-    // HTML itself not generated = true platform failure, always hard-fail regardless of attempt.
-    const htmlMissing    = missing.some((c) => c.item === "Online Submittal Form HTML");
-    const canDeliverPartial = attemptNumber >= 2 && knownReviewIssues.length > 0 && !htmlMissing;
-
-    if (canDeliverPartial) {
-      // Customer was told their documents were insufficient and chose to proceed anyway.
-      // Deliver everything that was generated; inject a notice for what couldn't be completed.
-      console.warn(`  Step 16.5: ⚠ ${missing.length} deliverable(s) missing — attempt ${attemptNumber}, customer-acknowledged gaps — injecting partial delivery notice`);
-      missing.forEach((c) => console.warn(`    ✗ ${c.item}${c.reason ? " — " + c.reason : ""}`));
-
-      const noticeHtml = buildPartialDeliveryNotice(missing, knownReviewIssues);
-      const bodyClose  = fullHtml.lastIndexOf("</body>");
-      fullHtml = bodyClose !== -1
-        ? fullHtml.slice(0, bodyClose) + noticeHtml + "\n</body></html>"
-        : fullHtml + noticeHtml;
-
-      await logAuditEvent({
-        eventType:  "partial_delivery",
-        entityType: "order",
-        entityId:   orderId,
-        customerId: order.customer_id,
-        metadata:   { creditCode: credit.credit_code, missing: missing.map((c) => c.item), priorIssues: knownReviewIssues },
-      });
-      // Fall through to delivery — no return.
-    } else {
-      console.warn(`  Step 16.5: ⚠ ${missing.length} missing deliverable(s) — marking order failed`);
-      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
-      await supabase.from("runs").update({
-        status:        "failed",
-        error_message: `Missing deliverables: ${missing.map((c) => c.item).join(", ")}`,
-        completed_at:  new Date().toISOString(),
-      }).eq("id", runId);
-      await logAuditEvent({
-        eventType:  "deliverables_incomplete",
-        entityType: "order",
-        entityId:   orderId,
-        customerId: order.customer_id,
-        metadata:   { creditCode: credit.credit_code, missing: missing.map((c) => c.item) },
-      });
-      return { orderId, runId, status: "failed", issues: missing.map((c) => `${c.item}: ${c.reason}`) };
-    }
+  if (containsNarration(fullHtml)) {
+    console.warn(`  Step 16.5: Narration survived final scrub — delivering with QA flag`);
   }
 
-  console.log(`  Step 16.5: ✓ Deliverables check passed — proceeding to delivery`);
+  if (fullHtml.length <= 100) {
+    console.error(`  Step 16.5: ✗ No HTML generated — hard failing`);
+    await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+    await supabase.from("runs").update({
+      status:        "failed",
+      error_message: "Claude API did not return HTML output",
+      completed_at:  new Date().toISOString(),
+    }).eq("id", runId);
+    return { orderId, runId, status: "failed", issues: ["Claude API did not return HTML output"] };
+  }
+
+  console.log(`  Step 16.5: ✓ HTML confirmed — proceeding to delivery`);
 
   // ── Step 17: Upload outputs to Storage ────────────────────────────────────
   console.log(`  Step 18: Uploading outputs to Storage...`);
