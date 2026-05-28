@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const supabase = await createServiceClient();
   const { data, error } = await supabase
     .from("gap_analysis_responses")
-    .insert({ customer_id: user.id, program, responses })
+    .insert({ customer_id: user.id, program, responses: responses as import("@/types/database").Json })
     .select("id")
     .single();
 

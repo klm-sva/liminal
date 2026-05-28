@@ -130,6 +130,7 @@ export type Order = {
   qa_instructions:          string | null;
   delivery_scheduled_at:    string | null;
   delay_email_sent:         boolean;
+  gap_analysis_program:     string | null;
 };
 
 export type Run = {
@@ -180,8 +181,8 @@ export type CreditInsert = Omit<Credit, "id" | "created_at" | "updated_at">;
 export type ProjectInsert = Omit<Project, "id" | "auto_extracted" | "flagged_fields" | "created_at" | "updated_at">
   & Partial<Pick<Project, "auto_extracted" | "flagged_fields">>;
 
-export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent" | "payment_id">
-  & Partial<Pick<Order, "status" | "payment_id">>;
+export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent" | "payment_id" | "gap_analysis_program">
+  & Partial<Pick<Order, "status" | "payment_id" | "gap_analysis_program">>;
 
 export type RunInsert = Omit<
   Run,
@@ -196,6 +197,14 @@ export type RunInsert = Omit<
 export type RunUpdate = Partial<Omit<Run, "id" | "created_at">>;
 
 export type AuditLogInsert = Omit<AuditLog, "id" | "created_at">;
+
+export type GapAnalysisResponse = {
+  id:          string;
+  customer_id: string;
+  program:     string;
+  responses:   Json;
+  created_at:  string;
+};
 
 // ─── Supabase Database type map ────────────────────────────────────────────────
 
@@ -242,6 +251,12 @@ export interface Database {
         Row:           AuditLog;
         Insert:        AuditLogInsert;
         Update:        Partial<AuditLogInsert>;
+        Relationships: [];
+      };
+      gap_analysis_responses: {
+        Row:           GapAnalysisResponse;
+        Insert:        Omit<GapAnalysisResponse, "id" | "created_at">;
+        Update:        Partial<Omit<GapAnalysisResponse, "id" | "created_at">>;
         Relationships: [];
       };
     };

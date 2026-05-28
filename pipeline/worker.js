@@ -846,11 +846,16 @@ async function processGapAnalysis(orderId, runId) {
       const buffer = Buffer.from(await fileData.arrayBuffer());
       const isPdf = upload.name.toLowerCase().endsWith(".pdf");
       if (isPdf) {
-        const text = await extractPdfContentFromBuffer(buffer);
-        if (text?.trim()) {
+        const result = await extractPdfContentFromBuffer(
+          client2,
+          buffer,
+          upload.name,
+          "Extract all text content from this document. Return the full text."
+        );
+        if (result?.text?.trim()) {
           documentContext += `
 --- ${upload.name} ---
-${text.slice(0, 8e3)}
+${result.text.slice(0, 8e3)}
 `;
         }
       }
@@ -918,10 +923,7 @@ ${rawHtml}
   await supabase.from("runs").update({
     status: "completed",
     completed_at: (/* @__PURE__ */ new Date()).toISOString(),
-    output_html_path: htmlPath,
-    output_html_url: signedStd.data?.signedUrl ?? null,
-    output_editable_path: editablePath,
-    output_editable_url: signedEdit.data?.signedUrl ?? null
+    output_html_path: htmlPath
   }).eq("id", runId);
   await supabase.from("orders").update({
     status: "delivered",

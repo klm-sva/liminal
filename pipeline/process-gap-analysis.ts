@@ -106,9 +106,14 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
       const isPdf  = upload.name.toLowerCase().endsWith(".pdf");
 
       if (isPdf) {
-        const text = await extractPdfContentFromBuffer(buffer);
-        if (text?.trim()) {
-          documentContext += `\n--- ${upload.name} ---\n${text.slice(0, 8000)}\n`;
+        const result = await extractPdfContentFromBuffer(
+          client,
+          buffer,
+          upload.name,
+          "Extract all text content from this document. Return the full text.",
+        );
+        if (result?.text?.trim()) {
+          documentContext += `\n--- ${upload.name} ---\n${result.text.slice(0, 8000)}\n`;
         }
       }
     } catch (err) {
@@ -201,12 +206,9 @@ ${rawHtml}
 
   // ── Step 11: Update run → completed ───────────────────────────────────────
   await supabase.from("runs").update({
-    status:                "completed",
-    completed_at:          new Date().toISOString(),
-    output_html_path:      htmlPath,
-    output_html_url:       signedStd.data?.signedUrl   ?? null,
-    output_editable_path:  editablePath,
-    output_editable_url:   signedEdit.data?.signedUrl  ?? null,
+    status:           "completed",
+    completed_at:     new Date().toISOString(),
+    output_html_path: htmlPath,
   }).eq("id", runId);
 
   // ── Step 12: Update order → delivered ─────────────────────────────────────
