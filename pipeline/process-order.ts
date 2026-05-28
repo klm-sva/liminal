@@ -1151,129 +1151,18 @@ ${plainText}`,
     console.log(`  Step 15.5: No calculator required for ${creditData.creditNumber}`);
   }
 
-  // ── FIX 1 — validateNoUnnecessaryCustomerRequests() ──────────────────────
-  // Block delivery if output asks customer for auto-retrievable data.
-  // One correction pass is attempted automatically.
-  // Skipped when the customer's documents were known-incomplete — a correction
-  // pass can't fill gaps that aren't in the source material, and would just add cost.
+  // ── QA signals — logged for reviewer, never block delivery or trigger Claude calls ──
   const calcGuideViolations = validateCalculatorGuidePresent(fullHtml, creditDataBlock);
-  if (calcGuideViolations.length > 0) {
-    calcGuideViolations.forEach((v) => console.warn(`  ⚠ ${v.description}`));
-  }
+  calcGuideViolations.forEach((v) => console.warn(`  ⚠ QA: ${v.description}`));
 
   const violations = validateNoUnnecessaryCustomerRequests(fullHtml);
-  if (violations.length > 0 && knownReviewIssues.length === 0) {
-    console.warn(`  ⚠ FIX 1: ${violations.length} validation violation(s) detected — running correction pass`);
-    violations.forEach((v) => console.warn(`    • ${v.description}`));
+  violations.forEach((v) => console.warn(`  ⚠ QA: unnecessary customer request — ${v.description}`));
 
-    const correctionResponse = await (client.messages.create as any)({
-      model:       "claude-sonnet-4-6",
-      max_tokens:  64000,
-      temperature: 0,
-      system:      systemPrompt,
-      tools:       [WEB_SEARCH_TOOL],
-      messages:    [{
-        role:    "user",
-        content: [
-          {
-            type: "text",
-            text: [
-              `The HTML document below has ${violations.length} violation(s) where the customer is asked to provide data that can be found via web search.`,
-              `Fix ONLY these violations. Use web search to retrieve the correct values and replace each request with the found data.`,
-              `Return the complete corrected HTML document.`,
-              ``,
-              `VIOLATIONS:`,
-              violations.map((v, i) => `${i + 1}. ${v.description}\n   Found: "${v.context}"`).join("\n\n"),
-              ``,
-              `HTML TO CORRECT:`,
-              fullHtml,
-            ].join("\n"),
-          },
-        ],
-      }],
-    });
-
-    const correctedRaw = (correctionResponse.content as any[])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text as string)
-      .join("\n");
-    const correctedCleaned = scrubNarration(correctedRaw).cleaned;
-    if (correctedCleaned.length >= fullHtml.length * 0.5) {
-      fullHtml = correctedCleaned;
-    } else {
-      console.warn(`    ⚠ FIX 1 correction response too short (${correctedCleaned.length} chars vs ${fullHtml.length} original) — keeping original`);
-    }
-
-    const remainingViolations = validateNoUnnecessaryCustomerRequests(fullHtml);
-    if (remainingViolations.length === 0) {
-      console.log(`    ✓ Correction successful — all violations resolved`);
-    } else {
-      console.warn(`    ⚠ ${remainingViolations.length} violation(s) remain after correction — delivering with warnings`);
-    }
-  } else if (violations.length > 0) {
-    console.log(`  FIX 1: skipping correction pass — known document issues on this run`);
-  } else {
-    console.log(`  ✓ FIX 1 validation passed — no unnecessary customer requests`);
-  }
-
-  // ── FIX 2 — validateAllOutputsProduced() ─────────────────────────────────
-  // Block delivery if any Column 4 required output is absent from the document.
-  // One correction pass is attempted automatically.
-  // Skipped when the customer's documents were known-incomplete — same reasoning as FIX 1.
   const missingOutputs = validateAllOutputsProduced(fullHtml, creditData.outputs);
-  if (missingOutputs.length > 0 && knownReviewIssues.length === 0) {
-    console.warn(`  ⚠ FIX 2: ${missingOutputs.length} Column 4 output(s) missing — running correction pass`);
-    missingOutputs.forEach((v) => console.warn(`    • ${v.description}\n      ${v.context}`));
+  missingOutputs.forEach((v) => console.warn(`  ⚠ QA: output may be missing — ${v.description}`));
 
-    const missingCorrectionResponse = await (client.messages.create as any)({
-      model:       "claude-sonnet-4-6",
-      max_tokens:  64000,
-      temperature: 0,
-      system:      systemPrompt,
-      tools:       [WEB_SEARCH_TOOL],
-      messages:    [{
-        role:    "user",
-        content: [
-          {
-            type: "text",
-            text: [
-              `The HTML document below is missing ${missingOutputs.length} required output(s) from Column 4 of the automation analysis.`,
-              `Add each missing output completely. Do not remove or alter any existing content.`,
-              `Return the complete corrected HTML document.`,
-              ``,
-              `MISSING OUTPUTS:`,
-              missingOutputs.map((v, i) => `${i + 1}. ${v.description}`).join("\n"),
-              ``,
-              `HTML TO CORRECT:`,
-              fullHtml,
-            ].join("\n"),
-          },
-        ],
-      }],
-    });
-
-    const missingCorrectedRaw = (missingCorrectionResponse.content as any[])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text as string)
-      .join("\n");
-    const missingCorrectedCleaned = scrubNarration(missingCorrectedRaw).cleaned;
-    if (missingCorrectedCleaned.length >= fullHtml.length * 0.5) {
-      fullHtml = missingCorrectedCleaned;
-    } else {
-      console.warn(`    ⚠ FIX 2 correction response too short (${missingCorrectedCleaned.length} chars vs ${fullHtml.length} original) — keeping original`);
-    }
-
-    const remainingMissing = validateAllOutputsProduced(fullHtml, creditData.outputs);
-    if (remainingMissing.length === 0) {
-      console.log(`    ✓ Correction successful — all Column 4 outputs now present`);
-    } else {
-      console.warn(`    ⚠ ${remainingMissing.length} output(s) still missing after correction — delivering with warnings`);
-      remainingMissing.forEach((v) => console.warn(`      • ${v.description}`));
-    }
-  } else if (missingOutputs.length > 0) {
-    console.log(`  FIX 2: skipping correction pass — known document issues on this run`);
-  } else {
-    console.log(`  ✓ FIX 2 validation passed — all Column 4 outputs present`);
+  if (violations.length === 0 && missingOutputs.length === 0 && calcGuideViolations.length === 0) {
+    console.log(`  ✓ QA signals clear`);
   }
 
   // Step 16: Map already generated at Step 15.8 — no action needed here.
