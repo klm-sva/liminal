@@ -203,9 +203,10 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
               )}
             </div>
 
-            <p className="text-xs text-certify-dark-grey leading-relaxed mb-3">
-              After downloading, to open the HTML file and edit it, right click &rarr; Open With &rarr; choose Microsoft Word. In Word, under View choose Web Layout for ideal formatting.
-            </p>
+            <ul className="text-xs text-certify-dark-grey leading-relaxed mb-3 list-disc list-inside space-y-1">
+              <li>Open in browser to review</li>
+              <li>Drag into Google Drive, then Open With &rarr; Google Docs to edit and print</li>
+            </ul>
             <p className="text-xs text-certify-dark-grey leading-relaxed mb-4">
               If any additional items are needed for your certification submittal they will be itemized. This might be items that were not included in the provided information or items that only project teams can provide (meeting minutes, photographs, etc.).
             </p>
