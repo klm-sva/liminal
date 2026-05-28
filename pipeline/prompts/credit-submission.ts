@@ -340,12 +340,9 @@ MAP INSERTION
   ← This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
   Never use text descriptions or .map-placeholder div for the actual map location.
 
-POLICY SIGNAL — REQUIRED WHEN A POLICY IS NEEDED
-If a policy, plan, or commitment document is required as part of the compliance path being documented, place exactly this HTML comment at the very end of Part 2 output, immediately before the Processing Summary:
-<!-- POLICY_REQUIRED -->
+POLICY DOCUMENTS — GENERATE INLINE WHEN REQUIRED
+When a credit requires a written policy, program, or commitment document as a deliverable — such as a Green Cleaning Policy, Smoking Policy, Guaranteed Ride Home Program, Integrated Pest Management Plan, or similar written organizational document — generate the complete policy document inline as a section within Part 2 output. Use <div class="plan-section"> for policy content sections. Include all required elements specified in the credit requirements (eligibility, procedures, responsible parties, etc.).
 
-Rules for this marker:
-- Include it ONLY when a policy, plan, or written commitment is a required deliverable for the specific compliance path being documented.
-- Do NOT include it when a policy is only one option among multiple compliance paths and a different path was selected.
-- Do NOT include it when a policy is mentioned in the credit language but is not required for the chosen path.
-- The pipeline reads this marker to decide whether to generate policy drafts. If the marker is absent, no policy drafts are generated. If it is present when not needed, unnecessary documents are produced. Place it accurately.`;
+If a policy is one compliance path option and a different path was selected, do not generate the policy.
+If a policy is one compliance path option and no path was selected, generate the policy as the default safe choice.
+Do not place any marker or signal in the output. Simply write the policy content as part of the document.`;

@@ -41,7 +41,6 @@ import { generateMap, type MapType } from "./map-generation";
 import { logAuditEvent } from "./lib/supabase-ops";
 import { preparePdfDocument } from "./lib/pdf-to-images";
 import { injectTableCss, makeEditable } from "./lib/make-editable";
-import { generatePolicyDrafts, policyChecklistHtml, type UploadedPolicy } from "./lib/policy-generator";
 import { generateCalculatorGuide, type CalcGuideResult } from "./lib/calculator-guide";
 import { extractSpecs, loadSpecsProfile, formatSpecsProfileForContext } from "./lib/specs-extract";
 import { extractDocument, loadAllDocumentProfiles, formatAllDocumentProfilesForContext } from "./lib/document-extract";
@@ -382,7 +381,6 @@ function validateAllDeliverables(params: {
   calcGuide:        CalcGuideResult | null;
   mapGenerated:     boolean;
   requiredMapType:  string | null;
-  policyDraftCount: number;
 }): { checks: DeliverableCheck[]; cleanedHtml: string } {
   const checks: DeliverableCheck[] = [];
   const outputsText = params.outputs.join(" ").toLowerCase();
@@ -428,17 +426,6 @@ function validateAllDeliverables(params: {
   const mapRequired = mapKeywords.some((kw) => outputsText.includes(kw)) || !!params.requiredMapType;
   if (mapRequired && !params.mapGenerated) {
     console.warn(`  [validateAllDeliverables] Map required but not generated — flagging for QA, not blocking delivery`);
-  }
-
-  // Policy drafts — required only when Claude placed the POLICY_REQUIRED marker.
-  // Keyword matching on outputs is unreliable ("plan" appears in site plan, floor plan, etc.).
-  const policyRequired = params.htmlContent.includes("<!-- POLICY_REQUIRED -->");
-  if (policyRequired) {
-    checks.push({
-      item: "Policy/Plan Drafts",
-      present: params.policyDraftCount > 0,
-      reason: params.policyDraftCount > 0 ? undefined : "No policy drafts generated",
-    });
   }
 
   return { checks, cleanedHtml };
@@ -1289,65 +1276,6 @@ ${plainText}`,
     console.log(`  ✓ FIX 2 validation passed — all Column 4 outputs present`);
   }
 
-  // ── Policy drafts ─────────────────────────────────────────────────────────
-  // Only runs when Claude placed <!-- POLICY_REQUIRED --> in the output.
-  // This marker is set when a policy is a required deliverable for the chosen
-  // compliance path — not merely mentioned as one option among several.
-  const policyRequired = fullHtml.includes("<!-- POLICY_REQUIRED -->");
-  console.log(`  [policy] POLICY_REQUIRED marker: ${policyRequired ? "FOUND — generating drafts" : "absent — skipping policy generation"}`);
-
-  const policyTokens = { input: 0, output: 0 };
-  const uploadedPolicies: UploadedPolicy[] = [];
-  let policyDrafts: Awaited<ReturnType<typeof generatePolicyDrafts>> = [];
-
-  if (policyRequired) {
-    // Extract text from any customer-uploaded PDFs that look like policy documents
-    const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
-
-    for (const u of uploadBuffers) {
-      if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
-        try {
-          const extract = await extractPdfContentFromBuffer(
-            client, u.buffer, u.filename,
-            "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks.",
-          );
-          policyTokens.input  += extract.inputTokens;
-          policyTokens.output += extract.outputTokens;
-          uploadedPolicies.push({ filename: u.filename, text: extract.text });
-        } catch (err) {
-          console.warn(`    [policy] Could not extract text from ${u.filename}: ${(err as Error).message}`);
-        }
-      }
-    }
-
-    const reqPdfExtract = await extractPdfContentFromBuffer(
-      client, reqPdfBuffer, credit.requirements_pdf_path,
-      "Extract all credit requirements, required uploads, and documentation requirements.",
-    );
-    policyTokens.input  += reqPdfExtract.inputTokens;
-    policyTokens.output += reqPdfExtract.outputTokens;
-
-    const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
-    policyDrafts = await generatePolicyDrafts(client, creditData.customerUploads.join("\n"), {
-      creditName:             credit.credit_code,
-      certProgram:            credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
-      projectAddress:         project.address ?? "",
-      creditRequirementsText: reqPdfExtract.text,
-      creditSlug:             credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      outputDir:              tempOutputDir,
-      uploadedDocuments:      uploadedPolicies,
-    }, policyTokens);
-  }
-
-  // Append policy checklist to HTML output and upload each draft to storage
-  if (policyDrafts.length > 0) {
-    const policySection = policyChecklistHtml(policyDrafts);
-    const bodyClose = fullHtml.lastIndexOf("</body>");
-    fullHtml = bodyClose !== -1
-      ? fullHtml.slice(0, bodyClose) + policySection + "\n</body></html>"
-      : fullHtml + policySection;
-  }
-
   // Step 16: Map already generated at Step 15.8 — no action needed here.
 
   // ── Step 16.5: Validate all deliverables before delivery ─────────────────
@@ -1363,7 +1291,6 @@ ${plainText}`,
     calcGuide,
     mapGenerated:     !!mapBuffer,
     requiredMapType,
-    policyDraftCount: policyDrafts.length,
   });
   fullHtml = gatedHtml; // use version that may have been re-scrubbed in gate
 
@@ -1456,24 +1383,6 @@ ${plainText}`,
     );
     if (mapErr) console.warn(`    Map upload failed: ${mapErr.message}`);
     else { outputPaths.push(mapPath); console.log(`    ✓ walking-distance-map.png`); }
-  }
-
-  // Upload policy draft HTML files
-  for (const draft of policyDrafts) {
-    try {
-      const draftPath = `${outputsFolder}/${draft.filename}`;
-      const { error: draftErr } = await dbCall(
-        supabase.storage.from(OUTPUTS_BUCKET).upload(draftPath, new Blob([draft.html], { type: "text/html" }), { upsert: true }),
-        `upload policy draft ${draft.filename}`,
-      );
-      if (draftErr) console.warn(`    Policy draft upload failed (${draft.filename}): ${draftErr.message}`);
-      else {
-        outputPaths.push(draftPath);
-        console.log(`    ✓ ${draft.filename}  [policy ${draft.mode}]`);
-      }
-    } catch (err) {
-      console.warn(`    Policy draft upload error (${draft.filename}): ${(err as Error).message}`);
-    }
   }
 
   // ── Step 18: Mark complete, send QA review email, schedule cleanup ──────────
