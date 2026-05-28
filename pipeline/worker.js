@@ -65,9 +65,9 @@ function parseList(raw) {
 function parseRows(buffer) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows2 = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-  const headers = rows2[1].map((h) => String(h ?? "").replace(/\n/g, " ").trim());
-  return { rows: rows2, headers };
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const headers = rows[1].map((h) => String(h ?? "").replace(/\n/g, " ").trim());
+  return { rows, headers };
 }
 function loadWorkbook() {
   if (!fs.existsSync(AUTOMATION_XLSX)) {
@@ -81,9 +81,9 @@ function loadWorkbook() {
   return result;
 }
 function extractCreditData(creditCode) {
-  const { rows: rows2 } = loadWorkbook();
+  const { rows } = loadWorkbook();
   const needles = creditCodeNeedles(creditCode);
-  const dataRow = rows2.slice(2).find((row) => {
+  const dataRow = rows.slice(2).find((row) => {
     const name = String(row[COL.creditName] ?? "").toLowerCase();
     const num = String(row[COL.creditNumber] ?? "").toLowerCase();
     return needles.some((n) => name.includes(n) || num.includes(n));
@@ -617,11 +617,11 @@ async function getWalkingRoute(origin, dest) {
 }
 async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   const key = MAPS_API_KEY();
-  const scale2 = 2;
+  const scale = 2;
   const base = "https://maps.googleapis.com/maps/api/staticmap";
   const params = [
-    `size=${imgWidth / scale2}x${imgHeight / scale2}`,
-    `scale=${scale2}`,
+    `size=${imgWidth / scale}x${imgHeight / scale}`,
+    `scale=${scale}`,
     `maptype=roadmap`,
     `style=feature:poi|visibility:off`,
     `style=feature:transit|element:labels|visibility:off`,
@@ -644,7 +644,7 @@ async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   return Buffer.from(res.data);
 }
 async function addCitationOverlay(imageBuffer, citationText, width, height) {
-  const sharp2 = (await import("sharp")).default;
+  const sharp = (await import("sharp")).default;
   const lines = citationText.split("\n");
   const lineH = 14;
   const padding = 6;
@@ -660,7 +660,7 @@ async function addCitationOverlay(imageBuffer, citationText, width, height) {
     <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="3" fill="white" opacity="0.82"/>
     ${textEls}
   </svg>`;
-  return sharp2(imageBuffer).resize(width, height, { fit: "cover" }).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
+  return sharp(imageBuffer).resize(width, height, { fit: "cover" }).composite([{ input: Buffer.from(svg), top: 0, left: 0 }]).png().toBuffer();
 }
 async function generateMap(request) {
   const WIDTH = 1200;
@@ -697,9 +697,9 @@ async function generateMap(request) {
 ${today}`;
   const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
   if (request.outputPath) {
-    const { mkdirSync: mkdirSync2, writeFileSync: writeFileSync5 } = await import("fs");
-    mkdirSync2(path4.dirname(request.outputPath), { recursive: true });
-    writeFileSync5(request.outputPath, pngBuffer);
+    const { mkdirSync, writeFileSync: writeFileSync4 } = await import("fs");
+    mkdirSync(path4.dirname(request.outputPath), { recursive: true });
+    writeFileSync4(request.outputPath, pngBuffer);
     console.log(`  \u2713 Map saved: ${request.outputPath}`);
   }
   console.log(`  \u2713 Map generated (${Math.round(pngBuffer.length / 1024)} KB PNG)`);
@@ -880,331 +880,6 @@ var init_make_editable = __esm({
   }
 });
 
-// pipeline/lib/policy-generator.ts
-function detectPolicyRequirements(creditRow) {
-  const fragments = creditRow.split(/[;\|\n]|(?<=[a-z])\s+and\s+(?=[a-z])/i).map((s) => s.trim()).filter((s) => s.length > 10);
-  const found = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const fragment of fragments) {
-    if (!POLICY_PATTERNS.some((p) => p.test(fragment))) continue;
-    const label = derivePolicyLabel(fragment);
-    if (seen.has(label.toLowerCase())) continue;
-    seen.add(label.toLowerCase());
-    found.push({ rawText: fragment, policyType: label });
-  }
-  return found;
-}
-function derivePolicyLabel(text) {
-  const clean = text.replace(/^(submit|provide|upload|include|attach|signed|written|completed|approved)\s+/i, "").replace(/\s+(on\s+(company|organization|project)\s+letterhead.*|signed\s+by.*|as\s+required.*)$/i, "").replace(/\s+\(.*?\)/g, "").trim();
-  return clean.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ").slice(0, 80);
-}
-function findMatchingUpload(policyType, uploads) {
-  if (uploads.length === 0) return null;
-  const stopWords = /* @__PURE__ */ new Set(["a", "an", "the", "and", "or", "of", "for", "in", "on", "to", "policy"]);
-  const typeTokens = new Set(
-    policyType.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((t) => t.length > 2 && !stopWords.has(t))
-  );
-  let best = null;
-  let bestScore = 0;
-  for (const upload of uploads) {
-    const nameTokens = upload.filename.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/);
-    const contentTokens = upload.text.slice(0, 500).toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/);
-    const allTokens = /* @__PURE__ */ new Set([...nameTokens, ...contentTokens]);
-    let score = 0;
-    for (const t of typeTokens) {
-      if (allTokens.has(t)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      best = upload;
-    }
-  }
-  return bestScore >= 1 ? best : null;
-}
-async function generatePolicyHtml(client2, requirement, context, usage2) {
-  const prompt = `You are drafting a formal policy document for a building certification submission.
-
-CREDIT / FEATURE: ${context.creditName}
-CERTIFICATION PROGRAM: ${context.certProgram}
-PROJECT ADDRESS: ${context.projectAddress}
-
-POLICY REQUIRED: ${requirement.policyType}
-ORIGINAL REQUIREMENT TEXT: ${requirement.rawText}
-
-CREDIT REQUIREMENTS (for context on what the policy must address):
-${context.creditRequirementsText}
-
-CREDIT AUTOMATION ANALYSIS ROW:
-${context.creditRow}
-
-TASK:
-Draft a complete, professional policy document that satisfies the above requirement for certification submission.
-
-RULES:
-1. Output ONLY the HTML body content \u2014 no DOCTYPE, no <html>, no <head>, no <body> tags.
-2. Use placeholder fields in ALL CAPS in square brackets for any information the organization must supply:
-   - [ORGANIZATION NAME]
-   - [BUILDING NAME / ADDRESS]
-   - [EFFECTIVE DATE]
-   - [POLICY REVIEW DATE]
-   - [AUTHORIZED SIGNATORY NAME]
-   - [AUTHORIZED SIGNATORY TITLE]
-   - [DEPARTMENT / CONTACT NAME]
-   - Any other project-specific fields
-3. The policy must address every requirement listed in the credit/feature for this document type.
-4. Include all standard policy sections: Purpose, Scope, Policy Statement, Procedures/Requirements, Responsibilities, Review and Update.
-5. Write in formal organizational policy language \u2014 clear, specific, and actionable.
-6. The policy must be complete enough to submit directly after the owner fills in the placeholders and signs.
-7. Do not include any narration, preamble, or explanation \u2014 output the policy document only.
-8. Use clean HTML with inline styles matching this color scheme:
-   - Headers: color #2b4044
-   - Body text: color #1a1a1a, font-family Arial, font-size 13px
-   - Section headers: color #327cb9, border-bottom 1px solid #327cb9
-   - Placeholder fields: background #fff3cd, color #856404, padding 0 4px, border-radius 2px
-   - Signature block: border-top 2px solid #2b4044, margin-top 40px, padding-top 16px`;
-  const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8e3,
-    temperature: 0,
-    messages: [{ role: "user", content: prompt }]
-  });
-  usage2.input += response.usage.input_tokens;
-  usage2.output += response.usage.output_tokens;
-  return response.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-}
-async function reviewPolicyHtml(client2, requirement, existingPolicy, context, usage2) {
-  const prompt = `You are a certification compliance specialist reviewing an existing organizational policy.
-
-CREDIT / FEATURE: ${context.creditName}
-CERTIFICATION PROGRAM: ${context.certProgram}
-PROJECT ADDRESS: ${context.projectAddress}
-
-POLICY BEING REVIEWED: ${requirement.policyType}
-ORIGINAL REQUIREMENT TEXT: ${requirement.rawText}
-SOURCE FILE: ${existingPolicy.filename}
-
-CREDIT REQUIREMENTS (every item the policy must address for certification):
-${context.creditRequirementsText}
-
-CREDIT AUTOMATION ANALYSIS ROW:
-${context.creditRow}
-
-EXISTING POLICY TEXT:
-${existingPolicy.text}
-
-TASK:
-Review the existing policy against the certification requirements above. Identify any compliance gaps \u2014 requirements the policy does not currently address \u2014 and produce a complete updated version of the policy that fills those gaps.
-
-RULES:
-1. Output ONLY the HTML body content \u2014 no DOCTYPE, no <html>, no <head>, no <body> tags.
-2. Preserve all existing policy content. Do not remove, weaken, or reword any existing provisions unless they directly conflict with the certification requirements.
-3. For every compliance gap, add the missing content clearly marked with:
-   <span style="background:#d1ecf1;color:#0c5460;padding:0 4px;border-radius:2px;font-size:11px;">[ADDED FOR ${context.certProgram.includes("WELL") ? "WELL" : "LEED"} COMPLIANCE]</span>
-4. If existing text needs minor revision to meet a requirement, add the corrected version immediately after the original line, marked:
-   <span style="background:#f8d7da;color:#721c24;padding:0 4px;border-radius:2px;font-size:11px;">[REVISED FOR COMPLIANCE \u2014 replace line above]</span>
-5. Use placeholder fields in ALL CAPS in square brackets for any missing organizational details:
-   - [ORGANIZATION NAME], [AUTHORIZED SIGNATORY NAME], [EFFECTIVE DATE], etc.
-6. If the policy already fully satisfies all requirements, output the policy as clean HTML with no changes marked \u2014 just confirm coverage.
-7. Do not include any narration, preamble, or explanation \u2014 output the updated policy document only.
-8. Use clean HTML with inline styles:
-   - Headers: color #2b4044
-   - Body text: color #1a1a1a, font-family Arial, font-size 13px
-   - Section headers: color #327cb9, border-bottom 1px solid #327cb9
-   - Placeholder fields: background #fff3cd, color #856404, padding 0 4px, border-radius 2px
-   - Signature block: border-top 2px solid #2b4044, margin-top 40px, padding-top 16px`;
-  const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8e3,
-    temperature: 0,
-    messages: [{ role: "user", content: prompt }]
-  });
-  usage2.input += response.usage.input_tokens;
-  usage2.output += response.usage.output_tokens;
-  return response.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
-}
-function policySlug(creditSlug, policyType, mode) {
-  const policyPart = policyType.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50);
-  const suffix = mode === "reviewed" ? "reviewed" : "draft";
-  return `${creditSlug}-${policyPart}-${suffix}`;
-}
-async function generatePolicyDrafts(client2, creditRow, context, usage2) {
-  const requirements = detectPolicyRequirements(creditRow);
-  if (requirements.length === 0) {
-    console.log(`  [policy] No policy requirements detected in Column 1`);
-    return [];
-  }
-  console.log(`  [policy] ${requirements.length} policy requirement(s) detected:`);
-  requirements.forEach((r) => console.log(`    \u2022 ${r.policyType}`));
-  const uploads = context.uploadedDocuments ?? [];
-  const drafts = [];
-  for (const req of requirements) {
-    const t0 = Date.now();
-    const match = findMatchingUpload(req.policyType, uploads);
-    const mode = match ? "reviewed" : "new-draft";
-    if (match) {
-      console.log(`  [policy] Reviewing uploaded policy for: ${req.policyType} (source: ${match.filename})...`);
-    } else {
-      console.log(`  [policy] Drafting new policy for: ${req.policyType}...`);
-    }
-    try {
-      const bodyHtml = match ? await reviewPolicyHtml(client2, req, match, {
-        creditName: context.creditName,
-        certProgram: context.certProgram,
-        projectAddress: context.projectAddress,
-        creditRequirementsText: context.creditRequirementsText,
-        creditRow
-      }, usage2) : await generatePolicyHtml(client2, req, {
-        creditName: context.creditName,
-        certProgram: context.certProgram,
-        projectAddress: context.projectAddress,
-        creditRequirementsText: context.creditRequirementsText,
-        creditRow
-      }, usage2);
-      const slug = policySlug(context.creditSlug, req.policyType, mode);
-      const today = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-      const fullHtml = wrapPolicyHtml(bodyHtml, req.policyType, context.creditName, today, mode, match?.filename);
-      const editableHtml = makeEditable(fullHtml);
-      const outputPath = path5.join(context.outputDir, `${slug}.html`);
-      fs6.mkdirSync(context.outputDir, { recursive: true });
-      fs6.writeFileSync(outputPath, editableHtml);
-      const modeLabel = mode === "reviewed" ? "reviewed + updated" : "new draft";
-      console.log(`  [policy] \u2713 ${req.policyType} \u2014 ${modeLabel} \u2014 ${Math.round(editableHtml.length / 1024)} KB \u2192 ${path5.basename(outputPath)} (${((Date.now() - t0) / 1e3).toFixed(1)}s)`);
-      drafts.push({
-        policyType: req.policyType,
-        mode,
-        filename: path5.basename(outputPath),
-        outputPath,
-        html: editableHtml,
-        tokensIn: 0,
-        tokensOut: 0
-      });
-    } catch (err) {
-      console.warn(`  [policy] \u26A0 Failed to process "${req.policyType}": ${err.message}`);
-    }
-  }
-  return drafts;
-}
-function wrapPolicyHtml(body, policyType, creditName, date, mode, sourceFile) {
-  const banner = mode === "reviewed" ? `<div class="draft-banner" style="background:#d1ecf1;border-color:#bee5eb;color:#0c5460;">
-  <strong>REVIEWED &amp; UPDATED \u2014 Compliance Review Complete</strong><br/>
-  This policy was reviewed against ${escHtml(creditName)} requirements on ${escHtml(date)}.
-  ${sourceFile ? `Source file: <em>${escHtml(sourceFile)}</em>. ` : ""}
-  Sections marked <span style="background:#d1ecf1;color:#0c5460;padding:0 3px;border-radius:2px;">[ADDED FOR COMPLIANCE]</span>
-  or <span style="background:#f8d7da;color:#721c24;padding:0 3px;border-radius:2px;">[REVISED FOR COMPLIANCE]</span>
-  were added or amended to meet certification requirements. Review all changes, then have an authorized representative sign before submitting.
-</div>` : `<div class="draft-banner">
-  <strong>DRAFT \u2014 Review Required Before Submission</strong><br/>
-  Complete all <span style="background:#fff3cd;color:#856404;padding:0 3px;border-radius:2px;">[PLACEHOLDER]</span> fields,
-  have an authorized representative review the document, and obtain a wet or electronic signature before submitting to the certification reviewer.
-  This draft was generated on ${escHtml(date)}.
-</div>`;
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${escHtml(policyType)} \u2014 ${mode === "reviewed" ? "Reviewed" : "Draft"}</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #1a1a1a; margin: 0; padding: 32px; max-width: 860px; }
-    h1   { font-size: 20px; color: #2b4044; border-bottom: 2px solid #2b4044; padding-bottom: 8px; margin-bottom: 4px; }
-    h2   { font-size: 14px; color: #327cb9; border-bottom: 1px solid #327cb9; padding-bottom: 4px; margin-top: 24px; }
-    h3   { font-size: 13px; color: #2b4044; margin-top: 16px; }
-    p, li { line-height: 1.6; margin-bottom: 8px; }
-    .draft-banner {
-      background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;
-      padding: 10px 16px; margin-bottom: 24px; font-size: 12px; color: #856404;
-    }
-    .draft-banner strong { font-size: 13px; }
-    .credit-ref { font-size: 11px; color: #666; margin-bottom: 24px; }
-  </style>
-</head>
-<body>
-
-${banner}
-
-<h1>${escHtml(policyType)}</h1>
-<div class="credit-ref">${mode === "reviewed" ? "Reviewed for" : "Generated for"}: ${escHtml(creditName)}</div>
-
-${body}
-
-</body>
-</html>`;
-}
-function escHtml(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function policyChecklistHtml(drafts) {
-  if (drafts.length === 0) return "";
-  const items = drafts.map((d) => {
-    const isReviewed = d.mode === "reviewed";
-    const badge = isReviewed ? `<span style="background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:bold;">\u2713 REVIEWED &amp; UPDATED</span>` : `<span style="background:#d4edda;color:#155724;border:1px solid #c3e6cb;border-radius:3px;padding:2px 8px;font-size:11px;font-weight:bold;">\u2713 DRAFT PROVIDED</span>`;
-    const action = isReviewed ? "Review all compliance additions/revisions marked in the document, confirm with your team, then obtain authorized signature before submitting." : "Review draft, fill all [PLACEHOLDER] fields, and obtain authorized signature before submitting.";
-    return `
-  <tr>
-    <td style="padding:8px 12px;border-bottom:1px solid #dee2e6;">
-      <strong>${escHtml(d.policyType)}</strong><br/>
-      <span style="font-size:11px;color:#666;">File: ${escHtml(d.filename)}</span>
-    </td>
-    <td style="padding:8px 12px;border-bottom:1px solid #dee2e6;">${badge}</td>
-    <td style="padding:8px 12px;border-bottom:1px solid #dee2e6;font-size:11px;color:#666;">${escHtml(action)}</td>
-  </tr>`;
-  }).join("");
-  const reviewedCount = drafts.filter((d) => d.mode === "reviewed").length;
-  const newCount = drafts.length - reviewedCount;
-  const summary = [
-    reviewedCount > 0 ? `${reviewedCount} reviewed` : null,
-    newCount > 0 ? `${newCount} new draft${newCount !== 1 ? "s" : ""}` : null
-  ].filter(Boolean).join(", ");
-  return `
-<div style="background:#d4edda;border:1px solid #c3e6cb;border-radius:4px;padding:12px 16px;margin:16px 0;">
-  <strong style="color:#155724;">\u2713 Policy Document(s) \u2014 ${drafts.length} file${drafts.length !== 1 ? "s" : ""} (${summary})</strong>
-  <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12px;">
-    <thead>
-      <tr style="background:#c3e6cb;">
-        <th style="padding:6px 12px;text-align:left;">Policy Document</th>
-        <th style="padding:6px 12px;text-align:left;">Status</th>
-        <th style="padding:6px 12px;text-align:left;">Action Required</th>
-      </tr>
-    </thead>
-    <tbody>${items}</tbody>
-  </table>
-</div>`;
-}
-var fs6, path5, POLICY_PATTERNS;
-var init_policy_generator = __esm({
-  "pipeline/lib/policy-generator.ts"() {
-    "use strict";
-    fs6 = __toESM(require("fs"));
-    path5 = __toESM(require("path"));
-    init_make_editable();
-    POLICY_PATTERNS = [
-      /signed\s+\w+\s+policy/i,
-      /written\s+\w+\s+policy/i,
-      /\w+\s+policy\s+(letter|document|statement|commitment)/i,
-      /policy\s+(on|for|regarding)\s+/i,
-      /commitment\s+letter/i,
-      /signed\s+commitment/i,
-      /signed\s+statement/i,
-      /management\s+plan/i,
-      /operations\s+(and\s+maintenance\s+)?plan/i,
-      /maintenance\s+plan/i,
-      /transportation\s+demand\s+management/i,
-      /tdm\s+program/i,
-      /green\s+cleaning\s+policy/i,
-      /smoking\s+policy/i,
-      /tobacco\s+policy/i,
-      /lighting\s+policy/i,
-      /thermal\s+comfort\s+policy/i,
-      /indoor\s+air\s+quality\s+policy/i,
-      /acoustic\s+policy/i,
-      /wellness\s+policy/i,
-      /tenant\s+guide(lines?)?/i,
-      /lease\s+(agreement|language|addendum)/i,
-      /\bpolicy\b/i
-    ];
-  }
-});
-
 // pipeline/lib/calculator-guide.ts
 function cc(s) {
   return s.toLowerCase().replace(/prerequisite/g, "prereq").replace(/[^a-z0-9]/g, "");
@@ -1366,7 +1041,7 @@ function renderGuideHtml(schema, entries, creditRow) {
     let contextBlocks = "";
     for (const [ctx, ctxEntries] of byContext) {
       const ctxHeader = ctx ? `<tr><td colspan="5" style="background:${LIGHT_BG};font-weight:600;padding:6px 10px;font-size:12px;color:${BODY_TEXT};">${esc(ctx)}</td></tr>` : "";
-      const rows2 = ctxEntries.map((e) => {
+      const rows = ctxEntries.map((e) => {
         const valueDisplay = e.value === null ? `<span style="color:#856404;">\u2014</span>` : `<strong>${esc(e.value)}</strong>`;
         return `<tr>
             <td style="padding:6px 10px;border-bottom:1px solid #e0eaf4;color:${BODY_TEXT};font-size:13px;">${esc(e.field_label)}</td>
@@ -1375,7 +1050,7 @@ function renderGuideHtml(schema, entries, creditRow) {
             <td style="padding:6px 10px;border-bottom:1px solid #e0eaf4;font-size:12px;">${sourceLabel(e.source)}</td>
           </tr>`;
       }).join("\n");
-      contextBlocks += ctxHeader + rows2;
+      contextBlocks += ctxHeader + rows;
     }
     renderedTabs.push(`
       <div style="margin-bottom:24px;">
@@ -1475,7 +1150,7 @@ async function generateCalculatorGuide(client2, creditRow, creditName, projectDa
   if (!creditRow.toLowerCase().includes("calculator")) {
     return null;
   }
-  const rawSchemas = fs7.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs7.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
+  const rawSchemas = fs6.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs6.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
   const schemas = rawSchemas.calculators ?? {};
   const schema = findSchemaForCredit(creditName, schemas);
   if (!schema) {
@@ -1520,13 +1195,13 @@ function skippedHtml(creditName, reason) {
   </span>
 </div>`;
 }
-var fs7, path6, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
+var fs6, path5, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
 var init_calculator_guide = __esm({
   "pipeline/lib/calculator-guide.ts"() {
     "use strict";
-    fs7 = __toESM(require("fs"));
-    path6 = __toESM(require("path"));
-    CALC_SCHEMA_PATH = path6.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
+    fs6 = __toESM(require("fs"));
+    path5 = __toESM(require("path"));
+    CALC_SCHEMA_PATH = path5.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
     PRIMARY = "#327cb9";
     LIGHT_BG = "#abcde8";
     PALE_BG = "#f7fafd";
@@ -1537,10 +1212,10 @@ var init_calculator_guide = __esm({
 
 // pipeline/lib/specs-extract.ts
 function convertToText(buffer, filename2) {
-  const ext = path7.extname(filename2).toLowerCase();
-  const tmp = path7.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
+  const ext = path6.extname(filename2).toLowerCase();
+  const tmp = path6.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
   try {
-    fs8.writeFileSync(tmp, buffer);
+    fs7.writeFileSync(tmp, buffer);
     if (ext === ".rtf") {
       return (0, import_child_process2.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
     }
@@ -1557,7 +1232,7 @@ function convertToText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs8.unlinkSync(tmp);
+      fs7.unlinkSync(tmp);
     } catch {
     }
   }
@@ -1653,7 +1328,7 @@ async function extractSpecsContent(files, client2, usage2) {
   const summaries2 = [];
   const sourceFiles = [];
   for (const file of files) {
-    const ext = path7.extname(file.filename).toLowerCase();
+    const ext = path6.extname(file.filename).toLowerCase();
     sourceFiles.push(file.filename);
     if (file.mimeType === "application/pdf" || ext === ".pdf") {
       const result = await extractPdfChunked(client2, file.buffer, file.filename, usage2);
@@ -1736,13 +1411,13 @@ function formatSpecsProfileForContext(profile) {
   }
   return lines.filter((l) => l !== void 0).join("\n");
 }
-var import_sdk2, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET, PROFILE_FILENAME, EXTRACTION_PROMPT;
+var import_sdk2, fs7, path6, os2, import_child_process2, UPLOADS_BUCKET, PROFILE_FILENAME, EXTRACTION_PROMPT;
 var init_specs_extract = __esm({
   "pipeline/lib/specs-extract.ts"() {
     "use strict";
     import_sdk2 = __toESM(require("@anthropic-ai/sdk"));
-    fs8 = __toESM(require("fs"));
-    path7 = __toESM(require("path"));
+    fs7 = __toESM(require("fs"));
+    path6 = __toESM(require("path"));
     os2 = __toESM(require("os"));
     import_child_process2 = require("child_process");
     init_supabase();
@@ -1781,10 +1456,10 @@ Return ONLY the JSON \u2014 no markdown, no explanation.`;
 
 // pipeline/lib/document-extract.ts
 function toText(buffer, filename2) {
-  const ext = path8.extname(filename2).toLowerCase();
-  const tmp = path8.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
+  const ext = path7.extname(filename2).toLowerCase();
+  const tmp = path7.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
   try {
-    fs9.writeFileSync(tmp, buffer);
+    fs8.writeFileSync(tmp, buffer);
     if ([".rtf", ".docx", ".doc"].includes(ext)) {
       try {
         return (0, import_child_process3.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
@@ -1795,13 +1470,13 @@ function toText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs9.unlinkSync(tmp);
+      fs8.unlinkSync(tmp);
     } catch {
     }
   }
 }
 function buildContentBlocks(buffer, filename2) {
-  const ext = path8.extname(filename2).toLowerCase();
+  const ext = path7.extname(filename2).toLowerCase();
   if (ext === ".pdf") {
     return [{
       type: "document",
@@ -1921,13 +1596,13 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
-var import_sdk3, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET2, EXTRACTION_PROMPT2;
+var import_sdk3, fs8, path7, os3, import_child_process3, UPLOADS_BUCKET2, EXTRACTION_PROMPT2;
 var init_document_extract = __esm({
   "pipeline/lib/document-extract.ts"() {
     "use strict";
     import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
-    fs9 = __toESM(require("fs"));
-    path8 = __toESM(require("path"));
+    fs8 = __toESM(require("fs"));
+    path7 = __toESM(require("path"));
     os3 = __toESM(require("os"));
     import_child_process3 = require("child_process");
     init_supabase();
@@ -1983,156 +1658,6 @@ Return a JSON object with this exact structure:
 }
 
 Return ONLY the JSON \u2014 no markdown fences, no explanation.`;
-  }
-});
-
-// pipeline/lib/pdf-extract.ts
-async function renderPdfToTiles(pdfBuffer, cols = 2, rows = 2, dpi = 200, tileMaxSide = 2500) {
-  const _req = eval("require");
-  const pdfjsLib = _req("pdfjs-dist/legacy/build/pdf.mjs");
-  const { createCanvas } = _req("@napi-rs/canvas");
-  const sharp = (await import("sharp")).default;
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${_req.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")}`;
-  const data = new Uint8Array(pdfBuffer);
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
-  const scale = dpi / 72;
-  const tiles = [];
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale });
-    const width = Math.round(viewport.width);
-    const height = Math.round(viewport.height);
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-    const fullPng = canvas.toBuffer("image/png");
-    const tileW = Math.ceil(width / cols);
-    const tileH = Math.ceil(height / rows);
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const left = c * tileW;
-        const top = r * tileH;
-        const tw = Math.min(tileW, width - left);
-        const th = Math.min(tileH, height - top);
-        const longest = Math.max(tw, th);
-        const resizeOpts = longest > tileMaxSide ? tw >= th ? { width: tileMaxSide } : { height: tileMaxSide } : {};
-        const jpegBuf = await sharp(fullPng).extract({ left, top, width: tw, height: th }).resize(resizeOpts).jpeg({ quality: 92 }).toBuffer();
-        const quadrant = ["top-left", "top-right", "bottom-left", "bottom-right"][r * cols + c] ?? `r${r}c${c}`;
-        tiles.push({ buffer: jpegBuf, label: `Page ${pageNum}, tile ${r * cols + c + 1}/${rows * cols} (${quadrant})` });
-      }
-    }
-  }
-  return tiles;
-}
-async function _extract(client2, pdfBuffer2, filename2, extractionPrompt, renderMode, cacheKey) {
-  const t0 = Date.now();
-  let content;
-  if (renderMode === "tiled-image") {
-    console.log(`  [pdf-extract] Rendering tiles: ${filename2}...`);
-    const tiles2 = await renderPdfToTiles(pdfBuffer2);
-    console.log(`  [pdf-extract] ${tiles2.length} tiles ready \u2014 sending to Claude`);
-    content = [
-      ...tiles2.map((tile) => ({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: "image/jpeg",
-          data: tile.buffer.toString("base64")
-        }
-      })),
-      {
-        type: "text",
-        text: `The above ${tiles2.length} images are tiles from the same drawing sheet, arranged in a 2-column \xD7 2-row grid (left-to-right, top-to-bottom). Together they form the complete sheet at higher resolution than a single image allows.
-
-` + extractionPrompt
-      }
-    ];
-  } else {
-    const pdfB64 = pdfBuffer2.toString("base64");
-    content = [
-      { type: "document", source: { type: "base64", media_type: "application/pdf", data: pdfB64 } },
-      { type: "text", text: extractionPrompt }
-    ];
-  }
-  const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8e3,
-    temperature: 0,
-    messages: [{ role: "user", content }]
-  });
-  const text = response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-  const elapsedMs = Date.now() - t0;
-  console.log(
-    `  [pdf-extract] \u2713 ${filename2} [${renderMode}] \u2014 ${(elapsedMs / 1e3).toFixed(1)}s  in:${response.usage.input_tokens.toLocaleString()} out:${response.usage.output_tokens.toLocaleString()}`
-  );
-  _cache.set(cacheKey, text);
-  return { text, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens, elapsedMs, cacheHit: false };
-}
-async function extractPdfContent(client2, pdfPath, extractionPrompt, renderMode = "document") {
-  const cacheKey = `${pdfPath}::${renderMode}::${extractionPrompt}`;
-  if (_cache.has(cacheKey)) {
-    console.log(`  [pdf-extract] Cache hit: ${path9.basename(pdfPath)}`);
-    return { text: _cache.get(cacheKey), inputTokens: 0, outputTokens: 0, elapsedMs: 0, cacheHit: true };
-  }
-  console.log(`  [pdf-extract] Extracting from ${path9.basename(pdfPath)} [${renderMode}]...`);
-  const pdfBuffer2 = fs10.readFileSync(pdfPath);
-  return _extract(client2, pdfBuffer2, path9.basename(pdfPath), extractionPrompt, renderMode, cacheKey);
-}
-async function extractPdfContentFromBuffer(client2, pdfBuffer2, filename2, extractionPrompt, renderMode = "document") {
-  const cacheKey = `buffer::${filename2}::${pdfBuffer2.length}::${renderMode}::${extractionPrompt}`;
-  if (_cache.has(cacheKey)) {
-    console.log(`  [pdf-extract] Cache hit: ${filename2}`);
-    return { text: _cache.get(cacheKey), inputTokens: 0, outputTokens: 0, elapsedMs: 0, cacheHit: true };
-  }
-  console.log(`  [pdf-extract] Extracting from ${filename2} [${renderMode}]...`);
-  return _extract(client2, pdfBuffer2, filename2, extractionPrompt, renderMode, cacheKey);
-}
-var fs10, path9, _cache, EXTRACT_PROMPTS;
-var init_pdf_extract = __esm({
-  "pipeline/lib/pdf-extract.ts"() {
-    "use strict";
-    fs10 = __toESM(require("fs"));
-    path9 = __toESM(require("path"));
-    _cache = /* @__PURE__ */ new Map();
-    EXTRACT_PROMPTS = {
-      CIVIL_DRAWING: `Extract all of the following from this civil drawing set:
-- Project name
-- Project address (full street address, city, state, zip)
-- Owner / developer name (if shown)
-- Project description / building type
-- Site area (total lot area in sq ft and/or acres)
-- Development footprint area (building footprint + impervious area if shown)
-- Site boundary description
-- Any noted land features: wetlands, floodplain notes, water bodies, detention/retention areas, easements
-- Zoning designation (if noted)
-- Any environmental or permitting notes
-- Benchmark / datum and coordinate system if shown
-- Any slope or grading notes relevant to sensitive land classification
-Output as structured plain text. Be thorough \u2014 include every data point visible.`,
-      CREDIT_REQUIREMENTS: `Extract all of the following from this LEED credit guide:
-- Credit name and number
-- Points available
-- All compliance options with their full thresholds and requirements
-- All items that must be documented or calculated
-- All items listed as required uploads or submittals
-- Items that can be retrieved from public databases (FEMA, NWI, Census, etc.)
-- Items that require owner input or site-specific data
-- All LEED Online form fields described or referenced
-- Any definitions or special terms
-Output as structured plain text. Be complete \u2014 every requirement matters.`,
-      GEOTECHNICAL_REPORT: `Extract all of the following from this geotechnical report:
-- Project name and address
-- Report date and author
-- Soil classifications (USCS or ASTM) for each boring or test pit
-- Prime farmland soil types identified (if any)
-- Groundwater depth observations
-- Any notes on wetlands, fill, or sensitive soil conditions
-- Bearing capacity values
-- Any environmental observations
-Output as structured plain text.`
-    };
   }
 });
 
@@ -2476,15 +2001,12 @@ MAP INSERTION
   \u2190 This exact element is the only map placeholder. The pipeline replaces it with the actual map image.
   Never use text descriptions or .map-placeholder div for the actual map location.
 
-POLICY SIGNAL \u2014 REQUIRED WHEN A POLICY IS NEEDED
-If a policy, plan, or commitment document is required as part of the compliance path being documented, place exactly this HTML comment at the very end of Part 2 output, immediately before the Processing Summary:
-<!-- POLICY_REQUIRED -->
+POLICY DOCUMENTS \u2014 GENERATE INLINE WHEN REQUIRED
+When a credit requires a written policy, program, or commitment document as a deliverable \u2014 such as a Green Cleaning Policy, Smoking Policy, Guaranteed Ride Home Program, Integrated Pest Management Plan, or similar written organizational document \u2014 generate the complete policy document inline as a section within Part 2 output. Use <div class="plan-section"> for policy content sections. Include all required elements specified in the credit requirements (eligibility, procedures, responsible parties, etc.).
 
-Rules for this marker:
-- Include it ONLY when a policy, plan, or written commitment is a required deliverable for the specific compliance path being documented.
-- Do NOT include it when a policy is only one option among multiple compliance paths and a different path was selected.
-- Do NOT include it when a policy is mentioned in the credit language but is not required for the chosen path.
-- The pipeline reads this marker to decide whether to generate policy drafts. If the marker is absent, no policy drafts are generated. If it is present when not needed, unnecessary documents are produced. Place it accurately.`;
+If a policy is one compliance path option and a different path was selected, do not generate the policy.
+If a policy is one compliance path option and no path was selected, generate the policy as the default safe choice.
+Do not place any marker or signal in the output. Simply write the policy content as part of the document.`;
   }
 });
 
@@ -2973,9 +2495,9 @@ function buildExpectedPdfName(program, creditCode, creditName) {
   return `WELL_HSR_${code}_${name}.pdf`;
 }
 function findCategoryFolder(programDir, category, creditCode) {
-  if (!fs11.existsSync(programDir)) return void 0;
-  const allFolders = fs11.readdirSync(programDir).filter(
-    (d) => fs11.statSync(path10.join(programDir, d)).isDirectory()
+  if (!fs9.existsSync(programDir)) return void 0;
+  const allFolders = fs9.readdirSync(programDir).filter(
+    (d) => fs9.statSync(path8.join(programDir, d)).isDirectory()
   );
   const categoryLow = category.toLowerCase();
   const exact = allFolders.find((d) => d.toLowerCase() === categoryLow);
@@ -2997,23 +2519,23 @@ function findCategoryFolder(programDir, category, creditCode) {
 function findCreditPdfBuffer(program, category, creditCode, creditName) {
   const subdir = PROGRAM_REF_SUBDIR[program];
   if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
-  const programDir = path10.join(REF_BASE, subdir);
+  const programDir = path8.join(REF_BASE, subdir);
   const categoryDir = findCategoryFolder(programDir, category, creditCode);
-  const searchedDir = categoryDir ? path10.join(programDir, categoryDir) : path10.join(programDir, category);
+  const searchedDir = categoryDir ? path8.join(programDir, categoryDir) : path8.join(programDir, category);
   if (!categoryDir) return { found: false, searchedDir, filesFound: [] };
-  const folderPath = path10.join(programDir, categoryDir);
-  const allFiles = fs11.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
+  const folderPath = path8.join(programDir, categoryDir);
+  const allFiles = fs9.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
   const expectedName = buildExpectedPdfName(program, creditCode, creditName);
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
-    const fullPath = path10.join(folderPath, exact);
-    return { buffer: fs11.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path8.join(folderPath, exact);
+    return { buffer: fs9.readFileSync(fullPath), resolvedPath: fullPath };
   }
   const nameLower = creditName.toLowerCase();
   const match = allFiles.find((f) => f.includes(creditCode)) ?? allFiles.find((f) => f.toLowerCase().includes(nameLower));
   if (match) {
-    const fullPath = path10.join(folderPath, match);
-    return { buffer: fs11.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path8.join(folderPath, match);
+    return { buffer: fs9.readFileSync(fullPath), resolvedPath: fullPath };
   }
   return { found: false, searchedDir, filesFound: allFiles };
 }
@@ -3029,8 +2551,8 @@ function scanPdfForAppendixRefs(buffer) {
   return [...nums].sort((a, b) => a - b);
 }
 function loadLeedAppendices(referencedNums) {
-  const leedDir = path10.join(REF_BASE, "leed");
-  const allFiles = fs11.existsSync(leedDir) ? fs11.readdirSync(leedDir) : [];
+  const leedDir = path8.join(REF_BASE, "leed");
+  const allFiles = fs9.existsSync(leedDir) ? fs9.readdirSync(leedDir) : [];
   const appendixFiles = allFiles.filter((f) => {
     const fl = f.toLowerCase();
     return fl.startsWith("appendix") && fl.endsWith(".pdf");
@@ -3042,7 +2564,7 @@ function loadLeedAppendices(referencedNums) {
       return fl.includes(`appendix ${num} `) || fl.includes(`appendix ${num}.`);
     });
     if (match) {
-      results.push({ num, buffer: fs11.readFileSync(path10.join(leedDir, match)), filename: match });
+      results.push({ num, buffer: fs9.readFileSync(path8.join(leedDir, match)), filename: match });
     } else {
       console.warn(`  Step 12.7: Appendix ${num} referenced but not found in pipeline/reference/leed/`);
     }
@@ -3066,9 +2588,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     "for any form field ID, calculator input label, or credit requirement.",
     ""
   ];
-  const formSchemaPath = path10.join(REF_BASE, "leed/leed_v41_form_schemas.json");
+  const formSchemaPath = path8.join(REF_BASE, "leed/leed_v41_form_schemas.json");
   try {
-    const allSchemas = JSON.parse(fs11.readFileSync(formSchemaPath, "utf-8"));
+    const allSchemas = JSON.parse(fs9.readFileSync(formSchemaPath, "utf-8"));
     const formKey = creditCodeToFormKey(creditCode);
     const creditSchema = allSchemas.credits?.[formKey] ?? Object.values(allSchemas.credits ?? {}).find(
       (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -3084,9 +2606,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     lines.push(`FORM FIELD SCHEMA: failed to load \u2014 ${err.message}`);
   }
   if (hasCalculator) {
-    const calcSchemaPath = path10.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
+    const calcSchemaPath = path8.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
     try {
-      const allCalcSchemas = JSON.parse(fs11.readFileSync(calcSchemaPath, "utf-8"));
+      const allCalcSchemas = JSON.parse(fs9.readFileSync(calcSchemaPath, "utf-8"));
       const formKey = creditCodeToFormKey(creditCode);
       const calcSchema = allCalcSchemas.calculators?.[formKey] ?? Object.values(allCalcSchemas.calculators ?? {}).find(
         (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -3168,15 +2690,31 @@ function validateAllDeliverables(params) {
   if (mapRequired && !params.mapGenerated) {
     console.warn(`  [validateAllDeliverables] Map required but not generated \u2014 flagging for QA, not blocking delivery`);
   }
-  const policyRequired = ["policy", "plan", "commitment", "statement"].some((kw) => outputsText.includes(kw));
-  if (policyRequired) {
-    checks.push({
-      item: "Policy/Plan Drafts",
-      present: params.policyDraftCount > 0,
-      reason: params.policyDraftCount > 0 ? void 0 : "No policy drafts generated"
-    });
-  }
   return { checks, cleanedHtml };
+}
+function buildPartialDeliveryNotice(missing2, priorIssues) {
+  const issueItems = priorIssues.map((iss) => `<li>${iss}</li>`).join("\n        ");
+  const missingItems = missing2.map(
+    (m) => `<li><strong>${m.item}</strong>${m.reason ? ` \u2014 ${m.reason}` : ""}</li>`
+  ).join("\n        ");
+  return `
+<div style="margin:32px 0;padding:20px 24px;background:#fff8f0;border-left:4px solid #e07000;border-radius:8px;font-family:sans-serif;">
+  <h3 style="margin:0 0 12px;font-size:16px;color:#7a3c00;">Partial Delivery \u2014 Incomplete Submission</h3>
+  <p style="margin:0 0 12px;font-size:14px;color:#555;">
+    The deliverables above represent the maximum that could be completed with the documentation provided.
+    The following items could not be generated due to the document issues identified during review:
+  </p>
+  <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#555;">
+        ${missingItems}
+  </ul>
+  <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#555;">Document issues identified during review:</p>
+  <ul style="margin:0 0 12px;padding-left:20px;font-size:13px;color:#555;">
+        ${issueItems}
+  </ul>
+  <p style="margin:0;font-size:13px;color:#888;font-style:italic;">
+    To complete the remaining deliverables, please resubmit with the documentation listed above.
+  </p>
+</div>`;
 }
 async function processOrder(orderId, runId, additionalInstructions) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -3236,6 +2774,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   );
   if (step5Err) console.error(`  Step 5 ERROR: ${step5Err.message}`);
   console.log(`  Step 5: Order \u2192 under_review`);
+  let knownReviewIssues = [];
   let reviewResult = null;
   if (uploads.length > 0) {
     console.log(`  Step 6: Running document review...`);
@@ -3269,6 +2808,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
       return { orderId, runId, status: "documents_requested", issues: issueStrings };
     }
     console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) \u2014 proceeding with best-effort run. Issues: ${issueStrings.join("; ")}`);
+    knownReviewIssues = issueStrings;
     await supabase.from("runs").update({
       review_issues: issueStrings
     }).eq("id", runId);
@@ -3341,7 +2881,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 10.5: Checking specs extraction status...`);
   let specsProfileBlock = "";
   const specFiles = uploadBuffers.filter((u) => {
-    const ext = path10.extname(u.filename).toLowerCase();
+    const ext = path8.extname(u.filename).toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc", ".txt"].includes(ext) && !u.filename.toLowerCase().includes("drawing") && !u.filename.toLowerCase().includes("annotated");
   });
   if (!project.specs_extracted && specFiles.length > 0) {
@@ -3371,7 +2911,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   let docProfilesBlock = "";
   const docProfiles = project.doc_profiles_extracted ?? {};
   const docFiles = uploadBuffers.filter((u) => {
-    const ext = path10.extname(u.filename).toLowerCase();
+    const ext = path8.extname(u.filename).toLowerCase();
     const name = u.filename.toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc"].includes(ext) && !name.includes("drawing") && !name.includes("annotated") && !name.includes("spec") && !name.includes("specification");
   });
@@ -3437,7 +2977,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     return { orderId, runId, status: "failed", issues: [errMsg] };
   }
   const reqPdfBuffer = pdfLookup.buffer;
-  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path10.sep, "")}`);
+  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path8.sep, "")}`);
   const appendixDocBlocks = [];
   if (isLeed(credit.credit_code)) {
     const appendixNums = scanPdfForAppendixRefs(reqPdfBuffer);
@@ -3686,151 +3226,13 @@ ${part1Html}` },
     console.log(`  Step 15.5: No calculator required for ${creditData.creditNumber}`);
   }
   const calcGuideViolations = validateCalculatorGuidePresent(fullHtml, creditDataBlock);
-  if (calcGuideViolations.length > 0) {
-    calcGuideViolations.forEach((v) => console.warn(`  \u26A0 ${v.description}`));
-  }
+  calcGuideViolations.forEach((v) => console.warn(`  \u26A0 QA: ${v.description}`));
   const violations = validateNoUnnecessaryCustomerRequests(fullHtml);
-  if (violations.length > 0) {
-    console.warn(`  \u26A0 FIX 1: ${violations.length} validation violation(s) detected \u2014 running correction pass`);
-    violations.forEach((v) => console.warn(`    \u2022 ${v.description}`));
-    const correctionResponse = await client2.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 64e3,
-      temperature: 0,
-      system: systemPrompt,
-      tools: [WEB_SEARCH_TOOL],
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: [
-              `The HTML document below has ${violations.length} violation(s) where the customer is asked to provide data that can be found via web search.`,
-              `Fix ONLY these violations. Use web search to retrieve the correct values and replace each request with the found data.`,
-              `Return the complete corrected HTML document.`,
-              ``,
-              `VIOLATIONS:`,
-              violations.map((v, i) => `${i + 1}. ${v.description}
-   Found: "${v.context}"`).join("\n\n"),
-              ``,
-              `HTML TO CORRECT:`,
-              fullHtml
-            ].join("\n")
-          }
-        ]
-      }]
-    });
-    const correctedRaw = correctionResponse.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-    const correctedCleaned = scrubNarration(correctedRaw).cleaned;
-    if (correctedCleaned.length >= fullHtml.length * 0.5) {
-      fullHtml = correctedCleaned;
-    } else {
-      console.warn(`    \u26A0 FIX 1 correction response too short (${correctedCleaned.length} chars vs ${fullHtml.length} original) \u2014 keeping original`);
-    }
-    const remainingViolations = validateNoUnnecessaryCustomerRequests(fullHtml);
-    if (remainingViolations.length === 0) {
-      console.log(`    \u2713 Correction successful \u2014 all violations resolved`);
-    } else {
-      console.warn(`    \u26A0 ${remainingViolations.length} violation(s) remain after correction \u2014 delivering with warnings`);
-    }
-  } else {
-    console.log(`  \u2713 FIX 1 validation passed \u2014 no unnecessary customer requests`);
-  }
+  violations.forEach((v) => console.warn(`  \u26A0 QA: unnecessary customer request \u2014 ${v.description}`));
   const missingOutputs = validateAllOutputsProduced(fullHtml, creditData.outputs);
-  if (missingOutputs.length > 0) {
-    console.warn(`  \u26A0 FIX 2: ${missingOutputs.length} Column 4 output(s) missing \u2014 running correction pass`);
-    missingOutputs.forEach((v) => console.warn(`    \u2022 ${v.description}
-      ${v.context}`));
-    const missingCorrectionResponse = await client2.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 64e3,
-      temperature: 0,
-      system: systemPrompt,
-      tools: [WEB_SEARCH_TOOL],
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: [
-              `The HTML document below is missing ${missingOutputs.length} required output(s) from Column 4 of the automation analysis.`,
-              `Add each missing output completely. Do not remove or alter any existing content.`,
-              `Return the complete corrected HTML document.`,
-              ``,
-              `MISSING OUTPUTS:`,
-              missingOutputs.map((v, i) => `${i + 1}. ${v.description}`).join("\n"),
-              ``,
-              `HTML TO CORRECT:`,
-              fullHtml
-            ].join("\n")
-          }
-        ]
-      }]
-    });
-    const missingCorrectedRaw = missingCorrectionResponse.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-    const missingCorrectedCleaned = scrubNarration(missingCorrectedRaw).cleaned;
-    if (missingCorrectedCleaned.length >= fullHtml.length * 0.5) {
-      fullHtml = missingCorrectedCleaned;
-    } else {
-      console.warn(`    \u26A0 FIX 2 correction response too short (${missingCorrectedCleaned.length} chars vs ${fullHtml.length} original) \u2014 keeping original`);
-    }
-    const remainingMissing = validateAllOutputsProduced(fullHtml, creditData.outputs);
-    if (remainingMissing.length === 0) {
-      console.log(`    \u2713 Correction successful \u2014 all Column 4 outputs now present`);
-    } else {
-      console.warn(`    \u26A0 ${remainingMissing.length} output(s) still missing after correction \u2014 delivering with warnings`);
-      remainingMissing.forEach((v) => console.warn(`      \u2022 ${v.description}`));
-    }
-  } else {
-    console.log(`  \u2713 FIX 2 validation passed \u2014 all Column 4 outputs present`);
-  }
-  const policyRequired = fullHtml.includes("<!-- POLICY_REQUIRED -->");
-  console.log(`  [policy] POLICY_REQUIRED marker: ${policyRequired ? "FOUND \u2014 generating drafts" : "absent \u2014 skipping policy generation"}`);
-  const policyTokens = { input: 0, output: 0 };
-  const uploadedPolicies = [];
-  let policyDrafts = [];
-  if (policyRequired) {
-    const POLICY_FILE_PATTERNS = /policy|plan|commitment|statement|guide|agreement|addendum|lease|protocol/i;
-    for (const u of uploadBuffers) {
-      if (u.mimeType === "application/pdf" && POLICY_FILE_PATTERNS.test(u.filename)) {
-        try {
-          const extract = await extractPdfContentFromBuffer(
-            client2,
-            u.buffer,
-            u.filename,
-            "Extract the full text content of this policy or plan document. Preserve all section headings, policy statements, procedures, and signature blocks."
-          );
-          policyTokens.input += extract.inputTokens;
-          policyTokens.output += extract.outputTokens;
-          uploadedPolicies.push({ filename: u.filename, text: extract.text });
-        } catch (err) {
-          console.warn(`    [policy] Could not extract text from ${u.filename}: ${err.message}`);
-        }
-      }
-    }
-    const reqPdfExtract = await extractPdfContentFromBuffer(
-      client2,
-      reqPdfBuffer,
-      credit.requirements_pdf_path,
-      "Extract all credit requirements, required uploads, and documentation requirements."
-    );
-    policyTokens.input += reqPdfExtract.inputTokens;
-    policyTokens.output += reqPdfExtract.outputTokens;
-    const tempOutputDir = `/tmp/liminal-policy-${orderId}`;
-    policyDrafts = await generatePolicyDrafts(client2, creditData.customerUploads.join("\n"), {
-      creditName: credit.credit_code,
-      certProgram: credit.credit_code.startsWith("W") ? "WELL v2" : "LEED v4.1",
-      projectAddress: project.address ?? "",
-      creditRequirementsText: reqPdfExtract.text,
-      creditSlug: credit.credit_code.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      outputDir: tempOutputDir,
-      uploadedDocuments: uploadedPolicies
-    }, policyTokens);
-  }
-  if (policyDrafts.length > 0) {
-    const policySection = policyChecklistHtml(policyDrafts);
-    const bodyClose = fullHtml.lastIndexOf("</body>");
-    fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + policySection + "\n</body></html>" : fullHtml + policySection;
+  missingOutputs.forEach((v) => console.warn(`  \u26A0 QA: output may be missing \u2014 ${v.description}`));
+  if (violations.length === 0 && missingOutputs.length === 0 && calcGuideViolations.length === 0) {
+    console.log(`  \u2713 QA signals clear`);
   }
   fullHtml = scrubNarration(fullHtml).cleaned;
   const { checks: deliverableChecks, cleanedHtml: gatedHtml } = validateAllDeliverables({
@@ -3841,8 +3243,7 @@ ${part1Html}` },
     htmlContent: fullHtml,
     calcGuide,
     mapGenerated: !!mapBuffer,
-    requiredMapType,
-    policyDraftCount: policyDrafts.length
+    requiredMapType
   });
   fullHtml = gatedHtml;
   const missing2 = deliverableChecks.filter((c) => !c.present);
@@ -3851,23 +3252,40 @@ ${part1Html}` },
   found.forEach((c) => console.log(`    \u2713 ${c.item}`));
   missing2.forEach((c) => console.warn(`    \u2717 MISSING: ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
   if (missing2.length > 0) {
-    console.warn(`  Step 16.5: \u26A0 ${missing2.length} missing deliverable(s) \u2014 marking order failed`);
-    await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
-    await supabase.from("runs").update({
-      status: "failed",
-      error_message: `Missing deliverables: ${missing2.map((c) => c.item).join(", ")}`,
-      completed_at: (/* @__PURE__ */ new Date()).toISOString()
-    }).eq("id", runId);
-    await logAuditEvent({
-      eventType: "deliverables_incomplete",
-      entityType: "order",
-      entityId: orderId,
-      customerId: order.customer_id,
-      metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item) }
-    });
-    return { orderId, runId, status: "failed", issues: missing2.map((c) => `${c.item}: ${c.reason}`) };
+    const htmlMissing = missing2.some((c) => c.item === "Online Submittal Form HTML");
+    const canDeliverPartial = attemptNumber >= 2 && knownReviewIssues.length > 0 && !htmlMissing;
+    if (canDeliverPartial) {
+      console.warn(`  Step 16.5: \u26A0 ${missing2.length} deliverable(s) missing \u2014 attempt ${attemptNumber}, customer-acknowledged gaps \u2014 injecting partial delivery notice`);
+      missing2.forEach((c) => console.warn(`    \u2717 ${c.item}${c.reason ? " \u2014 " + c.reason : ""}`));
+      const noticeHtml = buildPartialDeliveryNotice(missing2, knownReviewIssues);
+      const bodyClose = fullHtml.lastIndexOf("</body>");
+      fullHtml = bodyClose !== -1 ? fullHtml.slice(0, bodyClose) + noticeHtml + "\n</body></html>" : fullHtml + noticeHtml;
+      await logAuditEvent({
+        eventType: "partial_delivery",
+        entityType: "order",
+        entityId: orderId,
+        customerId: order.customer_id,
+        metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item), priorIssues: knownReviewIssues }
+      });
+    } else {
+      console.warn(`  Step 16.5: \u26A0 ${missing2.length} missing deliverable(s) \u2014 marking order failed`);
+      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+      await supabase.from("runs").update({
+        status: "failed",
+        error_message: `Missing deliverables: ${missing2.map((c) => c.item).join(", ")}`,
+        completed_at: (/* @__PURE__ */ new Date()).toISOString()
+      }).eq("id", runId);
+      await logAuditEvent({
+        eventType: "deliverables_incomplete",
+        entityType: "order",
+        entityId: orderId,
+        customerId: order.customer_id,
+        metadata: { creditCode: credit.credit_code, missing: missing2.map((c) => c.item) }
+      });
+      return { orderId, runId, status: "failed", issues: missing2.map((c) => `${c.item}: ${c.reason}`) };
+    }
   }
-  console.log(`  Step 16.5: \u2713 All deliverables confirmed \u2014 proceeding to delivery`);
+  console.log(`  Step 16.5: \u2713 Deliverables check passed \u2014 proceeding to delivery`);
   console.log(`  Step 18: Uploading outputs to Storage...`);
   const outputPaths = [];
   const standardHtml = injectTableCss(fullHtml);
@@ -3900,22 +3318,6 @@ ${part1Html}` },
     else {
       outputPaths.push(mapPath);
       console.log(`    \u2713 walking-distance-map.png`);
-    }
-  }
-  for (const draft of policyDrafts) {
-    try {
-      const draftPath = `${outputsFolder}/${draft.filename}`;
-      const { error: draftErr } = await dbCall(
-        supabase.storage.from(OUTPUTS_BUCKET).upload(draftPath, new Blob([draft.html], { type: "text/html" }), { upsert: true }),
-        `upload policy draft ${draft.filename}`
-      );
-      if (draftErr) console.warn(`    Policy draft upload failed (${draft.filename}): ${draftErr.message}`);
-      else {
-        outputPaths.push(draftPath);
-        console.log(`    \u2713 ${draft.filename}  [policy ${draft.mode}]`);
-      }
-    } catch (err) {
-      console.warn(`    Policy draft upload error (${draft.filename}): ${err.message}`);
     }
   }
   console.log(`  Step 18: Marking order complete...`);
@@ -3990,13 +3392,13 @@ ${part1Html}` },
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
-var import_sdk4, path10, fs11, envPath3, UPLOADS_BUCKET3, OUTPUTS_BUCKET, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var import_sdk4, path8, fs9, envPath3, UPLOADS_BUCKET3, OUTPUTS_BUCKET, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
 var init_process_order = __esm({
   "pipeline/process-order.ts"() {
     "use strict";
     import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
-    path10 = __toESM(require("path"));
-    fs11 = __toESM(require("fs"));
+    path8 = __toESM(require("path"));
+    fs9 = __toESM(require("fs"));
     init_supabase();
     init_extract_xlsx_row();
     init_document_review();
@@ -4005,11 +3407,9 @@ var init_process_order = __esm({
     init_supabase_ops();
     init_pdf_to_images();
     init_make_editable();
-    init_policy_generator();
     init_calculator_guide();
     init_specs_extract();
     init_document_extract();
-    init_pdf_extract();
     init_credit_submission();
     init_resend();
     init_geocode();
@@ -4017,9 +3417,9 @@ var init_process_order = __esm({
     init_validate_output();
     init_pipeline_utils();
     init_output_cleaner();
-    envPath3 = path10.resolve(__dirname, "../.env.local");
-    if (fs11.existsSync(envPath3)) {
-      for (const line of fs11.readFileSync(envPath3, "utf-8").split("\n")) {
+    envPath3 = path8.resolve(__dirname, "../.env.local");
+    if (fs9.existsSync(envPath3)) {
+      for (const line of fs9.readFileSync(envPath3, "utf-8").split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
         const eqIdx = trimmed.indexOf("=");
@@ -4029,7 +3429,7 @@ var init_process_order = __esm({
     }
     UPLOADS_BUCKET3 = "customer-uploads";
     OUTPUTS_BUCKET = "order-outputs";
-    REF_BASE = path10.join(process.cwd(), "pipeline/reference");
+    REF_BASE = path8.join(process.cwd(), "pipeline/reference");
     PROGRAM_REF_SUBDIR = {
       leed_bdc_v41: "leed",
       well_v2: "well-v2",
@@ -4047,13 +3447,13 @@ var init_process_order = __esm({
 });
 
 // pipeline/worker.ts
-var path11 = __toESM(require("path"));
-var fs12 = __toESM(require("fs"));
+var path9 = __toESM(require("path"));
+var fs10 = __toESM(require("fs"));
 console.log("[worker] starting up...");
 try {
-  const envPath4 = path11.resolve(__dirname, "../.env.local");
-  if (fs12.existsSync(envPath4)) {
-    for (const line of fs12.readFileSync(envPath4, "utf-8").split("\n")) {
+  const envPath4 = path9.resolve(__dirname, "../.env.local");
+  if (fs10.existsSync(envPath4)) {
+    for (const line of fs10.readFileSync(envPath4, "utf-8").split("\n")) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");
