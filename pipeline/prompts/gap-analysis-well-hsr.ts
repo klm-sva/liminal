@@ -134,6 +134,27 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature service as a checklist-item, prioritized by impact (highest gap → highest priority).
 
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "well_hsr",
+  "overall_score": <integer — estimated current points out of 35>,
+  "target_score": 25,
+  "max_possible": 35,
+  "concepts": [
+    { "name": "Cleaning & Sanitization (SC)", "score": <int>, "max": 7, "recommended": ["<code>", ...] },
+    { "name": "Emergency Preparedness (SE)",  "score": <int>, "max": 7, "recommended": [] },
+    { "name": "Health Services (SH)",         "score": <int>, "max": 6, "recommended": [] },
+    { "name": "Air Quality (SA)",             "score": <int>, "max": 7, "recommended": [] },
+    { "name": "Water Quality (SS)",           "score": <int>, "max": 4, "recommended": [] },
+    { "name": "Stakeholder Engagement (SI)",  "score": <int>, "max": 7, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
 - Do NOT say "contact us" or mention support

@@ -15,7 +15,7 @@ export async function GET(
 
   const { data: order, error } = await supabase
     .from("orders")
-    .select("status, qa_status")
+    .select("status, qa_status, gap_analysis_program")
     .eq("id", orderId)
     .eq("customer_id", user.id)
     .single();
@@ -24,5 +24,9 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ status: order.status, qa_status: order.qa_status });
+  return NextResponse.json({
+    status:               order.status,
+    qa_status:            order.qa_status,
+    gap_analysis_program: order.gap_analysis_program ?? null,
+  });
 }

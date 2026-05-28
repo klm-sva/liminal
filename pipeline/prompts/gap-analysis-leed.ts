@@ -128,6 +128,29 @@ REPORT STRUCTURE — produce all sections in this order:
    </div>
    Then list each recommended credit as a checklist-item with the credit name and a one-line reason.
 
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "leed_bd_c",
+  "overall_score": <integer — estimated current points>,
+  "target_score": <integer — points needed for target level>,
+  "certification_level": "<Certified|Silver|Gold|Platinum>",
+  "categories": [
+    { "name": "Location & Transportation", "score": <int>, "max": 26, "recommended": ["<credit code>", ...] },
+    { "name": "Sustainable Sites", "score": <int>, "max": 10, "recommended": [] },
+    { "name": "Water Efficiency", "score": <int>, "max": 11, "recommended": [] },
+    { "name": "Energy & Atmosphere", "score": <int>, "max": 33, "recommended": [] },
+    { "name": "Materials & Resources", "score": <int>, "max": 13, "recommended": [] },
+    { "name": "Indoor Env. Quality", "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Innovation", "score": <int>, "max": 6, "recommended": [] },
+    { "name": "Regional Priority", "score": <int>, "max": 4, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending (e.g. "EAc2", "LTc5"). Use short credit codes, not full names.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support
 - Do NOT give step-by-step compliance instructions or thresholds

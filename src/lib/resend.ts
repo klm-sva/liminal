@@ -329,6 +329,40 @@ export async function sendAddressInvalidEmail({
   });
 }
 
+// ─── 10. Gap analysis delivery ───────────────────────────────────────────────
+
+export async function sendGapAnalysisDeliveryEmail({
+  to,
+  name,
+  programLabel,
+  orderId,
+  htmlUrl,
+}: {
+  to: string;
+  name: string;
+  programLabel: string;
+  orderId: string;
+  htmlUrl: string;
+}) {
+  return getResend().emails.send({
+    from:    FROM(),
+    to,
+    subject: `Your ${programLabel} Gap Analysis is ready`,
+    html: `
+      <h1>Your Gap Analysis Report is ready</h1>
+      <p>Hi ${name},</p>
+      <p>Your <strong>${programLabel} Gap Analysis</strong> has been completed. The report identifies your strongest credit opportunities and recommends a pursuit strategy tailored to your project.</p>
+      <p>
+        <a href="${APP()}/orders/${orderId}/gap-analysis-output" style="display:inline-block;padding:12px 24px;background:#327cb9;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
+          View Report →
+        </a>
+      </p>
+      ${htmlUrl ? `<p style="font-size:13px;color:#666;">You can also <a href="${htmlUrl}">download the full HTML report</a> directly.</p>` : ""}
+      <p style="font-size:12px;color:#888;">Use the recommended credits in your report as a guide for your next steps. Order individual credit services from your project dashboard to get started.</p>
+    `,
+  });
+}
+
 // ─── Legacy emails (kept for compatibility) ───────────────────────────────────
 
 export async function sendProjectInviteEmail({

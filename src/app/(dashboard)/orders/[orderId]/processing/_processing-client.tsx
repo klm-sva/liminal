@@ -18,7 +18,7 @@ export default function ProcessingClient({ orderId }: { orderId: string }) {
       try {
         const res  = await fetch(`/api/orders/${orderId}/status`);
         if (!res.ok) return;
-        const data = await res.json() as { status: string };
+        const data = await res.json() as { status: string; gap_analysis_program?: string | null };
 
         if (cancelled) return;
 
@@ -30,7 +30,11 @@ export default function ProcessingClient({ orderId }: { orderId: string }) {
 
         if (data.status === "complete") {
           clearInterval(timerRef.current!);
-          router.push(`/orders/${orderId}/delivery`);
+          if (data.gap_analysis_program) {
+            router.push(`/orders/${orderId}/gap-analysis-output`);
+          } else {
+            router.push(`/orders/${orderId}/delivery`);
+          }
           return;
         }
 

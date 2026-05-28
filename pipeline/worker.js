@@ -471,6 +471,29 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
    </div>
    Then list each recommended credit as a checklist-item with the credit name and a one-line reason.
 
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "leed_bd_c",
+  "overall_score": <integer \u2014 estimated current points>,
+  "target_score": <integer \u2014 points needed for target level>,
+  "certification_level": "<Certified|Silver|Gold|Platinum>",
+  "categories": [
+    { "name": "Location & Transportation", "score": <int>, "max": 26, "recommended": ["<credit code>", ...] },
+    { "name": "Sustainable Sites", "score": <int>, "max": 10, "recommended": [] },
+    { "name": "Water Efficiency", "score": <int>, "max": 11, "recommended": [] },
+    { "name": "Energy & Atmosphere", "score": <int>, "max": 33, "recommended": [] },
+    { "name": "Materials & Resources", "score": <int>, "max": 13, "recommended": [] },
+    { "name": "Indoor Env. Quality", "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Innovation", "score": <int>, "max": 6, "recommended": [] },
+    { "name": "Regional Priority", "score": <int>, "max": 4, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending (e.g. "EAc2", "LTc5"). Use short credit codes, not full names.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support
 - Do NOT give step-by-step compliance instructions or thresholds
@@ -632,6 +655,32 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature as a checklist-item.
 
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "well_v2",
+  "overall_score": <integer \u2014 estimated current points>,
+  "target_score": <integer \u2014 points needed for target level>,
+  "certification_level": "<Silver|Gold|Platinum>",
+  "max_possible": 110,
+  "concepts": [
+    { "name": "Air",             "score": <int>, "max": 29, "recommended": ["<feature code>", ...] },
+    { "name": "Water",           "score": <int>, "max": 14, "recommended": [] },
+    { "name": "Nourishment",     "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Light",           "score": <int>, "max": 20, "recommended": [] },
+    { "name": "Movement",        "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Thermal Comfort", "score": <int>, "max": 13, "recommended": [] },
+    { "name": "Sound",           "score": <int>, "max": 9,  "recommended": [] },
+    { "name": "Materials",       "score": <int>, "max": 14, "recommended": [] },
+    { "name": "Mind",            "score": <int>, "max": 24, "recommended": [] },
+    { "name": "Community",       "score": <int>, "max": 26, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
 - Do NOT say "contact us" or mention support
@@ -780,6 +829,27 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature service as a checklist-item, prioritized by impact (highest gap \u2192 highest priority).
 
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "well_hsr",
+  "overall_score": <integer \u2014 estimated current points out of 35>,
+  "target_score": 25,
+  "max_possible": 35,
+  "concepts": [
+    { "name": "Cleaning & Sanitization (SC)", "score": <int>, "max": 7, "recommended": ["<code>", ...] },
+    { "name": "Emergency Preparedness (SE)",  "score": <int>, "max": 7, "recommended": [] },
+    { "name": "Health Services (SH)",         "score": <int>, "max": 6, "recommended": [] },
+    { "name": "Air Quality (SA)",             "score": <int>, "max": 7, "recommended": [] },
+    { "name": "Water Quality (SS)",           "score": <int>, "max": 4, "recommended": [] },
+    { "name": "Stakeholder Engagement (SI)",  "score": <int>, "max": 7, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
 - Do NOT say "contact us" or mention support
@@ -791,6 +861,146 @@ IMPORTANT CONSTRAINTS:
 var init_gap_analysis_well_hsr = __esm({
   "pipeline/prompts/gap-analysis-well-hsr.ts"() {
     "use strict";
+  }
+});
+
+// src/lib/resend.ts
+function getResend() {
+  if (!_resend) {
+    _resend = new import_resend.Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
+function FROM() {
+  return process.env.RESEND_FROM_EMAIL ?? "noreply@liminalsva.com";
+}
+function APP() {
+  return process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
+}
+async function sendQAReviewEmail({
+  customerName,
+  customerEmail,
+  creditName,
+  projectName,
+  orderId,
+  generatedAt,
+  deliveryScheduledAt,
+  standardHtmlUrl,
+  editableHtmlUrl,
+  approveUrl,
+  requestChangesUrl,
+  isRegeneration = false,
+  changeInstructions
+}) {
+  const delivery = new Date(deliveryScheduledAt);
+  const now = new Date(generatedAt);
+  const msLeft = delivery.getTime() - now.getTime();
+  const hLeft = Math.floor(msLeft / 36e5);
+  const mLeft = Math.floor(msLeft % 36e5 / 6e4);
+  const shortId = orderId.slice(0, 8).toUpperCase();
+  const regenerationNote = isRegeneration ? `<div style="background:#fff8e1;border-left:3px solid #f5a623;padding:12px 16px;margin-bottom:16px;font-size:14px;">
+        <strong>REGENERATED OUTPUT</strong> \u2014 Changes were requested and the pipeline has re-run.
+        ${changeInstructions ? `<br><br><strong>Instructions applied:</strong><br><pre style="margin:8px 0 0;white-space:pre-wrap;font-size:13px;">${changeInstructions}</pre>` : ""}
+       </div>` : "";
+  return getResend().emails.send({
+    from: FROM(),
+    to: "reviews@liminalsva.com",
+    subject: `QA Review Required \u2014 ${creditName} \u2014 ${projectName} \u2014 Order #${shortId}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
+        <h2 style="margin-bottom:4px;">QA Review Required</h2>
+        <p style="color:#666;margin-top:0;">${isRegeneration ? "Regenerated output ready for re-review." : "New output ready for review."}</p>
+
+        ${regenerationNote}
+
+        <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:24px;">
+          <tr><td style="padding:6px 12px 6px 0;color:#888;width:140px;">Customer</td><td style="padding:6px 0;">${customerName} &lt;${customerEmail}&gt;</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Credit</td><td style="padding:6px 0;">${creditName}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Project</td><td style="padding:6px 0;">${projectName}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Order ID</td><td style="padding:6px 0;font-family:monospace;">${orderId}</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Generated</td><td style="padding:6px 0;">${new Date(generatedAt).toLocaleString("en-US", { timeZone: "America/New_York" })} ET</td></tr>
+          <tr><td style="padding:6px 12px 6px 0;color:#888;">Auto-delivers</td><td style="padding:6px 0;">${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET <span style="color:#c0392b;font-weight:600;">(${hLeft}h ${mLeft}m remaining)</span></td></tr>
+        </table>
+
+        <h3 style="margin-bottom:8px;">Output Files</h3>
+        <ul style="padding-left:20px;font-size:14px;line-height:2;">
+          <li><a href="${standardHtmlUrl}" style="color:#388fa6;">Standard HTML Output</a> \u2014 submission.html</li>
+          <li><a href="${editableHtmlUrl}" style="color:#388fa6;">Editable HTML Output</a> \u2014 submission-editable.html</li>
+        </ul>
+
+        <h3 style="margin-top:24px;margin-bottom:12px;">Actions</h3>
+        <table style="border-collapse:collapse;">
+          <tr>
+            <td style="padding-right:12px;">
+              <a href="${approveUrl}" style="display:inline-block;padding:12px 24px;background:#27ae60;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">APPROVE</a>
+            </td>
+            <td>
+              <a href="${requestChangesUrl}" style="display:inline-block;padding:12px 24px;background:#e67e22;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">REQUEST CHANGES</a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="font-size:12px;color:#aaa;margin-top:32px;">
+          If no action is taken, output delivers automatically at ${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET.
+          If changes were requested and not approved before that time, the customer receives a delay notice.
+        </p>
+      </div>
+    `
+  });
+}
+async function sendAddressInvalidEmail({
+  to,
+  name,
+  creditName,
+  projectId,
+  reason
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Action required \u2014 project address needs correction`,
+    html: `
+      <h1>Your project address could not be verified</h1>
+      <p>Hi ${name},</p>
+      <p>We were unable to process your <strong>${creditName}</strong> submission because the project address could not be verified:</p>
+      <p style="background:#fff8e1;border-left:3px solid #f59e0b;padding:12px 16px;font-size:14px;">${reason}</p>
+      <p>Please update your project address and resubmit. No additional charge will apply for this resubmission.</p>
+      <p><a href="${APP()}/projects/${projectId}/edit">Update Project Address \u2192</a></p>
+      <p style="font-size:12px;color:#888;">If you believe your address is correct, please reply to this email and we will investigate.</p>
+    `
+  });
+}
+async function sendGapAnalysisDeliveryEmail({
+  to,
+  name,
+  programLabel,
+  orderId,
+  htmlUrl
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Your ${programLabel} Gap Analysis is ready`,
+    html: `
+      <h1>Your Gap Analysis Report is ready</h1>
+      <p>Hi ${name},</p>
+      <p>Your <strong>${programLabel} Gap Analysis</strong> has been completed. The report identifies your strongest credit opportunities and recommends a pursuit strategy tailored to your project.</p>
+      <p>
+        <a href="${APP()}/orders/${orderId}/gap-analysis-output" style="display:inline-block;padding:12px 24px;background:#327cb9;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;">
+          View Report \u2192
+        </a>
+      </p>
+      ${htmlUrl ? `<p style="font-size:13px;color:#666;">You can also <a href="${htmlUrl}">download the full HTML report</a> directly.</p>` : ""}
+      <p style="font-size:12px;color:#888;">Use the recommended credits in your report as a guide for your next steps. Order individual credit services from your project dashboard to get started.</p>
+    `
+  });
+}
+var import_resend, _resend;
+var init_resend = __esm({
+  "src/lib/resend.ts"() {
+    "use strict";
+    import_resend = require("resend");
+    _resend = null;
   }
 });
 
@@ -878,11 +1088,24 @@ ${result.text.slice(0, 8e3)}
       }
     ]
   });
-  const rawHtml = message.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-  console.log(`  Step 7: Claude returned ${rawHtml.length} chars`);
-  if (rawHtml.length < 200) {
-    throw new Error(`Gap analysis output too short (${rawHtml.length} chars) \u2014 likely a prompt failure`);
+  const fullOutput = message.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  console.log(`  Step 7: Claude returned ${fullOutput.length} chars`);
+  if (fullOutput.length < 200) {
+    throw new Error(`Gap analysis output too short (${fullOutput.length} chars) \u2014 likely a prompt failure`);
   }
+  let gapAnalysisResults = null;
+  const dataMatch = fullOutput.match(/<gap-analysis-data>([\s\S]*?)<\/gap-analysis-data>/);
+  if (dataMatch?.[1]) {
+    try {
+      gapAnalysisResults = JSON.parse(dataMatch[1].trim());
+      console.log(`  Step 7b: Parsed gap analysis data \u2014 program=${gapAnalysisResults?.program}`);
+    } catch (e) {
+      console.warn(`  Step 7b: Failed to parse gap analysis data: ${e.message}`);
+    }
+  } else {
+    console.warn(`  Step 7b: No <gap-analysis-data> block found in response`);
+  }
+  const rawHtml = fullOutput.replace(/<gap-analysis-data>[\s\S]*?<\/gap-analysis-data>/g, "").trim();
   const programLabel = PROGRAM_LABELS[program] ?? program;
   const fullHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -926,12 +1149,30 @@ ${rawHtml}
     output_html_path: htmlPath
   }).eq("id", runId);
   await supabase.from("orders").update({
-    status: "delivered",
-    delivered_at: (/* @__PURE__ */ new Date()).toISOString()
+    status: "complete",
+    delivered_at: (/* @__PURE__ */ new Date()).toISOString(),
+    gap_analysis_results: gapAnalysisResults ?? void 0
   }).eq("id", orderId);
-  console.log(`  Step 12: Order \u2192 delivered`);
+  console.log(`  Step 12: Order \u2192 complete`);
+  try {
+    const programLabels = {
+      leed_bd_c: "LEED BD+C v4.1",
+      well_v2: "WELL v2",
+      well_hsr: "WELL Health-Safety Rating"
+    };
+    await sendGapAnalysisDeliveryEmail({
+      to: customer.email,
+      name: customer.name ?? customer.email,
+      programLabel: programLabels[program] ?? program,
+      orderId,
+      htmlUrl: signedStd.data?.signedUrl ?? ""
+    });
+    console.log(`  Step 13: Completion email sent to ${customer.email}`);
+  } catch (emailErr) {
+    console.warn(`  Step 13: Email send failed: ${emailErr.message}`);
+  }
   console.log(`[gap-analysis] \u2713 Complete`);
-  return { status: "delivered" };
+  return { status: "complete" };
 }
 var import_sdk, UPLOADS_BUCKET, OUTPUTS_BUCKET, PROGRAM_LABELS;
 var init_process_gap_analysis = __esm({
@@ -944,6 +1185,7 @@ var init_process_gap_analysis = __esm({
     init_gap_analysis_leed();
     init_gap_analysis_well_v2();
     init_gap_analysis_well_hsr();
+    init_resend();
     UPLOADS_BUCKET = "customer-uploads";
     OUTPUTS_BUCKET = "order-outputs";
     PROGRAM_LABELS = {
@@ -2769,121 +3011,6 @@ When a credit requires a written policy, program, or commitment document as a de
 If a policy is one compliance path option and a different path was selected, do not generate the policy.
 If a policy is one compliance path option and no path was selected, generate the policy as the default safe choice.
 Do not place any marker or signal in the output. Simply write the policy content as part of the document.`;
-  }
-});
-
-// src/lib/resend.ts
-function getResend() {
-  if (!_resend) {
-    _resend = new import_resend.Resend(process.env.RESEND_API_KEY);
-  }
-  return _resend;
-}
-function FROM() {
-  return process.env.RESEND_FROM_EMAIL ?? "noreply@liminalsva.com";
-}
-function APP() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
-}
-async function sendQAReviewEmail({
-  customerName,
-  customerEmail,
-  creditName,
-  projectName,
-  orderId,
-  generatedAt,
-  deliveryScheduledAt,
-  standardHtmlUrl,
-  editableHtmlUrl,
-  approveUrl,
-  requestChangesUrl,
-  isRegeneration = false,
-  changeInstructions
-}) {
-  const delivery = new Date(deliveryScheduledAt);
-  const now = new Date(generatedAt);
-  const msLeft = delivery.getTime() - now.getTime();
-  const hLeft = Math.floor(msLeft / 36e5);
-  const mLeft = Math.floor(msLeft % 36e5 / 6e4);
-  const shortId = orderId.slice(0, 8).toUpperCase();
-  const regenerationNote = isRegeneration ? `<div style="background:#fff8e1;border-left:3px solid #f5a623;padding:12px 16px;margin-bottom:16px;font-size:14px;">
-        <strong>REGENERATED OUTPUT</strong> \u2014 Changes were requested and the pipeline has re-run.
-        ${changeInstructions ? `<br><br><strong>Instructions applied:</strong><br><pre style="margin:8px 0 0;white-space:pre-wrap;font-size:13px;">${changeInstructions}</pre>` : ""}
-       </div>` : "";
-  return getResend().emails.send({
-    from: FROM(),
-    to: "reviews@liminalsva.com",
-    subject: `QA Review Required \u2014 ${creditName} \u2014 ${projectName} \u2014 Order #${shortId}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;">
-        <h2 style="margin-bottom:4px;">QA Review Required</h2>
-        <p style="color:#666;margin-top:0;">${isRegeneration ? "Regenerated output ready for re-review." : "New output ready for review."}</p>
-
-        ${regenerationNote}
-
-        <table style="border-collapse:collapse;width:100%;font-size:14px;margin-bottom:24px;">
-          <tr><td style="padding:6px 12px 6px 0;color:#888;width:140px;">Customer</td><td style="padding:6px 0;">${customerName} &lt;${customerEmail}&gt;</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;color:#888;">Credit</td><td style="padding:6px 0;">${creditName}</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;color:#888;">Project</td><td style="padding:6px 0;">${projectName}</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;color:#888;">Order ID</td><td style="padding:6px 0;font-family:monospace;">${orderId}</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;color:#888;">Generated</td><td style="padding:6px 0;">${new Date(generatedAt).toLocaleString("en-US", { timeZone: "America/New_York" })} ET</td></tr>
-          <tr><td style="padding:6px 12px 6px 0;color:#888;">Auto-delivers</td><td style="padding:6px 0;">${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET <span style="color:#c0392b;font-weight:600;">(${hLeft}h ${mLeft}m remaining)</span></td></tr>
-        </table>
-
-        <h3 style="margin-bottom:8px;">Output Files</h3>
-        <ul style="padding-left:20px;font-size:14px;line-height:2;">
-          <li><a href="${standardHtmlUrl}" style="color:#388fa6;">Standard HTML Output</a> \u2014 submission.html</li>
-          <li><a href="${editableHtmlUrl}" style="color:#388fa6;">Editable HTML Output</a> \u2014 submission-editable.html</li>
-        </ul>
-
-        <h3 style="margin-top:24px;margin-bottom:12px;">Actions</h3>
-        <table style="border-collapse:collapse;">
-          <tr>
-            <td style="padding-right:12px;">
-              <a href="${approveUrl}" style="display:inline-block;padding:12px 24px;background:#27ae60;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">APPROVE</a>
-            </td>
-            <td>
-              <a href="${requestChangesUrl}" style="display:inline-block;padding:12px 24px;background:#e67e22;color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;">REQUEST CHANGES</a>
-            </td>
-          </tr>
-        </table>
-
-        <p style="font-size:12px;color:#aaa;margin-top:32px;">
-          If no action is taken, output delivers automatically at ${delivery.toLocaleString("en-US", { timeZone: "America/New_York" })} ET.
-          If changes were requested and not approved before that time, the customer receives a delay notice.
-        </p>
-      </div>
-    `
-  });
-}
-async function sendAddressInvalidEmail({
-  to,
-  name,
-  creditName,
-  projectId,
-  reason
-}) {
-  return getResend().emails.send({
-    from: FROM(),
-    to,
-    subject: `Action required \u2014 project address needs correction`,
-    html: `
-      <h1>Your project address could not be verified</h1>
-      <p>Hi ${name},</p>
-      <p>We were unable to process your <strong>${creditName}</strong> submission because the project address could not be verified:</p>
-      <p style="background:#fff8e1;border-left:3px solid #f59e0b;padding:12px 16px;font-size:14px;">${reason}</p>
-      <p>Please update your project address and resubmit. No additional charge will apply for this resubmission.</p>
-      <p><a href="${APP()}/projects/${projectId}/edit">Update Project Address \u2192</a></p>
-      <p style="font-size:12px;color:#888;">If you believe your address is correct, please reply to this email and we will investigate.</p>
-    `
-  });
-}
-var import_resend, _resend;
-var init_resend = __esm({
-  "src/lib/resend.ts"() {
-    "use strict";
-    import_resend = require("resend");
-    _resend = null;
   }
 });
 

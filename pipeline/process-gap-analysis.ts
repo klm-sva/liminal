@@ -5,6 +5,7 @@ import { extractPdfContentFromBuffer }  from "./lib/pdf-extract";
 import { buildLeedGapAnalysisPrompt }   from "./prompts/gap-analysis-leed";
 import { buildWellV2GapAnalysisPrompt } from "./prompts/gap-analysis-well-v2";
 import { buildWellHsrGapAnalysisPrompt } from "./prompts/gap-analysis-well-hsr";
+import { sendGapAnalysisDeliveryEmail } from "../src/lib/resend";
 
 const UPLOADS_BUCKET = "customer-uploads";
 const OUTPUTS_BUCKET = "order-outputs";
@@ -146,16 +147,33 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
     ],
   });
 
-  const rawHtml = message.content
+  const fullOutput = message.content
     .filter((b) => b.type === "text")
     .map((b) => (b as { type: "text"; text: string }).text)
     .join("");
 
-  console.log(`  Step 7: Claude returned ${rawHtml.length} chars`);
+  console.log(`  Step 7: Claude returned ${fullOutput.length} chars`);
 
-  if (rawHtml.length < 200) {
-    throw new Error(`Gap analysis output too short (${rawHtml.length} chars) — likely a prompt failure`);
+  if (fullOutput.length < 200) {
+    throw new Error(`Gap analysis output too short (${fullOutput.length} chars) — likely a prompt failure`);
   }
+
+  // ── Step 7b: Extract structured JSON data block ───────────────────────────
+  let gapAnalysisResults: Record<string, unknown> | null = null;
+  const dataMatch = fullOutput.match(/<gap-analysis-data>([\s\S]*?)<\/gap-analysis-data>/);
+  if (dataMatch?.[1]) {
+    try {
+      gapAnalysisResults = JSON.parse(dataMatch[1].trim());
+      console.log(`  Step 7b: Parsed gap analysis data — program=${gapAnalysisResults?.program}`);
+    } catch (e) {
+      console.warn(`  Step 7b: Failed to parse gap analysis data: ${(e as Error).message}`);
+    }
+  } else {
+    console.warn(`  Step 7b: No <gap-analysis-data> block found in response`);
+  }
+
+  // Strip the data block from HTML output
+  const rawHtml = fullOutput.replace(/<gap-analysis-data>[\s\S]*?<\/gap-analysis-data>/g, "").trim();
 
   // ── Step 8: Wrap HTML with full page structure and CSS ────────────────────
   const programLabel = PROGRAM_LABELS[program] ?? program;
@@ -211,14 +229,35 @@ ${rawHtml}
     output_html_path: htmlPath,
   }).eq("id", runId);
 
-  // ── Step 12: Update order → delivered ─────────────────────────────────────
+  // ── Step 12: Update order → complete with results ─────────────────────────
   await supabase.from("orders").update({
-    status:       "delivered",
-    delivered_at: new Date().toISOString(),
+    status:                "complete",
+    delivered_at:          new Date().toISOString(),
+    gap_analysis_results:  gapAnalysisResults as import("../src/types/database").Json ?? undefined,
   }).eq("id", orderId);
 
-  console.log(`  Step 12: Order → delivered`);
+  console.log(`  Step 12: Order → complete`);
+
+  // ── Step 13: Send completion email ────────────────────────────────────────
+  try {
+    const programLabels: Record<string, string> = {
+      leed_bd_c: "LEED BD+C v4.1",
+      well_v2:   "WELL v2",
+      well_hsr:  "WELL Health-Safety Rating",
+    };
+    await sendGapAnalysisDeliveryEmail({
+      to:           customer.email,
+      name:         customer.name ?? customer.email,
+      programLabel: programLabels[program] ?? program,
+      orderId,
+      htmlUrl:      signedStd.data?.signedUrl ?? "",
+    });
+    console.log(`  Step 13: Completion email sent to ${customer.email}`);
+  } catch (emailErr) {
+    console.warn(`  Step 13: Email send failed: ${(emailErr as Error).message}`);
+  }
+
   console.log(`[gap-analysis] ✓ Complete`);
 
-  return { status: "delivered" };
+  return { status: "complete" };
 }

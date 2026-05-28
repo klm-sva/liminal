@@ -147,6 +147,32 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature as a checklist-item.
 
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+
+<gap-analysis-data>
+{
+  "program": "well_v2",
+  "overall_score": <integer — estimated current points>,
+  "target_score": <integer — points needed for target level>,
+  "certification_level": "<Silver|Gold|Platinum>",
+  "max_possible": 110,
+  "concepts": [
+    { "name": "Air",             "score": <int>, "max": 29, "recommended": ["<feature code>", ...] },
+    { "name": "Water",           "score": <int>, "max": 14, "recommended": [] },
+    { "name": "Nourishment",     "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Light",           "score": <int>, "max": 20, "recommended": [] },
+    { "name": "Movement",        "score": <int>, "max": 16, "recommended": [] },
+    { "name": "Thermal Comfort", "score": <int>, "max": 13, "recommended": [] },
+    { "name": "Sound",           "score": <int>, "max": 9,  "recommended": [] },
+    { "name": "Materials",       "score": <int>, "max": 14, "recommended": [] },
+    { "name": "Mind",            "score": <int>, "max": 24, "recommended": [] },
+    { "name": "Community",       "score": <int>, "max": 26, "recommended": [] }
+  ]
+}
+</gap-analysis-data>
+
+Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
 - Do NOT say "contact us" or mention support
