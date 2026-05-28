@@ -792,7 +792,7 @@ var init_make_editable = __esm({
   /* Form fields */
   .field-row { display: flex; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
   .field-label { font-weight: bold; color: #327cb9; min-width: 220px; font-size: 12px; }
-  .field-id { font-family: monospace; font-size: 10px; color: #888; background: #f0f4f8; border-radius: 3px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; }
+  .field-id { display: none; }
   .field-value { color: #515062; flex: 1; }
   .field-value.filled { background: #e8f0f7; border-left: 3px solid #327cb9; padding: 5px 10px; border-radius: 0 3px 3px 0; }
   .field-value.upload { background: #fff3cd; border-left: 3px solid #ffc107; padding: 5px 10px; border-radius: 0 3px 3px 0; color: #856404; }
@@ -1758,8 +1758,8 @@ Never write any of the following anywhere in the output:
 
 This rule applies to the entire document \u2014 opening, closing, section introductions, and transitions. The output is a customer-facing certification document. There is no audience for process narration. Violation of this rule produces unusable output that must be regenerated.
 
-FIELD IDs ARE NEVER VISIBLE IN OUTPUT.
-The form schema contains internal identifiers like "fieldId: splCircumstances". These are for your reference only when identifying which field to populate. Never output a fieldId value as visible text \u2014 not next to a label, not as a caption, not anywhere. If you include a LEED Online field identifier in the document, it must be wrapped in <span class="field-id">...</span>. Raw camelCase field ID strings appearing as plain text in the output are a hard error.
+FIELD IDs ARE NEVER VISIBLE IN OUTPUT \u2014 HARD RULE, NO EXCEPTIONS.
+The form schema contains internal identifiers like "fieldId: splCircumstances" or "unitTypeSelected". These are for your reference only when identifying which field to populate. They must never appear anywhere in the output \u2014 not next to a label, not as a caption, not as a value, not anywhere. Do not output camelCase field ID strings as visible text under any circumstances. If you must reference a field ID in the document, wrap it in <span class="field-id">...</span> \u2014 the stylesheet hides this class entirely. A raw camelCase field ID string appearing as plain visible text is a critical output error.
 
 NEVER USE THE NAME "CERTIFYAI".
 The platform is called Liminal. Do not use "CertifyAI" anywhere in any output \u2014 not in section headers, not in checklist labels, not in any text. If you need to indicate that an item was produced or retrieved by the platform, say "Provided" or attribute to "Liminal." The word "CertifyAI" must never appear in customer-facing output.

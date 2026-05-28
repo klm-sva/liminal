@@ -39,7 +39,7 @@ const LIMINAL_CSS = `
   /* Form fields */
   .field-row { display: flex; align-items: flex-start; margin-bottom: 12px; gap: 12px; }
   .field-label { font-weight: bold; color: #327cb9; min-width: 220px; font-size: 12px; }
-  .field-id { font-family: monospace; font-size: 10px; color: #888; background: #f0f4f8; border-radius: 3px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; }
+  .field-id { display: none; }
   .field-value { color: #515062; flex: 1; }
   .field-value.filled { background: #e8f0f7; border-left: 3px solid #327cb9; padding: 5px 10px; border-radius: 0 3px 3px 0; }
   .field-value.upload { background: #fff3cd; border-left: 3px solid #ffc107; padding: 5px 10px; border-radius: 0 3px 3px 0; color: #856404; }
