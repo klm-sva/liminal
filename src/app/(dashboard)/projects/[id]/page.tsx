@@ -78,7 +78,7 @@ export default async function ProjectPage({
     const { data: gapOrders } = await supabase
       .from("orders")
       .select("id, gap_analysis_program, gap_analysis_results")
-      .eq("customer_id", project.customer_id)
+      .eq("project_id", id)
       .eq("status", "complete")
       .not("gap_analysis_program", "is", null)
       .not("gap_analysis_results", "is", null)

@@ -134,9 +134,9 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature service as a checklist-item, prioritized by impact (highest gap → highest priority).
 
-7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "well_hsr",
   "overall_score": <integer — estimated current points out of 35>,
@@ -151,7 +151,7 @@ REPORT STRUCTURE:
     { "name": "Stakeholder Engagement (SI)",  "score": <int>, "max": 7, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 

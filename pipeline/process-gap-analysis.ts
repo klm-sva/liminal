@@ -160,7 +160,7 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
 
   // ── Step 7b: Extract structured JSON data block ───────────────────────────
   let gapAnalysisResults: Record<string, unknown> | null = null;
-  const dataMatch = fullOutput.match(/<gap-analysis-data>([\s\S]*?)<\/gap-analysis-data>/);
+  const dataMatch = fullOutput.match(/===GAP_ANALYSIS_DATA_START===([\s\S]*?)===GAP_ANALYSIS_DATA_END===/);
   if (dataMatch?.[1]) {
     try {
       gapAnalysisResults = JSON.parse(dataMatch[1].trim());
@@ -169,11 +169,11 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
       console.warn(`  Step 7b: Failed to parse gap analysis data: ${(e as Error).message}`);
     }
   } else {
-    console.warn(`  Step 7b: No <gap-analysis-data> block found in response`);
+    console.warn(`  Step 7b: No GAP_ANALYSIS_DATA block found in response`);
   }
 
   // Strip the data block from HTML output
-  const rawHtml = fullOutput.replace(/<gap-analysis-data>[\s\S]*?<\/gap-analysis-data>/g, "").trim();
+  const rawHtml = fullOutput.replace(/===GAP_ANALYSIS_DATA_START===[\s\S]*?===GAP_ANALYSIS_DATA_END===/g, "").trim();
 
   // ── Step 8: Wrap HTML with full page structure and CSS ────────────────────
   const programLabel = PROGRAM_LABELS[program] ?? program;

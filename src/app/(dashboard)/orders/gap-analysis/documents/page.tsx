@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, FileText } from "lucide-react";
 
 const DOCS = [
@@ -36,7 +36,9 @@ const DOCS = [
 ];
 
 export default function GapAnalysisDocumentsPage() {
-  const router = useRouter();
+  const router      = useRouter();
+  const searchParams = useSearchParams();
+  const projectId   = searchParams.get("project_id");
 
   return (
     <div className="min-h-screen bg-certify-white">
@@ -66,7 +68,7 @@ export default function GapAnalysisDocumentsPage() {
         </div>
 
         <button
-          onClick={() => router.push("/orders/new/payment?type=gap-analysis&program=leed_bd_c&price=49900")}
+          onClick={() => router.push(`/orders/new/payment?type=gap-analysis&program=leed_bd_c&price=49900${projectId ? `&project_id=${projectId}` : ""}`)}
           className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all shadow-md group"
         >
           Continue to payment <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />

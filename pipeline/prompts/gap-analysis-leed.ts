@@ -128,9 +128,9 @@ REPORT STRUCTURE — produce all sections in this order:
    </div>
    Then list each recommended credit as a checklist-item with the credit name and a one-line reason.
 
-7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "leed_bd_c",
   "overall_score": <integer — estimated current points>,
@@ -147,7 +147,7 @@ REPORT STRUCTURE — produce all sections in this order:
     { "name": "Regional Priority", "score": <int>, "max": 4, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending (e.g. "EAc2", "LTc5"). Use short credit codes, not full names.
 

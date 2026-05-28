@@ -147,9 +147,9 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature as a checklist-item.
 
-7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK — after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "well_v2",
   "overall_score": <integer — estimated current points>,
@@ -169,7 +169,7 @@ REPORT STRUCTURE:
     { "name": "Community",       "score": <int>, "max": 26, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 

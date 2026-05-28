@@ -471,9 +471,9 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
    </div>
    Then list each recommended credit as a checklist-item with the credit name and a one-line reason.
 
-7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "leed_bd_c",
   "overall_score": <integer \u2014 estimated current points>,
@@ -490,7 +490,7 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
     { "name": "Regional Priority", "score": <int>, "max": 4, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending (e.g. "EAc2", "LTc5"). Use short credit codes, not full names.
 
@@ -655,9 +655,9 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature as a checklist-item.
 
-7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "well_v2",
   "overall_score": <integer \u2014 estimated current points>,
@@ -677,7 +677,7 @@ REPORT STRUCTURE:
     { "name": "Community",       "score": <int>, "max": 26, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 
@@ -829,9 +829,9 @@ REPORT STRUCTURE:
    </div>
    List each recommended feature service as a checklist-item, prioritized by impact (highest gap \u2192 highest priority).
 
-7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this:
+7. STRUCTURED DATA BLOCK \u2014 after the full HTML report, output a machine-readable JSON block exactly like this (use these exact delimiter lines):
 
-<gap-analysis-data>
+===GAP_ANALYSIS_DATA_START===
 {
   "program": "well_hsr",
   "overall_score": <integer \u2014 estimated current points out of 35>,
@@ -846,7 +846,7 @@ REPORT STRUCTURE:
     { "name": "Stakeholder Engagement (SI)",  "score": <int>, "max": 7, "recommended": [] }
   ]
 }
-</gap-analysis-data>
+===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 
@@ -1094,7 +1094,7 @@ ${result.text.slice(0, 8e3)}
     throw new Error(`Gap analysis output too short (${fullOutput.length} chars) \u2014 likely a prompt failure`);
   }
   let gapAnalysisResults = null;
-  const dataMatch = fullOutput.match(/<gap-analysis-data>([\s\S]*?)<\/gap-analysis-data>/);
+  const dataMatch = fullOutput.match(/===GAP_ANALYSIS_DATA_START===([\s\S]*?)===GAP_ANALYSIS_DATA_END===/);
   if (dataMatch?.[1]) {
     try {
       gapAnalysisResults = JSON.parse(dataMatch[1].trim());
@@ -1103,9 +1103,9 @@ ${result.text.slice(0, 8e3)}
       console.warn(`  Step 7b: Failed to parse gap analysis data: ${e.message}`);
     }
   } else {
-    console.warn(`  Step 7b: No <gap-analysis-data> block found in response`);
+    console.warn(`  Step 7b: No GAP_ANALYSIS_DATA block found in response`);
   }
-  const rawHtml = fullOutput.replace(/<gap-analysis-data>[\s\S]*?<\/gap-analysis-data>/g, "").trim();
+  const rawHtml = fullOutput.replace(/===GAP_ANALYSIS_DATA_START===[\s\S]*?===GAP_ANALYSIS_DATA_END===/g, "").trim();
   const programLabel = PROGRAM_LABELS[program] ?? program;
   const fullHtml = `<!DOCTYPE html>
 <html lang="en">
