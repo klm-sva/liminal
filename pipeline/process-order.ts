@@ -452,8 +452,8 @@ export async function processOrder(
     dirContents: require('fs').readdirSync(require('path').join(process.cwd(), 'pipeline')).join(', '),
   });
   console.log(`  Step 2: Loading credit data from automation analysis...`);
-  console.log(`  Step 2a: calling extractCreditData for "${credit.credit_code}"...`);
-  const creditData = extractCreditData(credit.credit_code);
+  console.log(`  Step 2a: calling extractCreditData for "${credit.credit_code}" (program: ${credit.program})...`);
+  const creditData = extractCreditData(credit.credit_code, credit.program);
   console.log(`  Step 2b: extractCreditData returned — outputs: ${creditData.outputs.join(", ") || "(none)"}`);
 
   // ── Step 3: Determine attempt number and storage paths ────────────────────
@@ -496,7 +496,32 @@ export async function processOrder(
   let knownReviewIssues: string[] = [];
 
   // ── Step 6: Document quality review ──────────────────────────────────────
-  // Skip review entirely when customer submitted with no files — they chose to proceed without uploads.
+  const requiredDocs: string[] = (credit.required_customer_documents as string[] | null) ?? [];
+
+  // If the credit requires documents and nothing was uploaded, stop immediately on attempt 1.
+  if (uploads.length === 0 && requiredDocs.length > 0 && attemptNumber === 1) {
+    console.log(`  Step 6: No uploads but credit requires ${requiredDocs.length} document(s) — requesting documents.`);
+
+    await supabase.from("runs").update({
+      status:        "failed",
+      review_issues: requiredDocs,
+      completed_at:  new Date().toISOString(),
+      error_message: "Required documents not uploaded",
+    }).eq("id", runId);
+
+    await supabase.from("orders").update({ status: "documents_requested" }).eq("id", orderId);
+
+    await logAuditEvent({
+      eventType:  "documents_requested",
+      entityType: "order",
+      entityId:   orderId,
+      customerId: order.customer_id,
+      metadata:   { attemptNumber, issueCount: requiredDocs.length, issues: requiredDocs, reason: "no_uploads" },
+    });
+
+    return { orderId, runId, status: "documents_requested", issues: requiredDocs };
+  }
+
   let reviewResult: Awaited<ReturnType<typeof reviewDocuments>> | null = null;
   if (uploads.length > 0) {
     console.log(`  Step 6: Running document review...`);
@@ -504,10 +529,11 @@ export async function processOrder(
       orderId,
       order.customer_id,
       credit.credit_code,
-      uploads
+      uploads,
+      creditData.customerUploads
     );
   } else {
-    console.log(`  Step 6: No uploads — skipping document review, proceeding directly.`);
+    console.log(`  Step 6: No uploads and no required documents — proceeding directly.`);
   }
 
   // ── Step 7: If incomplete on attempt 1 → documents_requested (notify, stop)

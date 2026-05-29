@@ -16,7 +16,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as path from "path";
 import * as fs from "fs";
 import { createServiceClient } from "./lib/supabase";
-import { extractCreditData } from "./lib/extract-xlsx-row";
 import { preparePdfDocument } from "./lib/pdf-to-images";
 import { logAuditEvent } from "./lib/supabase-ops";
 
@@ -149,7 +148,8 @@ export async function reviewDocuments(
   orderId: string,
   customerId: string,
   creditCode: string,
-  uploads: UploadedDocument[]
+  uploads: UploadedDocument[],
+  requiredDocs: string[]
 ): Promise<DocumentReviewResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
@@ -158,10 +158,6 @@ export async function reviewDocuments(
   const supabase = createServiceClient();
 
   console.log(`[document-review] Order ${orderId} — ${creditCode} — ${uploads.length} upload(s)`);
-
-  // 1. Load required documents from Col 1 of automation analysis spreadsheet
-  const creditData = extractCreditData(creditCode);
-  const requiredDocs = creditData.customerUploads;
 
   if (requiredDocs.length === 0) {
     console.log(`  No required documents defined for ${creditCode} — auto-passing review`);

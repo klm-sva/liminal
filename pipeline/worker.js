@@ -1220,19 +1220,20 @@ function parseRows(buffer) {
   const headers = rows2[1].map((h) => String(h ?? "").replace(/\n/g, " ").trim());
   return { rows: rows2, headers };
 }
-function loadWorkbook() {
-  if (!fs2.existsSync(AUTOMATION_XLSX)) {
-    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
+function loadWorkbook(program = "leed_bdc_v41") {
+  const xlsxPath = path2.join(process.cwd(), AUTOMATION_XLSX_BY_PROGRAM[program] ?? AUTOMATION_XLSX_BY_PROGRAM.leed_bdc_v41);
+  if (!fs2.existsSync(xlsxPath)) {
+    throw new Error(`Automation analysis XLSX not found: ${xlsxPath}`);
   }
-  console.log(`  [loadWorkbook] reading file from disk: ${AUTOMATION_XLSX}`);
-  const buf = fs2.readFileSync(AUTOMATION_XLSX);
+  console.log(`  [loadWorkbook] reading file from disk: ${xlsxPath}`);
+  const buf = fs2.readFileSync(xlsxPath);
   console.log(`  [loadWorkbook] file read complete \u2014 ${buf.length} bytes \u2014 parsing XLSX...`);
   const result = parseRows(buf);
   console.log(`  [loadWorkbook] XLSX parse complete \u2014 ${result.rows.length} rows`);
   return result;
 }
-function extractCreditData(creditCode) {
-  const { rows: rows2 } = loadWorkbook();
+function extractCreditData(creditCode, program = "leed_bdc_v41") {
+  const { rows: rows2 } = loadWorkbook(program);
   const needles = creditCodeNeedles(creditCode);
   const dataRow = rows2.slice(2).find((row) => {
     const name = String(row[COL.creditName] ?? "").toLowerCase();
@@ -1280,14 +1281,18 @@ function formatCreditDataForPrompt(data2) {
   ];
   return lines.join("\n");
 }
-var XLSX, fs2, path2, AUTOMATION_XLSX, COL;
+var XLSX, fs2, path2, AUTOMATION_XLSX_BY_PROGRAM, COL;
 var init_extract_xlsx_row = __esm({
   "pipeline/lib/extract-xlsx-row.ts"() {
     "use strict";
     XLSX = __toESM(require("xlsx"));
     fs2 = __toESM(require("fs"));
     path2 = __toESM(require("path"));
-    AUTOMATION_XLSX = path2.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
+    AUTOMATION_XLSX_BY_PROGRAM = {
+      leed_bdc_v41: "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx",
+      well_v2: "pipeline/reference/well-v2/WELL_v2_Automation_Analysis_v4.xlsx",
+      well_hsr: "pipeline/reference/well-hsr/WELL_HSR_Automation_Analysis_v3.xlsx"
+    };
     COL = {
       creditNumber: 0,
       creditName: 1,
@@ -1412,14 +1417,12 @@ function matchUploadToRequirement(requiredDescription, uploads) {
   }
   return bestScore > 0 ? bestMatch : null;
 }
-async function reviewDocuments(orderId, customerId, creditCode, uploads) {
+async function reviewDocuments(orderId, customerId, creditCode, uploads, requiredDocs) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
   const client2 = new import_sdk2.default({ apiKey, timeout: 18e4, maxRetries: 0 });
   const supabase = createServiceClient();
   console.log(`[document-review] Order ${orderId} \u2014 ${creditCode} \u2014 ${uploads.length} upload(s)`);
-  const creditData = extractCreditData(creditCode);
-  const requiredDocs = creditData.customerUploads;
   if (requiredDocs.length === 0) {
     console.log(`  No required documents defined for ${creditCode} \u2014 auto-passing review`);
     return {
@@ -1498,7 +1501,6 @@ var init_document_review = __esm({
     path3 = __toESM(require("path"));
     fs4 = __toESM(require("fs"));
     init_supabase();
-    init_extract_xlsx_row();
     init_pdf_to_images();
     init_supabase_ops();
     envPath = path3.resolve(__dirname, "../.env.local");
@@ -3589,8 +3591,8 @@ async function processOrder(orderId, runId, additionalInstructions) {
     dirContents: require("fs").readdirSync(require("path").join(process.cwd(), "pipeline")).join(", ")
   });
   console.log(`  Step 2: Loading credit data from automation analysis...`);
-  console.log(`  Step 2a: calling extractCreditData for "${credit.credit_code}"...`);
-  const creditData = extractCreditData(credit.credit_code);
+  console.log(`  Step 2a: calling extractCreditData for "${credit.credit_code}" (program: ${credit.program})...`);
+  const creditData = extractCreditData(credit.credit_code, credit.program);
   console.log(`  Step 2b: extractCreditData returned \u2014 outputs: ${creditData.outputs.join(", ") || "(none)"}`);
   const attemptNumber = run.attempt_number ?? run.run_number ?? 1;
   const orderBase = orderFolderPath(order.customer_id, order.project_id, orderId, credit.credit_code);
@@ -3616,6 +3618,25 @@ async function processOrder(orderId, runId, additionalInstructions) {
   if (step5Err) console.error(`  Step 5 ERROR: ${step5Err.message}`);
   console.log(`  Step 5: Order \u2192 under_review`);
   let knownReviewIssues = [];
+  const requiredDocs = credit.required_customer_documents ?? [];
+  if (uploads.length === 0 && requiredDocs.length > 0 && attemptNumber === 1) {
+    console.log(`  Step 6: No uploads but credit requires ${requiredDocs.length} document(s) \u2014 requesting documents.`);
+    await supabase.from("runs").update({
+      status: "failed",
+      review_issues: requiredDocs,
+      completed_at: (/* @__PURE__ */ new Date()).toISOString(),
+      error_message: "Required documents not uploaded"
+    }).eq("id", runId);
+    await supabase.from("orders").update({ status: "documents_requested" }).eq("id", orderId);
+    await logAuditEvent({
+      eventType: "documents_requested",
+      entityType: "order",
+      entityId: orderId,
+      customerId: order.customer_id,
+      metadata: { attemptNumber, issueCount: requiredDocs.length, issues: requiredDocs, reason: "no_uploads" }
+    });
+    return { orderId, runId, status: "documents_requested", issues: requiredDocs };
+  }
   let reviewResult = null;
   if (uploads.length > 0) {
     console.log(`  Step 6: Running document review...`);
@@ -3623,10 +3644,11 @@ async function processOrder(orderId, runId, additionalInstructions) {
       orderId,
       order.customer_id,
       credit.credit_code,
-      uploads
+      uploads,
+      creditData.customerUploads
     );
   } else {
-    console.log(`  Step 6: No uploads \u2014 skipping document review, proceeding directly.`);
+    console.log(`  Step 6: No uploads and no required documents \u2014 proceeding directly.`);
   }
   if (reviewResult && reviewResult.status === "incomplete") {
     const issueStrings = reviewResult.issues.map((i) => i.issue);

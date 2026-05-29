@@ -2,7 +2,11 @@ import * as XLSX from "xlsx";
 import * as fs   from "fs";
 import * as path from "path";
 
-const AUTOMATION_XLSX = path.join(process.cwd(), "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx");
+const AUTOMATION_XLSX_BY_PROGRAM: Record<string, string> = {
+  leed_bdc_v41: "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx",
+  well_v2:      "pipeline/reference/well-v2/WELL_v2_Automation_Analysis_v4.xlsx",
+  well_hsr:     "pipeline/reference/well-hsr/WELL_HSR_Automation_Analysis_v3.xlsx",
+};
 
 // ─── Column indices in the automation analysis spreadsheet ────────────────────
 // Row 1 (index 1) is the header row. Data rows start at index 2.
@@ -124,12 +128,13 @@ export function extractCreditDataFromBuffer(workbookBuffer: Buffer, creditCode: 
 
 // ─── Local-disk version (test scripts only — not used in production) ──────────
 
-function loadWorkbook(): { rows: any[][]; headers: string[] } {
-  if (!fs.existsSync(AUTOMATION_XLSX)) {
-    throw new Error(`Automation analysis XLSX not found: ${AUTOMATION_XLSX}`);
+function loadWorkbook(program = "leed_bdc_v41"): { rows: any[][]; headers: string[] } {
+  const xlsxPath = path.join(process.cwd(), AUTOMATION_XLSX_BY_PROGRAM[program] ?? AUTOMATION_XLSX_BY_PROGRAM.leed_bdc_v41);
+  if (!fs.existsSync(xlsxPath)) {
+    throw new Error(`Automation analysis XLSX not found: ${xlsxPath}`);
   }
-  console.log(`  [loadWorkbook] reading file from disk: ${AUTOMATION_XLSX}`);
-  const buf = fs.readFileSync(AUTOMATION_XLSX);
+  console.log(`  [loadWorkbook] reading file from disk: ${xlsxPath}`);
+  const buf = fs.readFileSync(xlsxPath);
   console.log(`  [loadWorkbook] file read complete — ${buf.length} bytes — parsing XLSX...`);
   const result = parseRows(buf);
   console.log(`  [loadWorkbook] XLSX parse complete — ${result.rows.length} rows`);
@@ -140,8 +145,8 @@ function loadWorkbook(): { rows: any[][]; headers: string[] } {
  * Extract credit data by reading the XLSX from the local filesystem.
  * Used by local test scripts only. Production code uses extractCreditDataFromBuffer.
  */
-export function extractCreditData(creditCode: string): CreditData {
-  const { rows } = loadWorkbook();
+export function extractCreditData(creditCode: string, program = "leed_bdc_v41"): CreditData {
+  const { rows } = loadWorkbook(program);
   const needles  = creditCodeNeedles(creditCode);
 
   const dataRow = rows.slice(2).find((row) => {
