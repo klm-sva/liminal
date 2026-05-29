@@ -903,37 +903,47 @@ export async function processOrder(
       : null
   ).filter(Boolean) as ReturnType<typeof preparePdfDocument>[];
 
-  // ── Step 15: Call Claude API (two-pass) — temperature: 0, web_search enabled ─
-  console.log(`  Step 15: Running Claude API (two-pass, temperature: 0)...`);
+  // ── Step 15: Call Claude API — temperature: 0, web_search enabled ─────────
+  // Two-pass for credits with an online form (LEED): Part 1 generates the form,
+  // Part 2 generates supporting docs using Part 1 as context.
+  // Single-pass for credits with no form (WELL): one call generates everything.
+  const hasForm = !!creditData.platformFiles.formLink;
+  console.log(`  Step 15: Running Claude API (${hasForm ? "two-pass" : "single-pass"}, temperature: 0)...`);
 
   const refBlock = referenceDataBlock
     ? [{ type: "text", text: referenceDataBlock }]
     : [];
 
-  const part1Response = await (client.messages.create as any)({
-    model:       "claude-sonnet-4-6",
-    max_tokens:  64000,
-    temperature: 0,
-    system:      systemPrompt,
-    tools:       [WEB_SEARCH_TOOL],
-    messages:    [{
-      role:    "user",
-      content: [
-        ...refBlock,
-        reqDocBlock,
-        ...appendixDocBlocks,
-        ...uploadDocBlocks,
-        { type: "text", text: userPromptPart1 },
-      ],
-    }],
-  });
+  let part1Html = "";
 
-  const part1AllText = (part1Response.content as any[])
-    .filter((b) => b.type === "text")
-    .map((b) => b.text as string)
-    .join("\n");
-  const part1Html = scrubNarration(part1AllText).cleaned;
-  console.log(`    Part 1 complete — ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b: any) => b.type === "text").length} text block(s))`);
+  if (hasForm) {
+    const part1Response = await (client.messages.create as any)({
+      model:       "claude-sonnet-4-6",
+      max_tokens:  64000,
+      temperature: 0,
+      system:      systemPrompt,
+      tools:       [WEB_SEARCH_TOOL],
+      messages:    [{
+        role:    "user",
+        content: [
+          ...refBlock,
+          reqDocBlock,
+          ...appendixDocBlocks,
+          ...uploadDocBlocks,
+          { type: "text", text: userPromptPart1 },
+        ],
+      }],
+    });
+
+    const part1AllText = (part1Response.content as any[])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text as string)
+      .join("\n");
+    part1Html = scrubNarration(part1AllText).cleaned;
+    console.log(`    Part 1 complete — ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b: any) => b.type === "text").length} text block(s))`);
+  } else {
+    console.log(`    No form link — skipping Part 1, running single-pass`);
+  }
 
   // ── Step 15.7: Extract locations from Part 1 output for map generation ──────
   // Uses Claude Haiku (fast/cheap) to pull named locations from the HTML text.
@@ -1028,7 +1038,7 @@ ${plainText}`,
       role:    "user",
       content: [
         ...refBlock,
-        { type: "text", text: `PART 1 OUTPUT (completed — do not regenerate):\n${part1Html}` },
+        ...(hasForm && part1Html ? [{ type: "text", text: `PART 1 OUTPUT (completed — do not regenerate):\n${part1Html}` }] : []),
         ...mapContentBlocks,
         reqDocBlock,
         ...appendixDocBlocks,

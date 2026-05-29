@@ -3925,28 +3925,34 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
   const uploadDocBlocks = uploadBuffers.map(
     (u) => u.mimeType === "application/pdf" ? preparePdfDocument(u.buffer, u.filename) : null
   ).filter(Boolean);
-  console.log(`  Step 15: Running Claude API (two-pass, temperature: 0)...`);
+  const hasForm = !!creditData.platformFiles.formLink;
+  console.log(`  Step 15: Running Claude API (${hasForm ? "two-pass" : "single-pass"}, temperature: 0)...`);
   const refBlock = referenceDataBlock ? [{ type: "text", text: referenceDataBlock }] : [];
-  const part1Response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 64e3,
-    temperature: 0,
-    system: systemPrompt,
-    tools: [WEB_SEARCH_TOOL],
-    messages: [{
-      role: "user",
-      content: [
-        ...refBlock,
-        reqDocBlock,
-        ...appendixDocBlocks,
-        ...uploadDocBlocks,
-        { type: "text", text: userPromptPart1 }
-      ]
-    }]
-  });
-  const part1AllText = part1Response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
-  const part1Html = scrubNarration(part1AllText).cleaned;
-  console.log(`    Part 1 complete \u2014 ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b) => b.type === "text").length} text block(s))`);
+  let part1Html = "";
+  if (hasForm) {
+    const part1Response2 = await client2.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 64e3,
+      temperature: 0,
+      system: systemPrompt,
+      tools: [WEB_SEARCH_TOOL],
+      messages: [{
+        role: "user",
+        content: [
+          ...refBlock,
+          reqDocBlock,
+          ...appendixDocBlocks,
+          ...uploadDocBlocks,
+          { type: "text", text: userPromptPart1 }
+        ]
+      }]
+    });
+    const part1AllText = part1Response2.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    part1Html = scrubNarration(part1AllText).cleaned;
+    console.log(`    Part 1 complete \u2014 ${part1Response2.usage.output_tokens} output tokens (${part1Response2.content.filter((b) => b.type === "text").length} text block(s))`);
+  } else {
+    console.log(`    No form link \u2014 skipping Part 1, running single-pass`);
+  }
   let locationsForMap = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
@@ -4024,8 +4030,8 @@ ${plainText}`
       role: "user",
       content: [
         ...refBlock,
-        { type: "text", text: `PART 1 OUTPUT (completed \u2014 do not regenerate):
-${part1Html}` },
+        ...hasForm && part1Html ? [{ type: "text", text: `PART 1 OUTPUT (completed \u2014 do not regenerate):
+${part1Html}` }] : [],
         ...mapContentBlocks,
         reqDocBlock,
         ...appendixDocBlocks,
