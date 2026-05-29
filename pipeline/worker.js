@@ -3930,7 +3930,7 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
   const refBlock = referenceDataBlock ? [{ type: "text", text: referenceDataBlock }] : [];
   let part1Html = "";
   if (hasForm) {
-    const part1Response2 = await client2.messages.create({
+    const part1Response = await client2.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 64e3,
       temperature: 0,
@@ -3947,9 +3947,9 @@ ${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
         ]
       }]
     });
-    const part1AllText = part1Response2.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const part1AllText = part1Response.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
     part1Html = scrubNarration(part1AllText).cleaned;
-    console.log(`    Part 1 complete \u2014 ${part1Response2.usage.output_tokens} output tokens (${part1Response2.content.filter((b) => b.type === "text").length} text block(s))`);
+    console.log(`    Part 1 complete \u2014 ${part1Response.usage.output_tokens} output tokens (${part1Response.content.filter((b) => b.type === "text").length} text block(s))`);
   } else {
     console.log(`    No form link \u2014 skipping Part 1, running single-pass`);
   }
@@ -4237,7 +4237,7 @@ ${part1Html}` }] : [],
   } catch (e) {
     console.error(`  Step 18.5: QA review email failed: ${e.message}`);
   }
-  const totalTokens = part1Response.usage.input_tokens + part1Response.usage.output_tokens + part2Response.usage.input_tokens + part2Response.usage.output_tokens;
+  const totalTokens = part2Response.usage.input_tokens + part2Response.usage.output_tokens;
   await logAuditEvent({
     eventType: "order_complete",
     entityType: "order",

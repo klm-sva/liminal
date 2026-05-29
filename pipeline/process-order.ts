@@ -1295,8 +1295,7 @@ ${plainText}`,
   }
 
   // Audit log
-  const totalTokens = part1Response.usage.input_tokens + part1Response.usage.output_tokens
-    + part2Response.usage.input_tokens + part2Response.usage.output_tokens;
+  const totalTokens = part2Response.usage.input_tokens + part2Response.usage.output_tokens;
 
   await logAuditEvent({
     eventType:  "order_complete",
