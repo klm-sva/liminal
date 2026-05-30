@@ -19,7 +19,7 @@ type OrderRow = {
     credit_name: string;
     program: ProgramType;
     has_calculator: boolean;
-    has_leed_form: boolean;
+    has_form: boolean;
   } | null;
 };
 

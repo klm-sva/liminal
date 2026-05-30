@@ -144,11 +144,11 @@ When an item is retrieved automatically, the retrieved data must be included dir
 AUTHORITATIVE REFERENCE FILES — MANDATORY — NO EXCEPTIONS
 ════════════════════════════════════════════════════════════════════
 
-You have been provided with the following authoritative reference files for this LEED credit. Use them exclusively — never fall back to training data for any form field, calculator input, or credit requirement.
+You have been provided with the following authoritative reference files for this credit. Use them exclusively — never fall back to training data for any form field, calculator input, or credit requirement.
 
 - Automation analysis spreadsheet row for this credit: tells you exactly what the team must upload, what you auto-retrieve and from which specific named sources, and exactly what you produce
-- Form schema for this credit: contains every field ID, field type, checkbox label, upload field name, and radio option from the live LEED Online form — populate fields using these exact IDs and field names
-- Calculator schema if applicable: contains every tab name and input field label from the actual USGBC calculator file — populate using these exact field labels
+- Form schema for this credit: contains every field ID, field type, checkbox label, upload field name, and radio option from the live online submission form — populate fields using these exact IDs and field names
+- Calculator schema if applicable: contains every tab name and input field label from the actual calculator file — populate using these exact field labels
 
 Column I of the automation analysis spreadsheet tells you exactly which public sources to retrieve data from for this credit with specific source names. Retrieve from those exact named sources. Do not use other sources unless the specified source is unavailable — if unavailable use the closest equivalent and note the substitution clearly.
 
@@ -239,7 +239,7 @@ Use this pattern for every credit, adapting sections as the credit requires:
     <h1>Credit Code — Credit Name</h1>
     <div class="sub">Project Name · City, State · Date</div>
   </div>
-  <div class="meta-bar"><span>Program:</span> LEED v4.1 BD+C &nbsp; <span>Credit:</span> LT Credit 5</div>
+  <div class="meta-bar"><span>Program:</span> {{PROGRAM_DISPLAY_NAME}} &nbsp; <span>Credit:</span> LT Credit 5</div>
 
   <div class="section-header">Section Title</div>
   <div class="section-body">
@@ -250,7 +250,7 @@ Use this pattern for every credit, adapting sections as the credit requires:
   <div class="section-body"> ... </div>
 
   <div class="section-wrap"> ... padding wrapper for free-flowing content ... </div>
-  <div class="form-id-bar">LEED Online — Form Section Identifier</div>
+  <div class="form-id-bar">Online Submission — Form Section Identifier</div>
   <hr class="divider">
 
 FORM FIELDS (Part 1 — online form reproduction)
@@ -263,7 +263,7 @@ FORM FIELDS (Part 1 — online form reproduction)
     <span class="field-value upload">[OWNER TO CONFIRM: description of what is needed]</span>
   </div>
   <span class="owner-field">[OWNER TO CONFIRM: description]</span>  ← inline owner item
-  <span class="field-id">field_id_123</span>  ← LEED Online field ID, monospace
+  <span class="field-id">field_id_123</span>  ← Online form field ID, monospace
   <span class="radio-selected">●</span> Selected option
   <span class="radio-unselected"></span> Other option
 
@@ -330,7 +330,7 @@ LAYOUT HELPERS (use when credit content calls for it)
 PROCESSING SUMMARY (at the very end of every output)
   <div class="processing-summary">
     <h3>Processing Summary</h3>
-    <p><strong>Credit:</strong> LT Credit 5 — Access to Quality Transit (LEED v4.1 BD+C)</p>
+    <p><strong>Credit:</strong> LT Credit 5 — Access to Quality Transit ({{PROGRAM_DISPLAY_NAME}})</p>
     <p><strong>Outputs generated:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
     <p><strong>Owner confirmation items:</strong> list any [OWNER TO CONFIRM] items here</p>
   </div>

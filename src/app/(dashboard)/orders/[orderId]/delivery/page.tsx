@@ -24,7 +24,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   const [orderRes, runRes] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, credits(credit_code, credit_name, has_calculator, has_leed_form)")
+      .select("id, credits(credit_code, credit_name, program, has_calculator, has_form)")
       .eq("id", orderId)
       .single(),
     supabase
@@ -40,7 +40,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   if (!orderRes.data) notFound();
   const order = orderRes.data;
 
-  type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; has_calculator: boolean; has_leed_form: boolean } | null };
+  type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; program: string; has_calculator: boolean; has_form: boolean } | null };
   const credit = (order as unknown as OrderWithCredit)?.credits;
   if (!credit) notFound();
 
@@ -187,14 +187,16 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
                     </div>
                   )}
 
-                  {/* LEED form — informational note */}
-                  {credit.has_leed_form && (
+                  {/* Online form — informational note */}
+                  {credit.has_form && (
                     <div className="flex items-center gap-3 bg-certify-white/60 rounded-xl px-4 py-3 border border-certify-white">
                       <div className="w-8 h-8 rounded-lg bg-certify-blue/10 flex items-center justify-center shrink-0">
                         <ClipboardList size={15} className="text-certify-blue" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-certify-deep truncate">LEED Online Form Data</p>
+                        <p className="text-xs font-semibold text-certify-deep truncate">
+                          {credit.program === "leed_bdc_v41" ? "LEED Online Form Data" : "Online Form Data"}
+                        </p>
                         <p className="text-xs text-certify-cool-grey">Pre-filled form data included in HTML output</p>
                       </div>
                     </div>

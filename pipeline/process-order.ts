@@ -889,10 +889,17 @@ export async function processOrder(
     "Generate PART 2 — SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 — COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either.",
   ].join("\n");
 
-  // Dynamic system prompt — append QA instructions when regenerating after review
+  const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
+    leed_bdc_v41: "LEED v4.1 BD+C",
+    well_v2:      "WELL v2",
+    well_hsr:     "WELL Health-Safety Rating",
+  };
+  const programDisplayName = PROGRAM_DISPLAY_NAMES[credit.program] ?? credit.program;
+
+  const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
   const systemPrompt = additionalInstructions
-    ? `${CREDIT_SUBMISSION_PROMPT}\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`
-    : CREDIT_SUBMISSION_PROMPT;
+    ? `${basePrompt}\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`
+    : basePrompt;
 
   // Build content blocks for each API call
   const reqDocBlock = preparePdfDocument(reqPdfBuffer, `Requirements: ${credit.credit_code}`);

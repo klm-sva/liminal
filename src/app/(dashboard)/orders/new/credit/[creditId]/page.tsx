@@ -91,7 +91,7 @@ export default async function CreditDetailPage({
           <ul className="space-y-2">
             {[
               "Compliance narrative (editable output)",
-              ...(credit.has_leed_form  ? ["Pre-filled sample online form"] : []),
+              ...(credit.has_form  ? ["Pre-filled sample online form"] : []),
               ...(credit.has_calculator ? ["Calculator inputs provided (.xlsx)"] : []),
             ].map((item) => (
               <li key={item} className="flex items-center gap-2 text-sm text-certify-dark-grey">

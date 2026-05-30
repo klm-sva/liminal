@@ -29,7 +29,7 @@ type OrderRow = {
     credit_name: string;
     program: ProgramType;
     has_calculator: boolean;
-    has_leed_form: boolean;
+    has_form: boolean;
   } | null;
 };
 
@@ -56,7 +56,7 @@ export default async function ProjectPage({
 
   const { data: orderData } = await supabase
     .from("orders")
-    .select("id, status, created_at, credits(credit_code, credit_name, program, has_calculator, has_leed_form)")
+    .select("id, status, created_at, credits(credit_code, credit_name, program, has_calculator, has_form)")
     .eq("project_id", id)
     .order("created_at", { ascending: false });
 

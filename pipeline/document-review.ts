@@ -51,7 +51,7 @@ export interface DocumentReviewResult {
   reviewedAt: string;
 }
 
-const DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
+const DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
 
 You will be told what document type is required. Review the provided file and determine:
 1. Is this the correct document type?
@@ -65,7 +65,7 @@ Respond with a single JSON object:
   "issue": string | null
 }
 
-Set "acceptable" to true if the document is suitable for LEED submission.
+Set "acceptable" to true if the document is suitable for certification submission.
 Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
 The "issue" string must be written for the project team to read — be specific and actionable.
 Return only the JSON object.`;

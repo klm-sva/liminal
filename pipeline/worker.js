@@ -1513,7 +1513,7 @@ var init_document_review = __esm({
         process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
       }
     }
-    DOCUMENT_REVIEW_PROMPT = `You are a LEED certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
+    DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
 
 You will be told what document type is required. Review the provided file and determine:
 1. Is this the correct document type?
@@ -1527,7 +1527,7 @@ Respond with a single JSON object:
   "issue": string | null
 }
 
-Set "acceptable" to true if the document is suitable for LEED submission.
+Set "acceptable" to true if the document is suitable for certification submission.
 Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
 The "issue" string must be written for the project team to read \u2014 be specific and actionable.
 Return only the JSON object.`;
@@ -2811,11 +2811,11 @@ When an item is retrieved automatically, the retrieved data must be included dir
 AUTHORITATIVE REFERENCE FILES \u2014 MANDATORY \u2014 NO EXCEPTIONS
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-You have been provided with the following authoritative reference files for this LEED credit. Use them exclusively \u2014 never fall back to training data for any form field, calculator input, or credit requirement.
+You have been provided with the following authoritative reference files for this credit. Use them exclusively \u2014 never fall back to training data for any form field, calculator input, or credit requirement.
 
 - Automation analysis spreadsheet row for this credit: tells you exactly what the team must upload, what you auto-retrieve and from which specific named sources, and exactly what you produce
-- Form schema for this credit: contains every field ID, field type, checkbox label, upload field name, and radio option from the live LEED Online form \u2014 populate fields using these exact IDs and field names
-- Calculator schema if applicable: contains every tab name and input field label from the actual USGBC calculator file \u2014 populate using these exact field labels
+- Form schema for this credit: contains every field ID, field type, checkbox label, upload field name, and radio option from the live online submission form \u2014 populate fields using these exact IDs and field names
+- Calculator schema if applicable: contains every tab name and input field label from the actual calculator file \u2014 populate using these exact field labels
 
 Column I of the automation analysis spreadsheet tells you exactly which public sources to retrieve data from for this credit with specific source names. Retrieve from those exact named sources. Do not use other sources unless the specified source is unavailable \u2014 if unavailable use the closest equivalent and note the substitution clearly.
 
@@ -2906,7 +2906,7 @@ Use this pattern for every credit, adapting sections as the credit requires:
     <h1>Credit Code \u2014 Credit Name</h1>
     <div class="sub">Project Name \xB7 City, State \xB7 Date</div>
   </div>
-  <div class="meta-bar"><span>Program:</span> LEED v4.1 BD+C &nbsp; <span>Credit:</span> LT Credit 5</div>
+  <div class="meta-bar"><span>Program:</span> {{PROGRAM_DISPLAY_NAME}} &nbsp; <span>Credit:</span> LT Credit 5</div>
 
   <div class="section-header">Section Title</div>
   <div class="section-body">
@@ -2917,7 +2917,7 @@ Use this pattern for every credit, adapting sections as the credit requires:
   <div class="section-body"> ... </div>
 
   <div class="section-wrap"> ... padding wrapper for free-flowing content ... </div>
-  <div class="form-id-bar">LEED Online \u2014 Form Section Identifier</div>
+  <div class="form-id-bar">Online Submission \u2014 Form Section Identifier</div>
   <hr class="divider">
 
 FORM FIELDS (Part 1 \u2014 online form reproduction)
@@ -2930,7 +2930,7 @@ FORM FIELDS (Part 1 \u2014 online form reproduction)
     <span class="field-value upload">[OWNER TO CONFIRM: description of what is needed]</span>
   </div>
   <span class="owner-field">[OWNER TO CONFIRM: description]</span>  \u2190 inline owner item
-  <span class="field-id">field_id_123</span>  \u2190 LEED Online field ID, monospace
+  <span class="field-id">field_id_123</span>  \u2190 Online form field ID, monospace
   <span class="radio-selected">\u25CF</span> Selected option
   <span class="radio-unselected"></span> Other option
 
@@ -2997,7 +2997,7 @@ LAYOUT HELPERS (use when credit content calls for it)
 PROCESSING SUMMARY (at the very end of every output)
   <div class="processing-summary">
     <h3>Processing Summary</h3>
-    <p><strong>Credit:</strong> LT Credit 5 \u2014 Access to Quality Transit (LEED v4.1 BD+C)</p>
+    <p><strong>Credit:</strong> LT Credit 5 \u2014 Access to Quality Transit ({{PROGRAM_DISPLAY_NAME}})</p>
     <p><strong>Outputs generated:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
     <p><strong>Owner confirmation items:</strong> list any [OWNER TO CONFIRM] items here</p>
   </div>
@@ -3915,12 +3915,19 @@ async function processOrder(orderId, runId, additionalInstructions) {
     "",
     "Generate PART 2 \u2014 SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 \u2014 COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either."
   ].join("\n");
-  const systemPrompt = additionalInstructions ? `${CREDIT_SUBMISSION_PROMPT}
+  const PROGRAM_DISPLAY_NAMES = {
+    leed_bdc_v41: "LEED v4.1 BD+C",
+    well_v2: "WELL v2",
+    well_hsr: "WELL Health-Safety Rating"
+  };
+  const programDisplayName = PROGRAM_DISPLAY_NAMES[credit.program] ?? credit.program;
+  const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
+  const systemPrompt = additionalInstructions ? `${basePrompt}
 
 ${"\u2550".repeat(60)}
 QA REVIEW INSTRUCTIONS \u2014 INCORPORATE THESE CHANGES:
 ${"\u2550".repeat(60)}
-${additionalInstructions}` : CREDIT_SUBMISSION_PROMPT;
+${additionalInstructions}` : basePrompt;
   const reqDocBlock = preparePdfDocument(reqPdfBuffer, `Requirements: ${credit.credit_code}`);
   const uploadDocBlocks = uploadBuffers.map(
     (u) => u.mimeType === "application/pdf" ? preparePdfDocument(u.buffer, u.filename) : null

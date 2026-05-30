@@ -83,7 +83,7 @@ function deliverableTags(credit: Credit): string[] {
   const tags: string[] = [];
   if (credit.program === "leed_bdc_v41") {
     tags.push("Narrative");
-    if (credit.has_leed_form)  tags.push("LEED form");
+    if (credit.has_form)  tags.push("Online form");
     if (credit.has_calculator) tags.push("Calculator");
   } else {
     tags.push("Documentation pkg");

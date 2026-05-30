@@ -45,8 +45,8 @@ export type Credit = {
   points_available:            number | null;
   automation_type:             AutomationType;
   requirements_pdf_path:       string;
-  has_leed_form:               boolean;
-  leed_form_link:              string | null;
+  has_form:                    boolean;
+  form_link:                   string | null;
   has_calculator:              boolean;
   calculator_path:             string | null;
   well_verification_row:       number | null;
