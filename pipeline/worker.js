@@ -2764,6 +2764,11 @@ Never write any of the following anywhere in the output:
 
 This rule applies to the entire document \u2014 opening, closing, section introductions, and transitions. The output is a customer-facing certification document. There is no audience for process narration. Violation of this rule produces unusable output that must be regenerated.
 
+INTERNAL DOCUMENTS ARE NEVER REFERENCED IN OUTPUT \u2014 HARD RULE, NO EXCEPTIONS.
+The automation analysis spreadsheet, column references (Column 1, Column 2, Column I, etc.), form schemas, calculator schemas, and any other internal pipeline document are invisible infrastructure. They must never be named, cited, or referenced anywhere in the output \u2014 not in notes, not in scope clarifications, not in checklists, not anywhere. The customer has no context for these documents and seeing them referenced destroys trust.
+
+If you notice a discrepancy between the requirements PDF and the credit scope, flag it in plain customer-facing language using [OWNER TO CONFIRM: description of the specific question] or a plain-language note. Never explain where the discrepancy came from or cite any internal document as the source. Write as if the output was produced by a human expert who simply knows the program \u2014 not by a system reading structured data files.
+
 FIELD IDs ARE NEVER VISIBLE IN OUTPUT \u2014 HARD RULE, NO EXCEPTIONS.
 The form schema contains internal identifiers like "fieldId: splCircumstances" or "unitTypeSelected". These are for your reference only when identifying which field to populate. They must never appear anywhere in the output \u2014 not next to a label, not as a caption, not as a value, not anywhere. Do not output camelCase field ID strings as visible text under any circumstances. If you must reference a field ID in the document, wrap it in <span class="field-id">...</span> \u2014 the stylesheet hides this class entirely. A raw camelCase field ID string appearing as plain visible text is a critical output error.
 
