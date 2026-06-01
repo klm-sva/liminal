@@ -107,19 +107,30 @@ const LIMINAL_CSS = `
 
 export function injectTableCss(html: string): string {
   const tag = `<style id="liminal-css">${LIMINAL_CSS}\n</style>`;
-  // Inject table CSS into <head>
   let result = html;
-  const headIdx = result.indexOf("</head>");
-  if (headIdx !== -1) {
-    result = result.slice(0, headIdx) + tag + "\n" + result.slice(headIdx);
+
+  if (result.indexOf("</head>") !== -1) {
+    // Full document already present — inject into <head>
+    result = result.slice(0, result.indexOf("</head>")) + tag + "\n" + result.slice(result.indexOf("</head>"));
+    result = result.replace(/<body([^>]*)>/i, (_match, attrs: string = "") => {
+      if (attrs.toLowerCase().includes("margin")) return _match;
+      return `<body${attrs} style="margin: 0 20%; padding: 40px 0; box-sizing: border-box;">`;
+    });
   } else {
-    result = tag + "\n" + result;
+    // Claude output is body-content only — wrap in a full document shell
+    result = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${tag}
+</head>
+<body style="margin: 0 20%; padding: 40px 0; box-sizing: border-box;">
+${result}
+</body>
+</html>`;
   }
-  // Apply side margins to <body>
-  result = result.replace(/<body([^>]*)>/i, (_match, attrs: string = "") => {
-    if (attrs.toLowerCase().includes("margin")) return _match;
-    return `<body${attrs} style="margin: 0 20%; padding: 40px 0; box-sizing: border-box;">`;
-  });
+
   return result;
 }
 
