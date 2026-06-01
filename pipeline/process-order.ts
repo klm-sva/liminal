@@ -1209,7 +1209,7 @@ ${plainText}`,
 
   const htmlPath = `${outputsFolder}/submission.html`;
   const { error: htmlErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true, contentType: "text/html" }),
+    supabase.storage.from(OUTPUTS_BUCKET).upload(htmlPath, Buffer.from(standardHtml), { upsert: true, contentType: "text/html" }),
     "upload submission.html",
   );
   if (htmlErr) throw new Error(`Failed to upload HTML output: ${htmlErr.message}`);
@@ -1219,7 +1219,7 @@ ${plainText}`,
   // Editable HTML — for customer download and PDF export
   const editablePath = `${outputsFolder}/submission-editable.html`;
   const { error: editErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true, contentType: "text/html" }),
+    supabase.storage.from(OUTPUTS_BUCKET).upload(editablePath, Buffer.from(editableHtml), { upsert: true, contentType: "text/html" }),
     "upload submission-editable.html",
   );
   if (editErr) console.warn(`    Editable HTML upload failed: ${editErr.message}`);

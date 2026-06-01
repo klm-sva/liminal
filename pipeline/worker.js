@@ -4177,7 +4177,7 @@ ${part1Html}` }] : [],
   const editableHtml = makeEditable(fullHtml);
   const htmlPath = `${outputsFolder}/submission.html`;
   const { error: htmlErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET2).upload(htmlPath, new Blob([standardHtml], { type: "text/html" }), { upsert: true, contentType: "text/html" }),
+    supabase.storage.from(OUTPUTS_BUCKET2).upload(htmlPath, Buffer.from(standardHtml), { upsert: true, contentType: "text/html" }),
     "upload submission.html"
   );
   if (htmlErr) throw new Error(`Failed to upload HTML output: ${htmlErr.message}`);
@@ -4185,7 +4185,7 @@ ${part1Html}` }] : [],
   console.log(`    \u2713 submission.html`);
   const editablePath = `${outputsFolder}/submission-editable.html`;
   const { error: editErr } = await dbCall(
-    supabase.storage.from(OUTPUTS_BUCKET2).upload(editablePath, new Blob([editableHtml], { type: "text/html" }), { upsert: true, contentType: "text/html" }),
+    supabase.storage.from(OUTPUTS_BUCKET2).upload(editablePath, Buffer.from(editableHtml), { upsert: true, contentType: "text/html" }),
     "upload submission-editable.html"
   );
   if (editErr) console.warn(`    Editable HTML upload failed: ${editErr.message}`);
