@@ -336,13 +336,11 @@ export async function sendGapAnalysisDeliveryEmail({
   name,
   programLabel,
   orderId,
-  htmlUrl,
 }: {
   to: string;
   name: string;
   programLabel: string;
   orderId: string;
-  htmlUrl: string;
 }) {
   return getResend().emails.send({
     from:    FROM(),
@@ -357,7 +355,6 @@ export async function sendGapAnalysisDeliveryEmail({
           View Report →
         </a>
       </p>
-      ${htmlUrl ? `<p style="font-size:13px;color:#666;">You can also <a href="${htmlUrl}">download the full HTML report</a> directly.</p>` : ""}
       <p style="font-size:12px;color:#888;">Use the recommended credits in your report as a guide for your next steps. Order individual credit services from your project dashboard to get started.</p>
     `,
   });

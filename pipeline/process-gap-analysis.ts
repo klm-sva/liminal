@@ -250,7 +250,6 @@ ${rawHtml}
       name:         customer.name ?? customer.email,
       programLabel: programLabels[program] ?? program,
       orderId,
-      htmlUrl:      signedStd.data?.signedUrl ?? "",
     });
     console.log(`  Step 13: Completion email sent to ${customer.email}`);
   } catch (emailErr) {
