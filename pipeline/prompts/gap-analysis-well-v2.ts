@@ -173,6 +173,13 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 
+DOCUMENT USAGE — CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals a building specification, operational policy, or design detail not captured in the questionnaire, incorporate it into the relevant concept analysis
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence of readiness for a specific WELL feature (e.g., an air quality report, operations manual, or equipment spec), note it as supporting evidence under that feature
+- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
 - Do NOT say "contact us" or mention support

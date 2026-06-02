@@ -155,6 +155,13 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 
+DOCUMENT USAGE — CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals an operational policy, protocol, maintenance record, or certification that wasn't captured in the questionnaire, incorporate it into the relevant concept assessment
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence that a specific HSR feature is already met (e.g., a cleaning protocol, water test report, emergency plan), note it as supporting evidence under that feature and update the readiness badge accordingly
+- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
 - Do NOT say "contact us" or mention support

@@ -121,7 +121,7 @@ REPORT STRUCTURE — produce all sections in this order:
    Add a note that this is an estimate — exact points depend on design decisions and documentation.
 
 6. RECOMMENDED SERVICES SECTION (section-header: "Recommended Credit Services")
-   A clear list of the specific credits recommended for ordering from Liminal, presented as:
+   A clear list of the specific credits recommended for ordering from LIMINALsva, presented as:
    <div class="info-box">
      <strong>Based on this gap analysis, the following LEED credit services are recommended for your project.</strong>
      Each service includes a complete credit submission package — GBCI calculator, compliance narrative, and all required documentation.
@@ -150,6 +150,13 @@ REPORT STRUCTURE — produce all sections in this order:
 ===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending. Use the exact short codes only — no category prefixes, no full names. Examples: "EAc2", "LTc5", "EQc1", "WEc1", "MRc2", "SSc1", "LTc4". The Indoor Environmental Quality category uses EQ codes (EQc1, EQc2, etc.) — never IEQ. The Energy & Atmosphere category uses EA codes — never ENE. The Location & Transportation category uses LT codes — never LOC.
+
+DOCUMENT USAGE — CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals a design decision, system spec, or commitment not captured in the questionnaire, incorporate it into the relevant credit analysis
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence of readiness for a specific credit (e.g., an energy model, spec sheet, or policy), note it as supporting evidence under that credit
+- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
 
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support
