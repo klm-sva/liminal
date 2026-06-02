@@ -26,11 +26,12 @@ type OrderRow = {
   created_at: string;
   gap_analysis_program: string | null;
   credits: {
-    credit_code: string;
-    credit_name: string;
-    program: ProgramType;
-    has_calculator: boolean;
-    has_form: boolean;
+    credit_code:      string;
+    credit_name:      string;
+    program:          ProgramType;
+    points_available: number | null;
+    has_calculator:   boolean;
+    has_form:         boolean;
   } | null;
 };
 
@@ -57,7 +58,7 @@ export default async function ProjectPage({
 
   const { data: orderData } = await supabase
     .from("orders")
-    .select("id, status, created_at, gap_analysis_program, credits(credit_code, credit_name, program, has_calculator, has_form)")
+    .select("id, status, created_at, gap_analysis_program, credits(credit_code, credit_name, program, points_available, has_calculator, has_form)")
     .eq("project_id", id)
     .order("created_at", { ascending: false });
 

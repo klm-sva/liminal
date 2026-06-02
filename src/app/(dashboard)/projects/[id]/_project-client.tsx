@@ -16,12 +16,36 @@ type OrderRow = {
   created_at: string;
   gap_analysis_program: string | null;
   credits: {
-    credit_code: string;
-    credit_name: string;
-    program: ProgramType;
-    has_calculator: boolean;
-    has_form: boolean;
+    credit_code:      string;
+    credit_name:      string;
+    program:          ProgramType;
+    points_available: number | null;
+    has_calculator:   boolean;
+    has_form:         boolean;
   } | null;
+};
+
+const CERT_LEVELS: Partial<Record<ProgramType, { label: string; pts: number }[]>> = {
+  leed_bdc_v41: [
+    { label: "Certified", pts: 40 },
+    { label: "Silver",    pts: 50 },
+    { label: "Gold",      pts: 60 },
+    { label: "Platinum",  pts: 80 },
+  ],
+  well_v2: [
+    { label: "Silver",   pts: 50 },
+    { label: "Gold",     pts: 60 },
+    { label: "Platinum", pts: 80 },
+  ],
+  well_hsr: [
+    { label: "Rating", pts: 25 },
+  ],
+};
+
+const MAX_PTS: Partial<Record<ProgramType, number>> = {
+  leed_bdc_v41: 110,
+  well_v2:      110,
+  well_hsr:     35,
 };
 
 const ALL_PROGRAMS: ProgramType[] = ["leed_bdc_v41", "well_v2", "well_hsr"];
@@ -147,6 +171,67 @@ export default function ProjectClient({ projectId, initialPrograms, certificatio
             <Plus size={14} /> Add a credit or feature
           </Link>
         </div>
+
+        {/* Certification progress bars — one per program that has ordered credits */}
+        {programs.filter((p) => CERT_LEVELS[p]).map((p) => {
+          const programOrders = orders.filter((o) => !o.gap_analysis_program && o.credits?.program === p && o.status !== "failed");
+          if (programOrders.length === 0) return null;
+          const pts    = programOrders.reduce((sum, o) => sum + (o.credits?.points_available ?? 0), 0);
+          const max    = MAX_PTS[p] ?? 110;
+          const levels = CERT_LEVELS[p] ?? [];
+          const pct    = Math.min((pts / max) * 100, 100);
+          return (
+            <div
+              key={p}
+              className="relative overflow-hidden mx-6 mb-1 rounded-xl px-4 py-2.5"
+              style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
+            >
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 opacity-[0.04]"
+                style={{
+                  backgroundImage: "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+                  backgroundSize: "40px 40px",
+                }}
+              />
+              <div className="relative">
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="font-medium text-white/65">{PROGRAM_SHORT[p]}</span>
+                  <span className="text-white/45">{pts} / {max} pts ordered</span>
+                </div>
+                {/* Bar */}
+                <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-1.5 rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: "rgba(255,255,255,0.55)" }}
+                  />
+                  {levels.map(({ pts: threshold }) => (
+                    <div
+                      key={threshold}
+                      className="absolute top-0 h-full w-px bg-white/25"
+                      style={{ left: `${(threshold / max) * 100}%` }}
+                    />
+                  ))}
+                </div>
+                {/* Level labels */}
+                <div className="relative h-3.5 mt-0.5">
+                  {levels.map(({ label, pts: threshold }) => (
+                    <span
+                      key={label}
+                      className="absolute text-[9px] text-white/40 -translate-x-1/2"
+                      style={{ left: `${(threshold / max) * 100}%` }}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[9px] text-white/30 mt-0.5 leading-tight">
+                  Points from ordered credits only — does not account for prerequisites or required items.
+                </p>
+              </div>
+            </div>
+          );
+        })}
 
         {filteredOrders.length === 0 ? (
           <div className="py-16 text-center">
