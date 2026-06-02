@@ -473,7 +473,7 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
    Add a note that this is an estimate \u2014 exact points depend on design decisions and documentation.
 
 6. RECOMMENDED SERVICES SECTION (section-header: "Recommended Credit Services")
-   A clear list of the specific credits recommended for ordering from Liminal, presented as:
+   A clear list of the specific credits recommended for ordering from LIMINALsva, presented as:
    <div class="info-box">
      <strong>Based on this gap analysis, the following LEED credit services are recommended for your project.</strong>
      Each service includes a complete credit submission package \u2014 GBCI calculator, compliance narrative, and all required documentation.
@@ -502,6 +502,13 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
 ===GAP_ANALYSIS_DATA_END===
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending. Use the exact short codes only \u2014 no category prefixes, no full names. Examples: "EAc2", "LTc5", "EQc1", "WEc1", "MRc2", "SSc1", "LTc4". The Indoor Environmental Quality category uses EQ codes (EQc1, EQc2, etc.) \u2014 never IEQ. The Energy & Atmosphere category uses EA codes \u2014 never ENE. The Location & Transportation category uses LT codes \u2014 never LOC.
+
+DOCUMENT USAGE \u2014 CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals a design decision, system spec, or commitment not captured in the questionnaire, incorporate it into the relevant credit analysis
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence of readiness for a specific credit (e.g., an energy model, spec sheet, or policy), note it as supporting evidence under that credit
+- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
 
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support
@@ -690,6 +697,13 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 
+DOCUMENT USAGE \u2014 CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals a building specification, operational policy, or design detail not captured in the questionnaire, incorporate it into the relevant concept analysis
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence of readiness for a specific WELL feature (e.g., an air quality report, operations manual, or equipment spec), note it as supporting evidence under that feature
+- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
 - Do NOT say "contact us" or mention support
@@ -859,6 +873,13 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 
+DOCUMENT USAGE \u2014 CRITICAL:
+If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
+- If a document reveals an operational policy, protocol, maintenance record, or certification that wasn't captured in the questionnaire, incorporate it into the relevant concept assessment
+- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+- If a document provides evidence that a specific HSR feature is already met (e.g., a cleaning protocol, water test report, emergency plan), note it as supporting evidence under that feature and update the readiness badge accordingly
+- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
 - Do NOT say "contact us" or mention support
@@ -880,6 +901,7 @@ __export(resend_exports, {
   sendCustomerDelayEmail: () => sendCustomerDelayEmail,
   sendDeletionWarningEmail: () => sendDeletionWarningEmail,
   sendDocumentsRequestedEmail: () => sendDocumentsRequestedEmail,
+  sendFeedbackEmail: () => sendFeedbackEmail,
   sendGapAnalysisDeliveryEmail: () => sendGapAnalysisDeliveryEmail,
   sendOutputDeliveryEmail: () => sendOutputDeliveryEmail,
   sendProcessingStartedEmail: () => sendProcessingStartedEmail,
@@ -1130,12 +1152,40 @@ async function sendAddressInvalidEmail({
     `
   });
 }
+async function sendFeedbackEmail({
+  customerEmail,
+  customerName,
+  orderId,
+  creditCode,
+  creditName,
+  useful,
+  wouldUseAgain,
+  whatWorked,
+  whatToImprove
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to: "support@liminalsva.com",
+    subject: `Pilot feedback \u2014 ${creditCode} \u2014 ${useful}`,
+    html: `
+      <h2>Pilot Feedback</h2>
+      <table style="border-collapse:collapse;width:100%;font-size:14px;">
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;width:160px;">Customer</td><td style="padding:6px 12px;">${customerName} (${customerEmail})</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;">Order</td><td style="padding:6px 12px;">#${orderId.slice(-6).toUpperCase()} \u2014 ${creditCode} ${creditName}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;">Was it useful?</td><td style="padding:6px 12px;">${useful}</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;">Use again?</td><td style="padding:6px 12px;">${wouldUseAgain}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;vertical-align:top;">What worked</td><td style="padding:6px 12px;">${whatWorked || "\u2014"}</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;vertical-align:top;">Improve</td><td style="padding:6px 12px;">${whatToImprove || "\u2014"}</td></tr>
+      </table>
+      <p style="font-size:12px;color:#999;margin-top:16px;">Submitted ${(/* @__PURE__ */ new Date()).toLocaleString()}</p>
+    `
+  });
+}
 async function sendGapAnalysisDeliveryEmail({
   to,
   name,
   programLabel,
-  orderId,
-  htmlUrl
+  orderId
 }) {
   return getResend().emails.send({
     from: FROM(),
@@ -1150,7 +1200,6 @@ async function sendGapAnalysisDeliveryEmail({
           View Report \u2192
         </a>
       </p>
-      ${htmlUrl ? `<p style="font-size:13px;color:#666;">You can also <a href="${htmlUrl}">download the full HTML report</a> directly.</p>` : ""}
       <p style="font-size:12px;color:#888;">Use the recommended credits in your report as a guide for your next steps. Order individual credit services from your project dashboard to get started.</p>
     `
   });
@@ -1341,8 +1390,7 @@ ${rawHtml}
       to: customer.email,
       name: customer.name ?? customer.email,
       programLabel: programLabels[program] ?? program,
-      orderId,
-      htmlUrl: signedStd.data?.signedUrl ?? ""
+      orderId
     });
     console.log(`  Step 13: Completion email sent to ${customer.email}`);
   } catch (emailErr) {
@@ -1707,6 +1755,84 @@ Respond with a single JSON object:
 Set "acceptable" to true if the document is suitable for certification submission.
 Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
 The "issue" string must be written for the project team to read \u2014 be specific and actionable.
+Return only the JSON object.`;
+  }
+});
+
+// pipeline/drawing-review.ts
+async function reviewDrawings(customerId, projectId, drawingPaths) {
+  if (drawingPaths.length === 0) {
+    return { acceptable: true, issues: [] };
+  }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
+  const client2 = new import_sdk3.default({ apiKey, timeout: 18e4, maxRetries: 0 });
+  const supabase = createServiceClient();
+  console.log(`[drawing-review] Reviewing ${drawingPaths.length} drawing file(s)...`);
+  const contentBlocks = [];
+  const pathsToReview = drawingPaths.slice(0, 3);
+  for (const drawingPath of pathsToReview) {
+    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(drawingPath);
+    if (error || !data2) {
+      console.warn(`  [drawing-review] Failed to download ${drawingPath}: ${error?.message}`);
+      continue;
+    }
+    const buffer = Buffer.from(await data2.arrayBuffer());
+    const filename2 = drawingPath.split("/").pop() ?? "drawing.pdf";
+    contentBlocks.push(preparePdfDocument(buffer, filename2));
+    console.log(`  \u2713 loaded ${filename2}`);
+  }
+  if (contentBlocks.length === 0) {
+    console.warn(`  [drawing-review] No files loaded \u2014 passing review to avoid blocking order`);
+    return { acceptable: true, issues: [] };
+  }
+  contentBlocks.push({
+    type: "text",
+    text: "Review these drawing files and return the JSON assessment."
+  });
+  const response = await client2.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 512,
+    system: DRAWING_REVIEW_PROMPT,
+    messages: [{ role: "user", content: contentBlocks }]
+  });
+  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+  try {
+    const json = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+    const result = JSON.parse(json);
+    return {
+      acceptable: result.acceptable === true,
+      issues: Array.isArray(result.issues) ? result.issues : []
+    };
+  } catch {
+    console.warn(`  [drawing-review] Response not valid JSON: ${rawText.slice(0, 200)} \u2014 passing review`);
+    return { acceptable: true, issues: [] };
+  }
+}
+var import_sdk3, DRAWING_REVIEW_PROMPT;
+var init_drawing_review = __esm({
+  "pipeline/drawing-review.ts"() {
+    "use strict";
+    import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
+    init_supabase();
+    init_pdf_to_images();
+    DRAWING_REVIEW_PROMPT = `You are a building certification specialist reviewing drawing files submitted by a project team. Assess whether these files are legible and usable for extracting basic building data needed for certification work.
+
+Review the provided files and determine:
+1. Are these recognizable as architectural, engineering, or construction drawings?
+2. Are they legible \u2014 not excessively blurry, not corrupted, not blank?
+3. Is at least one floor plan present?
+
+Be lenient. Drawings do not need to be complete or stamped. Only flag genuine problems that would prevent extracting basic building information such as floor area, occupancy, or site data.
+
+Respond with a single JSON object:
+{
+  "acceptable": boolean,
+  "issues": string[]
+}
+
+Set "acceptable" to true if the drawings are usable.
+Set "acceptable" to false and describe each specific problem in "issues". Write issues for the project team \u2014 be specific and actionable (e.g., "No floor plan found \u2014 please include architectural floor plan sheets").
 Return only the JSON object.`;
   }
 });
@@ -2548,7 +2674,7 @@ ${EXTRACTION_PROMPT}` }
 async function extractSpecs(projectId, customerId, files) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk3.default({ apiKey });
+  const client2 = new import_sdk4.default({ apiKey });
   const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractSpecsContent(files, client2, usage2);
@@ -2594,11 +2720,11 @@ function formatSpecsProfileForContext(profile) {
   }
   return lines.filter((l) => l !== void 0).join("\n");
 }
-var import_sdk3, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET2, PROFILE_FILENAME, EXTRACTION_PROMPT;
+var import_sdk4, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET2, PROFILE_FILENAME, EXTRACTION_PROMPT;
 var init_specs_extract = __esm({
   "pipeline/lib/specs-extract.ts"() {
     "use strict";
-    import_sdk3 = __toESM(require("@anthropic-ai/sdk"));
+    import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
     fs8 = __toESM(require("fs"));
     path7 = __toESM(require("path"));
     os2 = __toESM(require("os"));
@@ -2738,7 +2864,7 @@ async function extractDocumentContent(file, client2, usage2) {
 async function extractDocument(projectId, customerId, file) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk4.default({ apiKey });
+  const client2 = new import_sdk5.default({ apiKey });
   const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractDocumentContent(file, client2, usage2);
@@ -2779,11 +2905,11 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
-var import_sdk4, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
+var import_sdk5, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
 var init_document_extract = __esm({
   "pipeline/lib/document-extract.ts"() {
     "use strict";
-    import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
+    import_sdk5 = __toESM(require("@anthropic-ai/sdk"));
     fs9 = __toESM(require("fs"));
     path8 = __toESM(require("path"));
     os3 = __toESM(require("os"));
@@ -2950,7 +3076,7 @@ FIELD IDs ARE NEVER VISIBLE IN OUTPUT \u2014 HARD RULE, NO EXCEPTIONS.
 The form schema contains internal identifiers like "fieldId: splCircumstances" or "unitTypeSelected". These are for your reference only when identifying which field to populate. They must never appear anywhere in the output \u2014 not next to a label, not as a caption, not as a value, not anywhere. Do not output camelCase field ID strings as visible text under any circumstances. If you must reference a field ID in the document, wrap it in <span class="field-id">...</span> \u2014 the stylesheet hides this class entirely. A raw camelCase field ID string appearing as plain visible text is a critical output error.
 
 NEVER USE THE NAME "CERTIFYAI".
-The platform is called Liminal. Do not use "CertifyAI" anywhere in any output \u2014 not in section headers, not in checklist labels, not in any text. If you need to indicate that an item was produced or retrieved by the platform, say "Provided" or attribute to "Liminal." The word "CertifyAI" must never appear in customer-facing output.
+The platform is called LIMINALsva. Do not use "CertifyAI" anywhere in any output \u2014 not in section headers, not in checklist labels, not in any text. If you need to indicate that an item was produced or retrieved by the platform, say "Provided" or attribute to "LIMINALsva." The words "CertifyAI" and "Liminal" must never appear in customer-facing output.
 
 MAPS ARE NEVER GENERATED BY YOU.
 Walking distance maps, site context maps, transit maps, bicycle maps \u2014 all maps are produced by the Google Maps API pipeline, not by you. When a map is required, insert exactly this placeholder and nothing else: <!-- WALKING_DISTANCE_MAP -->
@@ -3034,8 +3160,8 @@ WHAT DRIVES THE OUTPUT \u2014 READ FIRST
 OUTPUT STRUCTURE (for every credit)
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-Online Submittal Form
-Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or standard reference values for this credit type. For any field requiring owner decision: [OWNER TO CONFIRM: specific description of what is needed]. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
+LEED Online Submittal Form Inputs
+The section header must be exactly "LEED Online Submittal Form Inputs" \u2014 do not append a form number, credit code, or any other identifier. Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or standard reference values for this credit type. For any field requiring owner decision: [OWNER TO CONFIRM: specific description of what is needed]. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
 
 Supporting Documentation
 
@@ -3753,7 +3879,7 @@ function validateAllDeliverables(params) {
 async function processOrder(orderId, runId, additionalInstructions) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
-  const client2 = new import_sdk5.default({ apiKey, timeout: 18e5, maxRetries: 1 });
+  const client2 = new import_sdk6.default({ apiKey, timeout: 18e5, maxRetries: 1 });
   const supabase = createServiceClient();
   console.log(`
 [process-order] \u25B6 Order ${orderId} / Run ${runId}`);
@@ -3841,13 +3967,42 @@ async function processOrder(orderId, runId, additionalInstructions) {
   } else {
     console.log(`  Step 6: No uploads and no required documents \u2014 proceeding directly.`);
   }
-  if (reviewResult && reviewResult.status === "incomplete") {
-    const issueStrings = reviewResult.issues.map((i) => i.issue);
+  let drawingReviewIssues = [];
+  if (attemptNumber === 1 && !project.auto_extracted) {
+    const { data: drawingFiles } = await dbCall(
+      supabase.storage.from(UPLOADS_BUCKET4).list(drawingsPath(order.customer_id, order.project_id)),
+      "list drawings for review"
+    );
+    const drawingPathsForReview = (drawingFiles ?? []).filter((f) => f.name?.endsWith(".pdf")).map((f) => `${drawingsPath(order.customer_id, order.project_id)}/${f.name}`);
+    if (drawingPathsForReview.length > 0) {
+      console.log(`  Step 6.5: Reviewing ${drawingPathsForReview.length} drawing file(s)...`);
+      const drawingReview = await reviewDrawings(
+        order.customer_id,
+        order.project_id,
+        drawingPathsForReview
+      );
+      if (!drawingReview.acceptable) {
+        drawingReviewIssues = drawingReview.issues;
+        console.log(`  Step 6.5: Drawing review found ${drawingReviewIssues.length} issue(s)`);
+      } else {
+        console.log(`  Step 6.5: Drawings acceptable`);
+      }
+    } else {
+      console.log(`  Step 6.5: No drawings uploaded \u2014 skipping drawing review`);
+    }
+  } else if (project.auto_extracted) {
+    console.log(`  Step 6.5: Drawings already analyzed \u2014 skipping drawing review`);
+  } else {
+    console.log(`  Step 6.5: Attempt ${attemptNumber} \u2014 skipping drawing review`);
+  }
+  const documentIssueStrings = reviewResult?.status === "incomplete" ? reviewResult.issues.map((i) => i.issue) : [];
+  const allReviewIssues = [...documentIssueStrings, ...drawingReviewIssues];
+  if (allReviewIssues.length > 0) {
     if (attemptNumber === 1) {
-      console.log(`  Step 7: Review incomplete (attempt 1) \u2014 ${issueStrings.length} issue(s). Notifying customer.`);
+      console.log(`  Step 7: Review incomplete (attempt 1) \u2014 ${allReviewIssues.length} issue(s). Notifying customer.`);
       await supabase.from("runs").update({
         status: "failed",
-        review_issues: issueStrings,
+        review_issues: allReviewIssues,
         completed_at: (/* @__PURE__ */ new Date()).toISOString(),
         error_message: "Document review incomplete"
       }).eq("id", runId);
@@ -3857,14 +4012,14 @@ async function processOrder(orderId, runId, additionalInstructions) {
         entityType: "order",
         entityId: orderId,
         customerId: order.customer_id,
-        metadata: { attemptNumber, issueCount: issueStrings.length, issues: issueStrings }
+        metadata: { attemptNumber, issueCount: allReviewIssues.length, issues: allReviewIssues }
       });
-      return { orderId, runId, status: "documents_requested", issues: issueStrings };
+      return { orderId, runId, status: "documents_requested", issues: allReviewIssues };
     }
-    console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) \u2014 proceeding with best-effort run. Issues: ${issueStrings.join("; ")}`);
-    knownReviewIssues = issueStrings;
+    console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) \u2014 proceeding with best-effort run. Issues: ${allReviewIssues.join("; ")}`);
+    knownReviewIssues = allReviewIssues;
     await supabase.from("runs").update({
-      review_issues: issueStrings
+      review_issues: allReviewIssues
     }).eq("id", runId);
   }
   console.log(`  Step 7.5: Validating project address: "${project.address ?? "(none)"}"...`);
@@ -4454,16 +4609,17 @@ ${part1Html}` }] : [],
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
-var import_sdk5, path9, fs10, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var import_sdk6, path9, fs10, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
 var init_process_order = __esm({
   "pipeline/process-order.ts"() {
     "use strict";
-    import_sdk5 = __toESM(require("@anthropic-ai/sdk"));
+    import_sdk6 = __toESM(require("@anthropic-ai/sdk"));
     path9 = __toESM(require("path"));
     fs10 = __toESM(require("fs"));
     init_supabase();
     init_extract_xlsx_row();
     init_document_review();
+    init_drawing_review();
     init_drawing_analysis();
     init_map_generation();
     init_supabase_ops();
