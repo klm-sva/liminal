@@ -21,7 +21,7 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
     subject: "Welcome to Liminal",
     html: `
       <h1>Welcome, ${name}!</h1>
-      <p>Your Liminal account is ready. Start by creating your first certification project.</p>
+      <p>Your LIMINALsva account is ready. Start by creating your first certification project.</p>
       <p><a href="${APP()}/dashboard">Go to Dashboard →</a></p>
     `,
   });
@@ -105,7 +105,7 @@ export async function sendProcessingStartedEmail({
     html: `
       <h1>Your submission is being processed</h1>
       <p>Hi ${name},</p>
-      <p>All documents checked out. We are now generating your <strong>${creditName}</strong> submission package.</p>
+      <p>We are now generating your <strong>${creditName}</strong> submission package.</p>
       <p>You'll receive an email with download links when it's ready — typically within a few minutes.</p>
     `,
   });
