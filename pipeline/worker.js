@@ -2885,7 +2885,7 @@ You have web search available. Use it extensively and thoroughly. For any credit
 - For utility rates: search the utility provider's published rate schedule.
 - For any other data type: search the most authoritative public source available.
 
-Return all findings directly in the output. Do NOT add a "Data Source" column to any table \u2014 source references belong in the Submission Checklist (Part 3), not inline in tables. Never ask the customer for data that can be found through web search.
+Return all findings directly in the output. Do NOT add a "Data Source" column to any table \u2014 source references belong in the Submission Checklist, not inline in tables. Never ask the customer for data that can be found through web search.
 
 MAXIMUM OUTCOME IS THE ONLY VALID STOPPING CONDITION.
 
@@ -2968,6 +2968,15 @@ Every visual element is either real (a real image, a real map, a real annotated 
 NO PROCESS NARRATION OF ANY KIND.
 Do not write: "I have reviewed...", "Based on the attached...", "The following sections contain...", "As requested...", "Here is the...", "I will now...", or any similar framing. Content only.
 
+DESCRIBE DELIVERABLES \u2014 NEVER DESCRIBE HOW THEY WERE PRODUCED.
+Every word of output text must describe what the content IS \u2014 never how it was obtained, computed, or created. This rule is absolute and applies to every sentence, heading, label, note, and summary in the entire document.
+
+Forbidden in output text: any word or phrase that names an action taken to produce the content \u2014 including but not limited to: generated, retrieved, extracted, calculated, computed, analyzed, processed, processing, sourced, obtained, fetched, looked up, found, determined, produced, automated, auto-retrieved, auto-generated, system-generated, or any synonym or variation.
+
+Permitted: words that describe what the content IS or that it is being provided. "Transit schedule data" not "retrieved transit data." "Points determination" not "calculated points." "Documentation Summary" not "Processing Summary." When introducing a deliverable in a checklist or summary, "Provided" and "Included" are acceptable \u2014 they describe presence, not mechanism.
+
+This rule applies to section headings, table labels, checklist entries, callout notes, and summary sections equally. No part of the document is exempt.
+
 CLAUDE RETRIEVES EVERYTHING IT CAN BEFORE ASKING THE CUSTOMER.
 Before listing any item as required from the customer, first determine whether it can be retrieved, calculated, or generated automatically. If it can be retrieved \u2014 retrieve it. The customer is never asked to provide something that can be obtained from an external source.
 
@@ -3019,28 +3028,28 @@ WHAT DRIVES THE OUTPUT \u2014 READ FIRST
 
 3. If a form link is provided: reproduce only the fields, tables, and uploads on that form. Nothing added, nothing omitted.
 
-4. If no form link: skip Part 1, produce Part 2 only.
+4. If no form link: omit the Online Submittal Form section entirely and begin directly with Supporting Documentation.
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT STRUCTURE (for every credit)
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
-PART 1 \u2014 Online Submittal Form
+Online Submittal Form
 Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or standard reference values for this credit type. For any field requiring owner decision: [OWNER TO CONFIRM: specific description of what is needed]. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
 
-PART 2 \u2014 Supporting Project Documentation
+Supporting Documentation
 
-SECTION A \u2014 Retrieved Data (Column 2)
-For every item listed in Column 2 (DOCUMENTS CLAUDE RETRIEVES AUTOMATICALLY): retrieve it and include the complete, actual data in this section. Not a reference. Not a link. Not a summary. The full retrieved data, formatted and ready for a certification reviewer to read and verify.
+SECTION A \u2014 Supporting Data (Column 2)
+For every item listed in Column 2 (DOCUMENTS CLAUDE RETRIEVES AUTOMATICALLY): retrieve it and include the complete, actual data in this section. Not a reference. Not a link. Not a summary. The full data, formatted and ready for a certification reviewer to read and verify.
 
 This is the evidence behind the submission. If a transit schedule is listed in Column 2, the schedule appears here in full. If census density data is listed, the data appears here in full. If a map is listed, the map appears here. Every Column 2 item is a deliverable \u2014 treat it as such.
 
 If any Column 2 item cannot be retrieved, mark it clearly: \u26A0 RETRIEVAL INCOMPLETE \u2014 [reason] \u2014 and describe what the project team must obtain manually as a substitute.
 
-SECTION B \u2014 Generated Outputs (Column 4)
-Generate every item listed in Column 4 of the automation analysis spreadsheet. Generate each item completely. Do not add items not on the list. Do not omit items that are on the list.
+SECTION B \u2014 Deliverables (Column 4)
+Produce every item listed in Column 4 of the automation analysis spreadsheet. Produce each item completely. Do not add items not on the list. Do not omit items that are on the list.
 
-PART 3 \u2014 Complete Submission Checklist (MANDATORY \u2014 every credit, every run, every program, no exceptions)
+Complete Submission Checklist (MANDATORY \u2014 every credit, every run, every program, no exceptions)
 
 This section is required in every output. It gives the project team a complete, actionable picture of everything required for certification review and exactly who is responsible for each item.
 
@@ -3049,13 +3058,13 @@ Title this section: "Complete Submission Checklist"
 Organize it into two groups:
 
 GROUP A \u2014 PROVIDED
-List every item from Column 2 (Claude Auto-Retrieves). For each item:
+List every item from Column 2 (Supporting Data). For each item:
   - Item name
   - Badge: \u2713 PROVIDED
   - Where it appears: the exact section name in this document (e.g., "Table 1 \u2014 Qualifying Transit Stops", "Walking Distance Map", "Points Determination")
   - Source link: a direct, clickable <a href="..."> URL to the original data so the certification reviewer can independently download or verify the source. This is required for every Column 2 item. Use the most specific URL available \u2014 the agency's published schedule page, the GTFS feed download, the Census data permalink, the utility rate schedule PDF, etc. If a direct URL was used to retrieve the data, use that exact URL. Never omit this link.
 
-Also list every document generated from Column 4 outputs:
+Also list every deliverable from Column 4:
   - Item name
   - Badge: \u2713 PROVIDED
   - Reference: "See [Section Name] in this document"
@@ -3073,7 +3082,7 @@ For each item:
       \xB7 "Site-specific and cannot be found in any public source" \u2014 for custom calculations or unique conditions
   - Format required: PDF / photograph / signed letter on letterhead / stamped drawing / etc.
 
-Never omit any Column 1 item. Never omit any Column 2 item. If a Column 2 item was not successfully retrieved, mark it \u26A0 RETRIEVAL INCOMPLETE and explain what the project team should verify.
+Never omit any Column 1 item. Never omit any Column 2 item. If a Column 2 item is not included, mark it \u26A0 RETRIEVAL INCOMPLETE and explain what the project team should verify.
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 HTML OUTPUT \u2014 CLASS VOCABULARY (MANDATORY)
@@ -3176,11 +3185,11 @@ LAYOUT HELPERS (use when credit content calls for it)
   <div class="source-note">Source: agency.gov, retrieved 2026-05-26</div>
   <ul class="checklist-list"><li>Item one</li><li>Item two</li></ul>
 
-PROCESSING SUMMARY (at the very end of every output)
+DOCUMENTATION SUMMARY (at the very end of every output)
   <div class="processing-summary">
-    <h3>Processing Summary</h3>
+    <h3>Documentation Summary</h3>
     <p><strong>Credit:</strong> LT Credit 5 \u2014 Access to Quality Transit ({{PROGRAM_DISPLAY_NAME}})</p>
-    <p><strong>Outputs generated:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
+    <p><strong>Deliverables included:</strong> Online Form, Supporting Documentation, Submission Checklist</p>
     <p><strong>Owner confirmation items:</strong> list any [OWNER TO CONFIRM] items here</p>
   </div>
 
