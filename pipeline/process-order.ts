@@ -36,6 +36,7 @@ import * as fs from "fs";
 import { createServiceClient } from "./lib/supabase";
 import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx-row";
 import { reviewDocuments, type UploadedDocument } from "./document-review";
+import { reviewDrawings } from "./drawing-review";
 import { analyzeDrawings } from "./drawing-analysis";
 import { generateMap, type MapType } from "./map-generation";
 import { logAuditEvent } from "./lib/supabase-ops";
@@ -536,17 +537,58 @@ export async function processOrder(
     console.log(`  Step 6: No uploads and no required documents — proceeding directly.`);
   }
 
-  // ── Step 7: If incomplete on attempt 1 → documents_requested (notify, stop)
-  //            If incomplete on attempt 2+ → continue anyway (best-effort run)
-  if (reviewResult && reviewResult.status === "incomplete") {
-    const issueStrings = reviewResult.issues.map((i) => i.issue);
+  // ── Step 6.5: Drawing quality review (attempt 1 only) ────────────────────
+  // Runs before the order moves to processing so drawing issues can be returned
+  // via the same documents_requested gate as document review issues.
+  // Skipped on attempt 2+ — customer was already notified; just run best-effort.
+  let drawingReviewIssues: string[] = [];
 
+  if (attemptNumber === 1 && !project.auto_extracted) {
+    const { data: drawingFiles } = await dbCall(
+      supabase.storage.from(UPLOADS_BUCKET).list(drawingsPath(order.customer_id, order.project_id!)),
+      "list drawings for review",
+    );
+
+    const drawingPathsForReview = (drawingFiles ?? [])
+      .filter((f) => f.name?.endsWith(".pdf"))
+      .map((f) => `${drawingsPath(order.customer_id, order.project_id!)}/${f.name}`);
+
+    if (drawingPathsForReview.length > 0) {
+      console.log(`  Step 6.5: Reviewing ${drawingPathsForReview.length} drawing file(s)...`);
+      const drawingReview = await reviewDrawings(
+        order.customer_id,
+        order.project_id!,
+        drawingPathsForReview,
+      );
+      if (!drawingReview.acceptable) {
+        drawingReviewIssues = drawingReview.issues;
+        console.log(`  Step 6.5: Drawing review found ${drawingReviewIssues.length} issue(s)`);
+      } else {
+        console.log(`  Step 6.5: Drawings acceptable`);
+      }
+    } else {
+      console.log(`  Step 6.5: No drawings uploaded — skipping drawing review`);
+    }
+  } else if (project.auto_extracted) {
+    console.log(`  Step 6.5: Drawings already analyzed — skipping drawing review`);
+  } else {
+    console.log(`  Step 6.5: Attempt ${attemptNumber} — skipping drawing review`);
+  }
+
+  // ── Step 7: If any review issues on attempt 1 → documents_requested (stop)
+  //            If issues on attempt 2+ → continue anyway (best-effort run)
+  const documentIssueStrings = reviewResult?.status === "incomplete"
+    ? reviewResult.issues.map((i) => i.issue)
+    : [];
+  const allReviewIssues = [...documentIssueStrings, ...drawingReviewIssues];
+
+  if (allReviewIssues.length > 0) {
     if (attemptNumber === 1) {
-      console.log(`  Step 7: Review incomplete (attempt 1) — ${issueStrings.length} issue(s). Notifying customer.`);
+      console.log(`  Step 7: Review incomplete (attempt 1) — ${allReviewIssues.length} issue(s). Notifying customer.`);
 
       await supabase.from("runs").update({
         status:        "failed",
-        review_issues: issueStrings,
+        review_issues: allReviewIssues,
         completed_at:  new Date().toISOString(),
         error_message: "Document review incomplete",
       }).eq("id", runId);
@@ -558,20 +600,20 @@ export async function processOrder(
         entityType: "order",
         entityId:   orderId,
         customerId: order.customer_id,
-        metadata:   { attemptNumber, issueCount: issueStrings.length, issues: issueStrings },
+        metadata:   { attemptNumber, issueCount: allReviewIssues.length, issues: allReviewIssues },
       });
 
-      return { orderId, runId, status: "documents_requested", issues: issueStrings };
+      return { orderId, runId, status: "documents_requested", issues: allReviewIssues };
     }
 
     // Attempt 2+: customer was already told what was missing — run pipeline with
     // whatever was provided and surface remaining gaps in the output document.
-    console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) — proceeding with best-effort run. Issues: ${issueStrings.join("; ")}`);
+    console.log(`  Step 7: Review incomplete (attempt ${attemptNumber}) — proceeding with best-effort run. Issues: ${allReviewIssues.join("; ")}`);
 
-    knownReviewIssues = issueStrings;
+    knownReviewIssues = allReviewIssues;
 
     await supabase.from("runs").update({
-      review_issues: issueStrings,
+      review_issues: allReviewIssues,
     }).eq("id", runId);
   }
 
