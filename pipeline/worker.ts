@@ -106,7 +106,7 @@ app.post("/process", async (req: any, res: any) => {
       .eq("id", orderId)
       .single();
 
-    let result: { status: string };
+    let result: { status: string; issues?: string[] };
     if (!order?.credit_id) {
       const { processGapAnalysis } = require("./process-gap-analysis");
       result = await processGapAnalysis(orderId, runId);
@@ -117,6 +117,35 @@ app.post("/process", async (req: any, res: any) => {
 
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
+
+    // Send documents-requested email — this can only be done here since the worker
+    // calls processOrder directly and the Vercel internal route is never used.
+    if (result.status === "documents_requested") {
+      try {
+        const { data: orderFull } = await supabase
+          .from("orders")
+          .select("customer_id, credit_id, credits(credit_name)")
+          .eq("id", orderId)
+          .single();
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("email, name")
+          .eq("id", orderFull?.customer_id)
+          .single();
+        const creditName = (orderFull?.credits as { credit_name: string } | null)?.credit_name ?? "your credit";
+        const { sendDocumentsRequestedEmail } = require("../src/lib/resend");
+        await sendDocumentsRequestedEmail({
+          to:        customer?.email ?? "",
+          name:      customer?.name  ?? "there",
+          creditName,
+          orderId,
+          issues:    result.issues ?? [],
+        });
+        console.log(`[worker] documents-requested email sent for orderId=${orderId}`);
+      } catch (emailErr) {
+        console.warn(`[worker] failed to send documents-requested email: ${(emailErr as Error).message}`);
+      }
+    }
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
     console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${(err as Error).message}`);

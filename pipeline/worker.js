@@ -874,6 +874,20 @@ var init_gap_analysis_well_hsr = __esm({
 });
 
 // src/lib/resend.ts
+var resend_exports = {};
+__export(resend_exports, {
+  sendAddressInvalidEmail: () => sendAddressInvalidEmail,
+  sendCustomerDelayEmail: () => sendCustomerDelayEmail,
+  sendDeletionWarningEmail: () => sendDeletionWarningEmail,
+  sendDocumentsRequestedEmail: () => sendDocumentsRequestedEmail,
+  sendGapAnalysisDeliveryEmail: () => sendGapAnalysisDeliveryEmail,
+  sendOutputDeliveryEmail: () => sendOutputDeliveryEmail,
+  sendProcessingStartedEmail: () => sendProcessingStartedEmail,
+  sendProjectInviteEmail: () => sendProjectInviteEmail,
+  sendQAReviewEmail: () => sendQAReviewEmail,
+  sendUploadConfirmationEmail: () => sendUploadConfirmationEmail,
+  sendWelcomeEmail: () => sendWelcomeEmail
+});
 function getResend() {
   if (!_resend) {
     _resend = new import_resend.Resend(process.env.RESEND_API_KEY);
@@ -885,6 +899,128 @@ function FROM() {
 }
 function APP() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
+}
+async function sendWelcomeEmail({ to, name }) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: "Welcome to Liminal",
+    html: `
+      <h1>Welcome, ${name}!</h1>
+      <p>Your LIMINALsva account is ready. Start by creating your first certification project.</p>
+      <p><a href="${APP()}/dashboard">Go to Dashboard \u2192</a></p>
+    `
+  });
+}
+async function sendUploadConfirmationEmail({
+  to,
+  name,
+  creditName,
+  orderId,
+  fileCount
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Upload received \u2014 ${creditName}`,
+    html: `
+      <h1>We received your documents</h1>
+      <p>Hi ${name},</p>
+      <p>We received <strong>${fileCount} file(s)</strong> for <strong>${creditName}</strong>.</p>
+      <p>When you're ready to submit for review, click the button below.</p>
+      <p><a href="${APP()}/orders/${orderId}">Review and Submit \u2192</a></p>
+    `
+  });
+}
+async function sendDocumentsRequestedEmail({
+  to,
+  name,
+  creditName,
+  orderId,
+  issues
+}) {
+  const issueList = issues.map((i) => `<li>${i}</li>`).join("\n");
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Action required \u2014 ${creditName}`,
+    html: `
+      <h1>Additional documents needed</h1>
+      <p>Hi ${name},</p>
+      <p>We reviewed your submission for <strong>${creditName}</strong> and need the following before we can proceed:</p>
+      <ul>${issueList}</ul>
+      <p>Please upload the corrected documents and mark your submission as ready again.</p>
+      <p><a href="${APP()}/orders/${orderId}/upload">Upload Documents \u2192</a></p>
+    `
+  });
+}
+async function sendProcessingStartedEmail({
+  to,
+  name,
+  creditName
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Processing your submission \u2014 ${creditName}`,
+    html: `
+      <h1>Your submission is being processed</h1>
+      <p>Hi ${name},</p>
+      <p>We are now generating your <strong>${creditName}</strong> submission package.</p>
+      <p>You'll receive an email with download links when it's ready \u2014 typically within a few minutes.</p>
+    `
+  });
+}
+async function sendOutputDeliveryEmail({
+  to,
+  name,
+  creditName,
+  orderId,
+  outputPaths
+}) {
+  const links = outputPaths.map((p) => {
+    const filename2 = p.split("/").pop() ?? p;
+    const isEditable = filename2.includes("editable");
+    const label = isEditable ? `${filename2} <span style="color:#388fa6;font-size:12px;">(editable version)</span>` : filename2;
+    return `<li style="margin-bottom:6px;"><a href="${APP()}/orders/${orderId}/download?path=${encodeURIComponent(p)}">${label}</a></li>`;
+  }).join("\n");
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Your ${creditName} submission is ready`,
+    html: `
+      <h1>Your submission package is ready</h1>
+      <p>Hi ${name},</p>
+      <p>Your <strong>${creditName}</strong> submission documents are ready for download:</p>
+      <ul>${links}</ul>
+      <p style="background:#f5f5f5;padding:12px 16px;border-left:3px solid #327cb9;font-size:14px;">
+        Your output is delivered as editable files. Open either in any browser.
+        Use the <strong>editable version</strong> to make changes directly in your browser,
+        then save as a PDF using <strong>File &rarr; Print &rarr; Save as PDF</strong>.
+      </p>
+      <p>Your submitted project documents will be deleted from our servers within 48 hours. Your output files are retained permanently in your dashboard.</p>
+      <p><a href="${APP()}/orders/${orderId}/delivery">View Output \u2192</a></p>
+    `
+  });
+}
+async function sendDeletionWarningEmail({
+  to,
+  name,
+  creditName,
+  orderId
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Action required \u2014 download your ${creditName} files before they expire`,
+    html: `
+      <h1>Uploaded documents expiring in 48 hours</h1>
+      <p>Hi ${name},</p>
+      <p>This is a reminder that the project documents you uploaded for <strong>${creditName}</strong> will be automatically deleted from our servers in 48 hours as part of our privacy policy.</p>
+      <p>Your output files are not affected and remain available in your dashboard.</p>
+      <p><a href="${APP()}/orders/${orderId}/delivery">View Output \u2192</a></p>
+    `
+  });
 }
 async function sendQAReviewEmail({
   customerName,
@@ -957,6 +1093,21 @@ async function sendQAReviewEmail({
     `
   });
 }
+async function sendCustomerDelayEmail({
+  to,
+  name,
+  creditName
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `Your output for ${creditName} is being reviewed`,
+    html: `
+      <p>Hi ${name},</p>
+      <p>We are completing a final review of your output before delivery. You will receive your files as soon as the review is complete. We apologize for any delay and appreciate your patience.</p>
+    `
+  });
+}
 async function sendAddressInvalidEmail({
   to,
   name,
@@ -1001,6 +1152,23 @@ async function sendGapAnalysisDeliveryEmail({
       </p>
       ${htmlUrl ? `<p style="font-size:13px;color:#666;">You can also <a href="${htmlUrl}">download the full HTML report</a> directly.</p>` : ""}
       <p style="font-size:12px;color:#888;">Use the recommended credits in your report as a guide for your next steps. Order individual credit services from your project dashboard to get started.</p>
+    `
+  });
+}
+async function sendProjectInviteEmail({
+  to,
+  inviterName,
+  projectName,
+  inviteUrl
+}) {
+  return getResend().emails.send({
+    from: FROM(),
+    to,
+    subject: `${inviterName} invited you to ${projectName} on Liminal`,
+    html: `
+      <h1>You've been invited</h1>
+      <p>${inviterName} has invited you to collaborate on <strong>${projectName}</strong>.</p>
+      <a href="${inviteUrl}">Accept Invitation \u2192</a>
     `
   });
 }
@@ -4410,6 +4578,24 @@ app.post("/process", async (req, res) => {
     }
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
     console.log(`[worker] job complete orderId=${orderId} runId=${runId} status=${result.status} elapsed=${elapsed}s`);
+    if (result.status === "documents_requested") {
+      try {
+        const { data: orderFull } = await supabase.from("orders").select("customer_id, credit_id, credits(credit_name)").eq("id", orderId).single();
+        const { data: customer } = await supabase.from("customers").select("email, name").eq("id", orderFull?.customer_id).single();
+        const creditName = orderFull?.credits?.credit_name ?? "your credit";
+        const { sendDocumentsRequestedEmail: sendDocumentsRequestedEmail2 } = (init_resend(), __toCommonJS(resend_exports));
+        await sendDocumentsRequestedEmail2({
+          to: customer?.email ?? "",
+          name: customer?.name ?? "there",
+          creditName,
+          orderId,
+          issues: result.issues ?? []
+        });
+        console.log(`[worker] documents-requested email sent for orderId=${orderId}`);
+      } catch (emailErr) {
+        console.warn(`[worker] failed to send documents-requested email: ${emailErr.message}`);
+      }
+    }
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
     console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${err.message}`);
