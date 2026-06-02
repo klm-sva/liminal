@@ -201,7 +201,7 @@ export default function GapAnalysisOutputClient({
                           style={{ maxWidth: "160px" }}
                         >
                           {sec.recommended.map((code) => {
-                            const creditId = creditIdMap[code];
+                            const creditId = creditIdMap[code] ?? creditIdMap[code.toLowerCase()] ?? creditIdMap[code.toUpperCase()];
                             const href = creditId
                               ? `/orders/new/credit/${creditId}`
                               : `/orders/new/credit?program=${program === "leed_bd_c" ? "leed_bdc_v41" : program}&filter=${encodeURIComponent(sec.name)}`;

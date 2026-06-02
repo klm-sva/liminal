@@ -501,7 +501,7 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
 }
 ===GAP_ANALYSIS_DATA_END===
 
-Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending (e.g. "EAc2", "LTc5"). Use short credit codes, not full names.
+Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending. Use the exact short codes only \u2014 no category prefixes, no full names. Examples: "EAc2", "LTc5", "EQc1", "WEc1", "MRc2", "SSc1", "LTc4". The Indoor Environmental Quality category uses EQ codes (EQc1, EQc2, etc.) \u2014 never IEQ. The Energy & Atmosphere category uses EA codes \u2014 never ENE. The Location & Transportation category uses LT codes \u2014 never LOC.
 
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support

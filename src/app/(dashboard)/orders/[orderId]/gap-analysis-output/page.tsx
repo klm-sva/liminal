@@ -101,7 +101,14 @@ export default async function GapAnalysisOutputPage({
     .eq("program", creditsProgram as import("@/types/database").ProgramType);
   const creditIdMap: Record<string, string> = {};
   for (const c of creditsData ?? []) {
+    // Store the canonical code
     creditIdMap[c.credit_code] = c.id;
+    // Store common AI-generated aliases so lookups survive Claude using the wrong prefix
+    // LEED: Claude sometimes outputs "IEQc1" instead of "EQc1"
+    if (c.credit_code.startsWith("EQ")) creditIdMap[`IEQ${c.credit_code.slice(2)}`] = c.id;
+    // Store case-insensitive variants
+    creditIdMap[c.credit_code.toLowerCase()] = c.id;
+    creditIdMap[c.credit_code.toUpperCase()] = c.id;
   }
 
   return (
