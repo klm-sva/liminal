@@ -72,7 +72,7 @@ export default async function ProjectPage({
   };
   const gapPrograms = programs.map((p) => programToGapKey[p]).filter(Boolean);
 
-  let completedGapAnalysis: { orderId: string; results: GapAnalysisResults; program: string } | null = null;
+  const completedGapAnalyses: { orderId: string; results: GapAnalysisResults; program: string }[] = [];
 
   if (gapPrograms.length > 0) {
     const { data: gapOrders } = await supabase
@@ -83,16 +83,20 @@ export default async function ProjectPage({
       .not("gap_analysis_program", "is", null)
       .not("gap_analysis_results", "is", null)
       .in("gap_analysis_program", gapPrograms)
-      .order("created_at", { ascending: false })
-      .limit(1);
+      .order("created_at", { ascending: false });
 
-    const gap = gapOrders?.[0];
-    if (gap?.gap_analysis_results && typeof gap.gap_analysis_results === "object") {
-      completedGapAnalysis = {
-        orderId: gap.id,
-        program: gap.gap_analysis_program!,
-        results: gap.gap_analysis_results as unknown as GapAnalysisResults,
-      };
+    // Keep only the most recent result per program
+    const seenPrograms = new Set<string>();
+    for (const gap of gapOrders ?? []) {
+      if (!gap.gap_analysis_program || seenPrograms.has(gap.gap_analysis_program)) continue;
+      if (gap.gap_analysis_results && typeof gap.gap_analysis_results === "object") {
+        completedGapAnalyses.push({
+          orderId: gap.id,
+          program: gap.gap_analysis_program,
+          results: gap.gap_analysis_results as unknown as GapAnalysisResults,
+        });
+        seenPrograms.add(gap.gap_analysis_program);
+      }
     }
   }
 
@@ -129,99 +133,100 @@ export default async function ProjectPage({
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
 
-        {/* Gap analysis card */}
-        {completedGapAnalysis ? (
-          /* ── Completed gap analysis — visual score card ── */
-          (() => {
-            const { orderId: gaOrderId, results, program: gaProgram } = completedGapAnalysis;
-            const sections = results.categories ?? results.concepts ?? [];
-            const gapToTarget = results.target_score - results.overall_score;
-            const maxPossible = results.max_possible ?? 110;
-            const programLabels: Record<string, string> = {
-              leed_bd_c: "LEED BD+C v4.1",
-              well_v2:   "WELL v2",
-              well_hsr:  "WELL Health-Safety Rating",
-            };
-            return (
-              <div
-                className="relative overflow-hidden rounded-2xl p-6"
-                style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
-              >
+        {/* Gap analysis cards — one per completed program, or promotional if none */}
+        {completedGapAnalyses.length > 0 ? (
+          <div className="space-y-4">
+            {completedGapAnalyses.map(({ orderId: gaOrderId, results, program: gaProgram }) => {
+              const sections    = results.categories ?? results.concepts ?? [];
+              const gapToTarget = results.target_score - results.overall_score;
+              const maxPossible = results.max_possible ?? 110;
+              const programLabels: Record<string, string> = {
+                leed_bd_c: "LEED BD+C v4.1",
+                well_v2:   "WELL v2",
+                well_hsr:  "WELL Health-Safety Rating",
+              };
+              return (
                 <div
-                  aria-hidden="true"
-                  className="absolute inset-0 opacity-[0.04]"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
-                    backgroundSize: "40px 40px",
-                  }}
-                />
-                <div className="relative">
-                  {/* Header row */}
-                  <div className="flex items-start justify-between mb-5">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">Gap Analysis</p>
-                      <p className="text-xs text-white/60">{programLabels[gaProgram] ?? gaProgram}</p>
+                  key={gaOrderId}
+                  className="relative overflow-hidden rounded-2xl p-6"
+                  style={{ background: "linear-gradient(135deg, #388fa6 0%, #1c5e70 100%)" }}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 opacity-[0.04]"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(rgba(255,255,255,0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.7) 1px, transparent 1px)",
+                      backgroundSize: "40px 40px",
+                    }}
+                  />
+                  <div className="relative">
+                    {/* Header row */}
+                    <div className="flex items-start justify-between mb-5">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">Gap Analysis</p>
+                        <p className="text-xs text-white/60">{programLabels[gaProgram] ?? gaProgram}</p>
+                      </div>
+                      <Link
+                        href={`/orders/${gaOrderId}/gap-analysis-output`}
+                        className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-3.5 py-1.5 rounded-xl transition-colors text-xs"
+                      >
+                        Recommended strategies for your project <ArrowRight size={11} />
+                      </Link>
                     </div>
-                    <Link
-                      href={`/orders/${gaOrderId}/gap-analysis-output`}
-                      className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-3.5 py-1.5 rounded-xl transition-colors text-xs"
-                    >
-                      Recommended strategies for your project <ArrowRight size={11} />
-                    </Link>
-                  </div>
 
-                  {/* Score row */}
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <p className="font-serif text-5xl text-white leading-none">{results.overall_score}</p>
-                      <p className="text-white/45 text-xs mt-1">/ {maxPossible} pts estimated</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="bg-certify-sand/20 border border-certify-sand/30 rounded-xl px-4 py-2">
-                        <p className="text-certify-sand font-bold">{results.target_score} pts</p>
-                        <p className="text-certify-sand/60 text-xs">
-                          {results.certification_level ? `${results.certification_level} target` : "target"}
+                    {/* Score row */}
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <p className="font-serif text-5xl text-white leading-none">{results.overall_score}</p>
+                        <p className="text-white/45 text-xs mt-1">/ {maxPossible} pts estimated</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="bg-certify-sand/20 border border-certify-sand/30 rounded-xl px-4 py-2">
+                          <p className="text-certify-sand font-bold">{results.target_score} pts</p>
+                          <p className="text-certify-sand/60 text-xs">
+                            {results.certification_level ? `${results.certification_level} target` : "target"}
+                          </p>
+                        </div>
+                        <p className="text-certify-sage text-xs font-semibold mt-1.5">
+                          {gapToTarget > 0
+                            ? `${gapToTarget} pts to ${results.certification_level ?? "target"}`
+                            : "Target met with recommended strategies"}
                         </p>
                       </div>
-                      <p className="text-certify-sage text-xs font-semibold mt-1.5">
-                        {gapToTarget > 0
-                          ? `${gapToTarget} pts to ${results.certification_level ?? "target"}`
-                          : "Target met with recommended strategies"}
-                      </p>
                     </div>
-                  </div>
 
-                  {/* Category bars (compact) */}
-                  {sections.length > 0 && (
-                    <div className="space-y-2.5">
-                      {sections.map((sec) => {
-                        const pct   = Math.round((sec.score / sec.max) * 100);
-                        const isRec = sec.recommended.length > 0;
-                        return (
-                          <div key={sec.name}>
-                            <div className="flex justify-between text-[11px] mb-0.5">
-                              <span className={`font-medium ${isRec ? "text-certify-sage" : "text-white/65"}`}>
-                                {sec.name}
-                                {isRec && <span className="ml-1.5 opacity-70"> ↑</span>}
-                              </span>
-                              <span className="text-white/35">{sec.score}/{sec.max}</span>
+                    {/* Category bars (compact) */}
+                    {sections.length > 0 && (
+                      <div className="space-y-2.5">
+                        {sections.map((sec) => {
+                          const pct   = Math.round((sec.score / sec.max) * 100);
+                          const isRec = sec.recommended.length > 0;
+                          return (
+                            <div key={sec.name}>
+                              <div className="flex justify-between text-[11px] mb-0.5">
+                                <span className={`font-medium ${isRec ? "text-certify-sage" : "text-white/65"}`}>
+                                  {sec.name}
+                                  {isRec && <span className="ml-1.5 opacity-70"> ↑</span>}
+                                </span>
+                                <span className="text-white/35">{sec.score}/{sec.max}</span>
+                              </div>
+                              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-1.5 rounded-full"
+                                  style={{ width: `${pct}%`, backgroundColor: isRec ? "#5fa8bb" : "#388fa6" }}
+                                />
+                              </div>
                             </div>
-                            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                              <div
-                                className="h-1.5 rounded-full"
-                                style={{ width: `${pct}%`, backgroundColor: isRec ? "#5fa8bb" : "#388fa6" }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })()
+              );
+            })}
+          </div>
         ) : (
           /* ── Promotional card — no gap analysis yet ── */
           <div
