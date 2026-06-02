@@ -25,7 +25,19 @@ export default function FeedbackClient({ orders }: { orders: OrderOption[] }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    await fetch("/api/feedback", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId,
+        creditCode:    selectedOrder?.credit_code,
+        creditName:    selectedOrder?.credit_name,
+        useful,
+        wouldUseAgain,
+        whatWorked,
+        whatToImprove,
+      }),
+    });
     setSubmitted(true);
   }
 

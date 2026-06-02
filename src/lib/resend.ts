@@ -329,7 +329,49 @@ export async function sendAddressInvalidEmail({
   });
 }
 
-// ─── 10. Gap analysis delivery ───────────────────────────────────────────────
+// ─── 10. Pilot feedback ──────────────────────────────────────────────────────
+
+export async function sendFeedbackEmail({
+  customerEmail,
+  customerName,
+  orderId,
+  creditCode,
+  creditName,
+  useful,
+  wouldUseAgain,
+  whatWorked,
+  whatToImprove,
+}: {
+  customerEmail:  string;
+  customerName:   string;
+  orderId:        string;
+  creditCode:     string;
+  creditName:     string;
+  useful:         string;
+  wouldUseAgain:  string;
+  whatWorked:     string;
+  whatToImprove:  string;
+}) {
+  return getResend().emails.send({
+    from:    FROM(),
+    to:      "support@liminalsva.com",
+    subject: `Pilot feedback — ${creditCode} — ${useful}`,
+    html: `
+      <h2>Pilot Feedback</h2>
+      <table style="border-collapse:collapse;width:100%;font-size:14px;">
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;width:160px;">Customer</td><td style="padding:6px 12px;">${customerName} (${customerEmail})</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;">Order</td><td style="padding:6px 12px;">#${orderId.slice(-6).toUpperCase()} — ${creditCode} ${creditName}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;">Was it useful?</td><td style="padding:6px 12px;">${useful}</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;">Use again?</td><td style="padding:6px 12px;">${wouldUseAgain}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:700;color:#555;vertical-align:top;">What worked</td><td style="padding:6px 12px;">${whatWorked || "—"}</td></tr>
+        <tr style="background:#f5f5f5;"><td style="padding:6px 12px;font-weight:700;color:#555;vertical-align:top;">Improve</td><td style="padding:6px 12px;">${whatToImprove || "—"}</td></tr>
+      </table>
+      <p style="font-size:12px;color:#999;margin-top:16px;">Submitted ${new Date().toLocaleString()}</p>
+    `,
+  });
+}
+
+// ─── 11. Gap analysis delivery ───────────────────────────────────────────────
 
 export async function sendGapAnalysisDeliveryEmail({
   to,
