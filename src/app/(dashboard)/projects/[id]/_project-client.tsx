@@ -14,6 +14,7 @@ type OrderRow = {
   id: string;
   status: OrderStatus;
   created_at: string;
+  gap_analysis_program: string | null;
   credits: {
     credit_code: string;
     credit_name: string;
@@ -40,7 +41,9 @@ export default function ProjectClient({ projectId, initialPrograms, certificatio
   const [adding, setAdding] = useState(false);
 
   const availableToAdd = ALL_PROGRAMS.filter((p) => !programs.includes(p));
-  const filteredOrders = filter ? orders.filter((o) => o.credits?.program === filter) : orders;
+  const filteredOrders = filter
+    ? orders.filter((o) => o.gap_analysis_program ? true : o.credits?.program === filter)
+    : orders;
 
   async function handleAddProgram(prog: ProgramType) {
     setAdding(true);
@@ -166,8 +169,14 @@ export default function ProjectClient({ projectId, initialPrograms, certificatio
               <div key={order.id} className="flex items-center gap-4 px-6 py-4 hover:bg-certify-white/50 transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-certify-cool-grey">{order.credits?.credit_code ?? "—"}</span>
-                    <span className="font-medium text-certify-deep text-sm truncate">{order.credits?.credit_name ?? "—"}</span>
+                    {order.gap_analysis_program ? (
+                      <span className="font-medium text-certify-deep text-sm truncate">Gap Analysis</span>
+                    ) : (
+                      <>
+                        <span className="text-xs font-bold text-certify-cool-grey">{order.credits?.credit_code ?? "—"}</span>
+                        <span className="font-medium text-certify-deep text-sm truncate">{order.credits?.credit_name ?? "—"}</span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     {order.credits?.program && <ProgramChip program={order.credits.program} />}
@@ -178,7 +187,12 @@ export default function ProjectClient({ projectId, initialPrograms, certificatio
                 <div className="flex items-center gap-3 shrink-0">
                   <OrderStatusBadge status={order.status} />
                   {(order.status === "delivered" || order.status === "complete") && (
-                    <Link href={`/orders/${order.id}/delivery`} className="text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors">
+                    <Link
+                      href={order.gap_analysis_program
+                        ? `/orders/${order.id}/gap-analysis-output`
+                        : `/orders/${order.id}/delivery`}
+                      className="text-xs font-semibold text-certify-blue hover:text-certify-teal transition-colors"
+                    >
                       View →
                     </Link>
                   )}

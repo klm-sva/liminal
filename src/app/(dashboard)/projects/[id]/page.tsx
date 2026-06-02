@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Plus, Edit, MessageSquare, ArrowRight } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import type { OrderStatus, ProgramType, Json } from "@/types/database";
+import type { OrderStatus, ProgramType } from "@/types/database";
 import ProjectClient from "./_project-client";
 
 type GapAnalysisCategory = { name: string; score: number; max: number; recommended: string[] };
@@ -24,6 +24,7 @@ type OrderRow = {
   id: string;
   status: OrderStatus;
   created_at: string;
+  gap_analysis_program: string | null;
   credits: {
     credit_code: string;
     credit_name: string;
@@ -56,7 +57,7 @@ export default async function ProjectPage({
 
   const { data: orderData } = await supabase
     .from("orders")
-    .select("id, status, created_at, credits(credit_code, credit_name, program, has_calculator, has_form)")
+    .select("id, status, created_at, gap_analysis_program, credits(credit_code, credit_name, program, has_calculator, has_form)")
     .eq("project_id", id)
     .order("created_at", { ascending: false });
 
@@ -64,39 +65,29 @@ export default async function ProjectPage({
   const delivered = orders.filter((o) => o.status === "delivered" || o.status === "complete").length;
   const programs = (project.programs ?? []) as ProgramType[];
 
-  // Look up completed gap analysis for each program this project tracks
-  const programToGapKey: Record<string, string> = {
-    leed_bdc_v41: "leed_bd_c",
-    well_v2:      "well_v2",
-    well_hsr:     "well_hsr",
-  };
-  const gapPrograms = programs.map((p) => programToGapKey[p]).filter(Boolean);
-
+  // Look up the most recent completed gap analysis per program for this project
   const completedGapAnalyses: { orderId: string; results: GapAnalysisResults; program: string }[] = [];
 
-  if (gapPrograms.length > 0) {
-    const { data: gapOrders } = await supabase
-      .from("orders")
-      .select("id, gap_analysis_program, gap_analysis_results")
-      .eq("project_id", id)
-      .eq("status", "complete")
-      .not("gap_analysis_program", "is", null)
-      .not("gap_analysis_results", "is", null)
-      .in("gap_analysis_program", gapPrograms)
-      .order("created_at", { ascending: false });
+  const { data: gapOrders } = await supabase
+    .from("orders")
+    .select("id, gap_analysis_program, gap_analysis_results")
+    .eq("project_id", id)
+    .eq("status", "complete")
+    .not("gap_analysis_program", "is", null)
+    .not("gap_analysis_results", "is", null)
+    .order("created_at", { ascending: false });
 
-    // Keep only the most recent result per program
-    const seenPrograms = new Set<string>();
-    for (const gap of gapOrders ?? []) {
-      if (!gap.gap_analysis_program || seenPrograms.has(gap.gap_analysis_program)) continue;
-      if (gap.gap_analysis_results && typeof gap.gap_analysis_results === "object") {
-        completedGapAnalyses.push({
-          orderId: gap.id,
-          program: gap.gap_analysis_program,
-          results: gap.gap_analysis_results as unknown as GapAnalysisResults,
-        });
-        seenPrograms.add(gap.gap_analysis_program);
-      }
+  // Keep only the most recent result per program
+  const seenPrograms = new Set<string>();
+  for (const gap of gapOrders ?? []) {
+    if (!gap.gap_analysis_program || seenPrograms.has(gap.gap_analysis_program)) continue;
+    if (gap.gap_analysis_results && typeof gap.gap_analysis_results === "object") {
+      completedGapAnalyses.push({
+        orderId: gap.id,
+        program: gap.gap_analysis_program,
+        results: gap.gap_analysis_results as unknown as GapAnalysisResults,
+      });
+      seenPrograms.add(gap.gap_analysis_program);
     }
   }
 
