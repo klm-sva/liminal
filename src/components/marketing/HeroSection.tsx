@@ -123,7 +123,7 @@ export default function HeroSection() {
             }}
           >
             Upload your project information. Receive professionally prepared
-            certification documentation. Save up to 600 hours per project.
+            certification documentation. Fast. Accurate.
           </p>
 
           {/* Value badges */}

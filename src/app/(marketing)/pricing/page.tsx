@@ -5,7 +5,7 @@ import OrderLink from "@/components/pricing/OrderLink";
 import type { Credit } from "@/types/database";
 import creditsData from "@/data/credits.json";
 
-export const metadata: Metadata = { title: "Pricing — Liminal" };
+export const metadata: Metadata = { title: "Pricing — LIMINALsva" };
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -293,7 +293,7 @@ export default function PricingPage() {
               }}
             >
               <p className="text-sm font-semibold mb-1" style={{ color: "#1c5e70" }}>
-                Liminal is currently offering pilot pricing.
+                LIMINALsva is currently offering pilot pricing.
               </p>
               <p className="text-xs leading-relaxed" style={{ color: "#6b7e82" }}>
                 Pricing is being offered at a special rate and will increase when we fully launch the platform. Your project keeps the rate it started at and we will give you plenty of notice before any change.

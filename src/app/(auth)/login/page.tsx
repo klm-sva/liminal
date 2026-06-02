@@ -23,7 +23,7 @@ function LogoMark() {
         className="text-xl tracking-tight"
         style={{ fontFamily: "var(--font-dm-serif)", color: "#2b4044" }}
       >
-        Liminal
+        LIMINALsva
       </span>
     </Link>
   );
@@ -75,7 +75,7 @@ export default function LoginPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <LogoMark />
           <p className="text-sm" style={{ color: "#7a8f94" }}>
-            New to Liminal?{" "}
+            New to LIMINALsva?{" "}
             <Link
               href="/signup"
               className="font-semibold transition-colors"

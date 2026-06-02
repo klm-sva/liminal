@@ -41,7 +41,7 @@ export default function FeedbackClient({ orders }: { orders: OrderOption[] }) {
           </div>
           <h2 className="font-serif text-2xl text-certify-deep mb-2">Thanks for your feedback</h2>
           <p className="text-sm text-certify-cool-grey leading-relaxed">
-            Your input directly shapes how we improve Liminal. We read every response.
+            Your input directly shapes how we improve LIMINALsva. We read every response.
           </p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function FeedbackClient({ orders }: { orders: OrderOption[] }) {
         <div className="flex items-start gap-2.5 bg-certify-sand/20 border border-certify-sand/50 rounded-xl px-4 py-3 mb-8">
           <MessageSquare size={14} className="text-certify-dark-grey shrink-0 mt-0.5" />
           <p className="text-xs text-certify-dark-grey leading-relaxed">
-            <strong>Pilot feedback.</strong> Liminal is in early access. Your honest input helps us improve output quality, user experience, and document accuracy before public launch. This takes about 2 minutes.
+            <strong>Pilot feedback.</strong> LIMINALsva is in early access. Your honest input helps us improve output quality, user experience, and document accuracy before public launch. This takes about 2 minutes.
           </p>
         </div>
 
@@ -142,7 +142,7 @@ export default function FeedbackClient({ orders }: { orders: OrderOption[] }) {
 
           {/* Would you use again */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-certify-deep/70 mb-2">Would you use Liminal again?</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-certify-deep/70 mb-2">Would you use LIMINALsva again?</label>
             <div className="flex gap-2">
               {(["yes", "maybe", "no"] as const).map((val) => (
                 <button

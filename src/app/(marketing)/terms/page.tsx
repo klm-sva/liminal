@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
 
-export const metadata: Metadata = { title: "Terms of Service — Liminal" };
+export const metadata: Metadata = { title: "Terms of Service — LIMINALsva" };
 
 export default function TermsPage() {
   return (
@@ -13,7 +13,7 @@ export default function TermsPage() {
 
           <h1 className="font-serif text-4xl text-certify-deep mb-2">Terms of Service</h1>
           <p className="text-sm text-certify-cool-grey mb-12">
-            Liminal Platform, a service of KLM Design Studio, Inc.
+            LIMINALsva Platform, a service of KLM Design Studio, Inc.
           </p>
 
           <div className="prose-legal">

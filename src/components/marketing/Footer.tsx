@@ -34,7 +34,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span className="font-serif text-xl text-white">
-                Liminal
+                LIMINALsva
               </span>
             </Link>
             <p className="text-sm text-white/50 leading-relaxed max-w-xs">
@@ -105,7 +105,7 @@ export default function Footer() {
         {/* Bottom row */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8">
           <p className="text-xs text-white/35">
-            © {new Date().getFullYear()} Liminal. All rights reserved.
+            © {new Date().getFullYear()} LIMINALsva. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link href="/privacy" className="text-xs text-white/35 hover:text-white/60 transition-colors">Privacy Policy</Link>

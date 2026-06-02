@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
 
-export const metadata: Metadata = { title: "Privacy Policy — Liminal" };
+export const metadata: Metadata = { title: "Privacy Policy — LIMINALsva" };
 
 export default function PrivacyPage() {
   return (
@@ -13,13 +13,13 @@ export default function PrivacyPage() {
 
           <h1 className="font-serif text-4xl text-certify-deep mb-2">Privacy Policy</h1>
           <p className="text-sm text-certify-cool-grey mb-12">
-            Liminal Platform, a service of KLM Design Studio, Inc.
+            LIMINALsva Platform, a service of KLM Design Studio, Inc.
           </p>
 
           <div className="space-y-10">
 
             <p className="text-sm text-certify-cool-grey leading-relaxed">
-              This Privacy Policy ("Policy") describes how Liminal, a service of KLM Design Studio, Inc. and its owners, members, officers, and agents ("Company," "we," "us," or "our") collect, use, store, process, share, and delete information in connection with the Liminal platform, a service of KLM Design Studio, Inc. ("Platform" or "Service"). By using the Platform, you acknowledge and agree to the practices described in this Policy. This Policy is incorporated into and made part of the Terms of Service. Capitalized terms not defined herein have the meanings given in the Terms of Service.
+              This Privacy Policy ("Policy") describes how LIMINALsva, a service of KLM Design Studio, Inc. and its owners, members, officers, and agents ("Company," "we," "us," or "our") collect, use, store, process, share, and delete information in connection with the LIMINALsva platform, a service of KLM Design Studio, Inc. ("Platform" or "Service"). By using the Platform, you acknowledge and agree to the practices described in this Policy. This Policy is incorporated into and made part of the Terms of Service. Capitalized terms not defined herein have the meanings given in the Terms of Service.
             </p>
 
             <Section number="1" title="INFORMATION WE COLLECT">
@@ -152,7 +152,7 @@ export default function PrivacyPage() {
                 For questions, requests, or concerns regarding this Privacy Policy or our data practices, please contact us at:
               </p>
               <div className="mt-3 text-sm text-certify-cool-grey leading-relaxed">
-                <p className="font-medium text-certify-deep">Liminal, a service of KLM Design Studio, Inc.</p>
+                <p className="font-medium text-certify-deep">LIMINALsva, a service of KLM Design Studio, Inc.</p>
                 <p>
                   Email:{" "}
                   <a href="mailto:info@liminalsva.com" className="text-certify-blue hover:text-certify-teal transition-colors">

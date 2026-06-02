@@ -4,7 +4,7 @@ import Footer from "@/components/marketing/Footer";
 import AboutHeroSection from "@/components/marketing/AboutHeroSection";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Who We Are — Liminal" };
+export const metadata: Metadata = { title: "Who We Are — LIMINALsva" };
 
 export default function AboutPage() {
   return (

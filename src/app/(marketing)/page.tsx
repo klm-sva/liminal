@@ -6,7 +6,7 @@ import HeroSection from "@/components/marketing/HeroSection";
 import LoomLoop from "@/components/marketing/LoomLoop";
 
 export const metadata: Metadata = {
-  title: "Liminal — LEED & WELL Certification Documentation Platform",
+  title: "LIMINALsva — LEED & WELL Certification Documentation Platform",
   description:
     "Documentation for LEED BD+C v4.1, WELL v2, and WELL Health-Safety Rating. Automate credit narratives, track documentation, and submit with confidence.",
 };

@@ -20,8 +20,8 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Liminal — LEED & WELL Certification Documentation Platform",
-    template: "%s | Liminal",
+    default: "LIMINALsva — LEED & WELL Certification Documentation Platform",
+    template: "%s | LIMINALsva",
   },
   description:
     "Documentation platform for LEED BD+C v4.1, WELL v2, and WELL Health-Safety Rating certifications. Streamline credit tracking, narrative generation, and submission.",
@@ -34,19 +34,19 @@ export const metadata: Metadata = {
     "WELL v2",
     "sustainability",
   ],
-  authors: [{ name: "Liminal" }],
+  authors: [{ name: "LIMINALsva" }],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://liminalsva.com",
-    siteName: "Liminal",
-    title: "Liminal — LEED & WELL Certification Documentation Platform",
+    siteName: "LIMINALsva",
+    title: "LIMINALsva — LEED & WELL Certification Documentation Platform",
     description:
       "Streamline your path to LEED BD+C v4.1, WELL v2, and WELL Health-Safety Rating certification.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Liminal — Certification Documentation Platform",
+    title: "LIMINALsva — Certification Documentation Platform",
     description:
       "LEED & WELL certification documentation. Faster. Smarter. Certified.",
   },

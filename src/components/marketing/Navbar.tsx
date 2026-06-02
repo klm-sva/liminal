@@ -76,7 +76,7 @@ export default function Navbar() {
                 className="text-xl tracking-tight"
                 style={{ fontFamily: "var(--font-dm-serif)", color: "#2b4044" }}
               >
-                Liminal
+                LIMINALsva
               </span>
             </Link>
 

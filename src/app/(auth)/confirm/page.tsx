@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Check Your Inbox — Liminal" };
+export const metadata: Metadata = { title: "Check Your Inbox — LIMINALsva" };
 
 export default async function ConfirmPage({
   searchParams,
@@ -38,7 +38,7 @@ export default async function ConfirmPage({
               className="text-xl tracking-tight"
               style={{ fontFamily: "var(--font-dm-serif)", color: "#2b4044" }}
             >
-              Liminal
+              LIMINALsva
             </span>
           </Link>
         </div>

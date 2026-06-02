@@ -242,7 +242,7 @@ export default function UploadClient({ orderId, creditCode, creditName, required
         <div className="flex items-start gap-2.5 bg-certify-white border border-certify-cool-grey/20 rounded-xl px-4 py-3 mb-6">
           <Info size={14} className="text-certify-cool-grey shrink-0 mt-0.5" />
           <p className="text-xs text-certify-cool-grey leading-relaxed">
-            Liminal produces output based exclusively on the files and information you provide. The quality of the output depends entirely on the quality of the information you provide. We will provide feedback on any outstanding issues and allow you to upload additional information before processing.
+            LIMINALsva produces output based exclusively on the files and information you provide. The quality of the output depends entirely on the quality of the information you provide. We will provide feedback on any outstanding issues and allow you to upload additional information before processing.
           </p>
         </div>
 

@@ -87,7 +87,7 @@ export default async function DashboardPage({
   if (!hasProjects) {
     return (
       <>
-        <DashboardHeader title="My Dashboard" subtitle="Welcome to Liminal" />
+        <DashboardHeader title="My Dashboard" subtitle="Welcome to LIMINALsva" />
 
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <div className="w-16 h-16 rounded-2xl bg-certify-blue/10 border border-certify-blue/20 flex items-center justify-center mx-auto mb-6">

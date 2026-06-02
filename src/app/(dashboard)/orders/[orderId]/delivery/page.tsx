@@ -88,7 +88,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
               <div className="w-7 h-7 rounded-lg bg-certify-blue/30 flex items-center justify-center">
                 <CheckCircle2 size={14} className="text-certify-sage" />
               </div>
-              <span className="text-xs font-bold text-certify-white/60 uppercase tracking-wider">Liminal</span>
+              <span className="text-xs font-bold text-certify-white/60 uppercase tracking-wider">LIMINALsva</span>
             </div>
             <h2 className="font-serif text-xl text-certify-white mt-3 mb-0.5">Your output is ready</h2>
             <p className="text-xs text-certify-white/50">

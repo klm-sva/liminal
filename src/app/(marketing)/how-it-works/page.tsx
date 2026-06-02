@@ -3,7 +3,7 @@ import Link from "next/link";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
 
-export const metadata: Metadata = { title: "How It Works — Liminal" };
+export const metadata: Metadata = { title: "How It Works — LIMINALsva" };
 
 // ─── Steps ────────────────────────────────────────────────────────────────────
 
@@ -152,10 +152,10 @@ export default function HowItWorksPage() {
               From credit selection to submission-ready output
             </h1>
             <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>
-              After you choose a credit or gap analysis and upload your documents, Liminal reviews your documents, retrieves supporting data from public databases, generates required maps, provides calculator inputs, prepares data to complete credit forms, drafts any required policy documents, and delivers formatted, editable output ready for certification submittal.
+              After you choose a credit or gap analysis and upload your documents, LIMINALsva reviews your documents, retrieves supporting data from public databases, generates required maps, provides calculator inputs, prepares data to complete credit forms, drafts any required policy documents, and delivers formatted, editable output ready for certification submittal.
             </p>
             <p className="text-sm max-w-lg mx-auto mt-5 leading-relaxed" style={{ color: "rgba(163,212,224,0.80)" }}>
-              Liminal is currently in pilot. Pricing is locked in at today&apos;s rate for your entire project when you place your first order. Prices will increase at launch with plenty of notice.
+              LIMINALsva is currently in pilot. Pricing is locked in at today&apos;s rate for your entire project when you place your first order. Prices will increase at launch with plenty of notice.
             </p>
           </div>
         </section>
