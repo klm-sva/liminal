@@ -196,7 +196,7 @@ export default function ProjectClient({ projectId, initialPrograms, certificatio
               />
               <div className="relative">
                 <div className="flex justify-between text-[11px] mb-1">
-                  <span className="font-medium text-white/65">{PROGRAM_SHORT[p]}</span>
+                  <span className="font-medium text-white/65">{PROGRAM_SHORT[p]} progress</span>
                   <span className="text-white/45">{pts} / {max} pts ordered</span>
                 </div>
                 {/* Bar */}
