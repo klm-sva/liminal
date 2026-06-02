@@ -167,7 +167,7 @@ export default async function ProjectPage({
                       href={`/orders/${gaOrderId}/gap-analysis-output`}
                       className="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white border border-white/30 font-semibold px-3.5 py-1.5 rounded-xl transition-colors text-xs"
                     >
-                      View report <ArrowRight size={11} />
+                      Recommended strategies for your project <ArrowRight size={11} />
                     </Link>
                   </div>
 
@@ -187,7 +187,7 @@ export default async function ProjectPage({
                       <p className="text-certify-sage text-xs font-semibold mt-1.5">
                         {gapToTarget > 0
                           ? `${gapToTarget} pts to ${results.certification_level ?? "target"}`
-                          : "Target met"}
+                          : "Target met with recommended strategies"}
                       </p>
                     </div>
                   </div>

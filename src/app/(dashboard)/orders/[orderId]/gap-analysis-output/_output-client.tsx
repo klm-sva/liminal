@@ -11,6 +11,7 @@ type Props = {
   program:      string;
   results:      GapAnalysisData | null;
   htmlContent:  string | null;
+  creditIdMap:  Record<string, string>;
 };
 
 export default function GapAnalysisOutputClient({
@@ -19,6 +20,7 @@ export default function GapAnalysisOutputClient({
   program,
   results,
   htmlContent,
+  creditIdMap,
 }: Props) {
   const [view, setView] = useState<"dashboard" | "report">("dashboard");
 
@@ -134,7 +136,7 @@ export default function GapAnalysisOutputClient({
                     <p className="text-certify-sage text-xs font-semibold mt-2">
                       {gapToTarget > 0
                         ? `${gapToTarget} pts to reach ${results.certification_level ?? "target"}`
-                        : "Target met"}
+                        : "Target met with recommended strategies"}
                     </p>
                   </div>
                 </div>
@@ -198,17 +200,21 @@ export default function GapAnalysisOutputClient({
                           className="flex gap-1.5 shrink-0 flex-wrap justify-end"
                           style={{ maxWidth: "160px" }}
                         >
-                          {sec.recommended.map((code) => (
-                            <Link
-                              key={code}
-                              href={`/orders/new/credit?program=${
-                                program === "leed_bd_c" ? "leed_bdc_v41" : program
-                              }&filter=${encodeURIComponent(sec.name)}`}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-certify-sage/15 border border-certify-sage/30 text-certify-teal hover:bg-certify-sage/25 transition-colors"
-                            >
-                              {code}
-                            </Link>
-                          ))}
+                          {sec.recommended.map((code) => {
+                            const creditId = creditIdMap[code];
+                            const href = creditId
+                              ? `/orders/new/credit/${creditId}`
+                              : `/orders/new/credit?program=${program === "leed_bd_c" ? "leed_bdc_v41" : program}&filter=${encodeURIComponent(sec.name)}`;
+                            return (
+                              <Link
+                                key={code}
+                                href={href}
+                                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-certify-sage/15 border border-certify-sage/30 text-certify-teal hover:bg-certify-sage/25 transition-colors"
+                              >
+                                {code}
+                              </Link>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}

@@ -88,6 +88,22 @@ export default async function GapAnalysisOutputPage({
   const programLabel = programLabels[program] ?? program;
   const results      = parseResults(order.gap_analysis_results as Json | null);
 
+  // Map gap analysis program key back to credits table program value
+  const creditsProgramKey: Record<string, string> = {
+    leed_bd_c: "leed_bdc_v41",
+    well_v2:   "well_v2",
+    well_hsr:  "well_hsr",
+  };
+  const creditsProgram = creditsProgramKey[program] ?? program;
+  const { data: creditsData } = await supabase
+    .from("credits")
+    .select("id, credit_code")
+    .eq("program", creditsProgram as import("@/types/database").ProgramType);
+  const creditIdMap: Record<string, string> = {};
+  for (const c of creditsData ?? []) {
+    creditIdMap[c.credit_code] = c.id;
+  }
+
   return (
     <GapAnalysisOutputClient
       orderId={orderId}
@@ -95,6 +111,7 @@ export default async function GapAnalysisOutputPage({
       program={program}
       results={results}
       htmlContent={htmlContent}
+      creditIdMap={creditIdMap}
     />
   );
 }
