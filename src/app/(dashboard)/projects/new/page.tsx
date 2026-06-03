@@ -58,6 +58,7 @@ export default function NewProjectPage() {
   const [occupancy,         setOccupancy]         = useState("");
   const [regularOccupants,  setRegularOccupants]  = useState("");
   const [peakVisitors,      setPeakVisitors]      = useState("");
+  const [narrative,         setNarrative]         = useState("");
 
   function toggleProgram(id: string) {
     setPrograms((prev) =>
@@ -93,6 +94,7 @@ export default function NewProjectPage() {
           occupancy:               isManual ? (occupancy || null) : null,
           regular_occupants:       isManual && regularOccupants ? parseInt(regularOccupants, 10) : null,
           peak_visitors:           isManual && peakVisitors ? parseInt(peakVisitors, 10) : null,
+          project_narrative:       (isManual && narrative ? narrative : null) as never,
           // remaining nullable fields — provided explicitly to satisfy ProjectInsert
           net_sqft:                null,
           stories_below_grade:     null,
@@ -263,6 +265,17 @@ export default function NewProjectPage() {
               <div>
                 <label className="block text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-certify-deep/70 mb-1.5">Occupancy description</label>
                 <input value={occupancy} onChange={(e) => setOccupancy(e.target.value)} placeholder="Class A Commercial Office" className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15" />
+              </div>
+
+              <div>
+                <label className="block text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-certify-deep/70 mb-1.5">Project narrative <span className="text-certify-cool-grey/50 font-normal normal-case tracking-normal">(optional)</span></label>
+                <textarea
+                  value={narrative}
+                  onChange={(e) => setNarrative(e.target.value)}
+                  rows={4}
+                  placeholder="Describe your project in your own words — construction type, building age, recent upgrades, operational context, certification history, or anything else relevant. Claude reads this to provide more accurate analysis."
+                  className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15 resize-none"
+                />
               </div>
 
               <div className="pt-1 border-t border-certify-white">

@@ -6,12 +6,13 @@ type ProjectUpdate = Partial<Pick<Project,
   "name" | "address" | "building_type" | "gross_sqft" | "stories" |
   "total_parking" | "certification_target" | "regular_occupants" |
   "peak_visitors" | "description" | "primary_occupancy" | "occupancy"
->>;
+>> & { project_narrative?: string | null };
 
 const ALLOWED: Set<string> = new Set([
   "name", "address", "building_type", "gross_sqft", "stories",
   "total_parking", "certification_target", "regular_occupants",
   "peak_visitors", "description", "primary_occupancy", "occupancy",
+  "project_narrative",
 ]);
 
 export async function PATCH(
@@ -46,7 +47,7 @@ export async function PATCH(
 
   if (Object.keys(updates).length === 0) return NextResponse.json({ ok: true });
 
-  const { error } = await supabase.from("projects").update(updates).eq("id", id);
+  const { error } = await (supabase as any).from("projects").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

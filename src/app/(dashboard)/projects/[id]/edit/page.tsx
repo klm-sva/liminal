@@ -9,9 +9,9 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   const { data: { user } } = await authClient.auth.getUser();
   const supabase = await createServiceClient();
 
-  const { data: project } = await supabase
+  const { data: project } = await (supabase as any)
     .from("projects")
-    .select("id, name, address, gross_sqft, stories, building_type, occupancy, description, flagged_fields, customer_id")
+    .select("id, name, address, gross_sqft, stories, building_type, occupancy, description, project_narrative, flagged_fields, customer_id")
     .eq("id", id)
     .single();
 
