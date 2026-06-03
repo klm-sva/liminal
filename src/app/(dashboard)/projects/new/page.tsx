@@ -267,19 +267,8 @@ export default function NewProjectPage() {
                 <input value={occupancy} onChange={(e) => setOccupancy(e.target.value)} placeholder="Class A Commercial Office" className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15" />
               </div>
 
-              <div>
-                <label className="block text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-certify-deep/70 mb-1.5">Project narrative <span className="text-certify-cool-grey/50 font-normal normal-case tracking-normal">(optional)</span></label>
-                <textarea
-                  value={narrative}
-                  onChange={(e) => setNarrative(e.target.value)}
-                  rows={4}
-                  placeholder="Describe your project in your own words — construction type, building age, recent upgrades, operational context, certification history, or anything else relevant. Claude reads this to provide more accurate analysis."
-                  className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15 resize-none"
-                />
-              </div>
-
               <div className="pt-1 border-t border-certify-white">
-                <p className="text-[0.65rem] font-semibold tracking-[0.08em] uppercase text-certify-cool-grey mb-3">Occupancy — LEED Registration Data</p>
+                <p className="text-[0.65rem] font-semibold tracking-[0.08em] uppercase text-certify-cool-grey mb-3">Occupancy</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-certify-deep/70 mb-1.5">Regular occupants</label>
@@ -306,6 +295,17 @@ export default function NewProjectPage() {
                     <p className="text-[0.65rem] text-certify-cool-grey/70 mt-1">Max visitors at any one time</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="pt-1 border-t border-certify-white">
+                <label className="block text-[0.7rem] font-semibold tracking-[0.08em] uppercase text-certify-deep/70 mb-1.5">Project narrative <span className="text-certify-cool-grey/50 font-normal normal-case tracking-normal">(optional)</span></label>
+                <textarea
+                  value={narrative}
+                  onChange={(e) => setNarrative(e.target.value)}
+                  rows={5}
+                  placeholder="Provide a general project description including intended occupancy, overall building context, and any other relevant characteristics of the project available at this stage of design. Describe the building's anticipated HVAC, lighting, and electrical systems to the extent currently known, noting any decisions still pending. Include planned base building systems and controls, and describe the current project scope of work."
+                  className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15 resize-none"
+                />
               </div>
             </div>
           )}
