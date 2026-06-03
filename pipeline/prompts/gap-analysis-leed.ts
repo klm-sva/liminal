@@ -1,9 +1,11 @@
 export function buildLeedGapAnalysisPrompt(params: {
-  responses: Record<string, unknown>;
+  responses:       Record<string, unknown>;
   documentContext: string;
+  documentCount?:  number;
 }): string {
-  const r = params.responses as Record<string, string>;
+  const r    = params.responses as Record<string, string>;
   const docs = params.documentContext;
+  const docCount = params.documentCount ?? 0;
 
   return `You are a LEED BD+C v4.1 consultant producing a Gap Analysis Report for a project team.
 
@@ -61,10 +63,11 @@ Pre-design charrette:     ${r.charrette || "Unknown"}
 Commissioning authority:  ${r.cxAuthority || "Unknown"}
 Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `\nContractor LEED experience: ${r.contractorLeedExperience}` : ""}
 
-${docs ? `═══════════════════════════════════════════════════════════
+${docCount > 0 ? `═══════════════════════════════════════════════════════════
 UPLOADED DOCUMENTS
 ═══════════════════════════════════════════════════════════
-${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached to this message as PDFs. Read them visually — floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
+${docs ? `\nExtracted text from documents (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS

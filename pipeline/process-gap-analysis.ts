@@ -2,6 +2,7 @@ import Anthropic         from "@anthropic-ai/sdk";
 import { createServiceClient }   from "./lib/supabase";
 import { injectTableCss, makeEditable } from "./lib/make-editable";
 import { extractPdfContentFromBuffer }  from "./lib/pdf-extract";
+import { preparePdfDocument }           from "./lib/pdf-to-images";
 import { buildLeedGapAnalysisPrompt }   from "./prompts/gap-analysis-leed";
 import { buildWellV2GapAnalysisPrompt } from "./prompts/gap-analysis-well-v2";
 import { buildWellHsrGapAnalysisPrompt } from "./prompts/gap-analysis-well-hsr";
@@ -92,8 +93,9 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
 
   console.log(`  Step 4: Found ${uploads.length} uploaded file(s)`);
 
-  // ── Step 5: Extract text from uploaded PDFs ───────────────────────────────
+  // ── Step 5: Download uploads, extract text, and prepare visual document blocks
   let documentContext = "";
+  const documentBlocks: ReturnType<typeof preparePdfDocument>[] = [];
 
   for (const upload of uploads) {
     try {
@@ -107,6 +109,10 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
       const isPdf  = upload.name.toLowerCase().endsWith(".pdf");
 
       if (isPdf) {
+        // Visual block — lets Claude read drawings, floor plans, diagrams directly
+        documentBlocks.push(preparePdfDocument(buffer, upload.name));
+
+        // Text extraction — supplements visual reading with searchable content
         const result = await extractPdfContentFromBuffer(
           client,
           buffer,
@@ -118,11 +124,11 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
         }
       }
     } catch (err) {
-      console.warn(`  Step 5: Failed to extract ${upload.name}: ${(err as Error).message}`);
+      console.warn(`  Step 5: Failed to process ${upload.name}: ${(err as Error).message}`);
     }
   }
 
-  console.log(`  Step 5: Document context — ${documentContext.length} chars`);
+  console.log(`  Step 5: ${documentBlocks.length} document block(s) prepared, ${documentContext.length} chars extracted`);
 
   // ── Step 6: Build prompt ───────────────────────────────────────────────────
   const promptFn =
@@ -130,8 +136,9 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
     program === "well_hsr"  ? buildWellHsrGapAnalysisPrompt :
     buildLeedGapAnalysisPrompt;
 
-  const prompt = promptFn({ responses, documentContext });
-  console.log(`  Step 6: Prompt built — ${prompt.length} chars`);
+  // Pass document count so prompt builders can note documents are attached visually
+  const prompt = promptFn({ responses, documentContext, documentCount: documentBlocks.length });
+  console.log(`  Step 6: Prompt built — ${prompt.length} chars, ${documentBlocks.length} visual block(s)`);;
 
   // ── Step 7: Call Claude ────────────────────────────────────────────────────
   console.log(`  Step 7: Calling Claude...`);
@@ -142,7 +149,9 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
     messages: [
       {
         role:    "user",
-        content: prompt,
+        content: documentBlocks.length > 0
+          ? [...documentBlocks, { type: "text" as const, text: prompt }]
+          : prompt,
       },
     ],
   });

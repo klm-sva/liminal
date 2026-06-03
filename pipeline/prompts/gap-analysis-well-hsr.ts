@@ -1,9 +1,11 @@
 export function buildWellHsrGapAnalysisPrompt(params: {
-  responses: Record<string, unknown>;
+  responses:       Record<string, unknown>;
   documentContext: string;
+  documentCount?:  number;
 }): string {
-  const r = params.responses as Record<string, string>;
+  const r    = params.responses as Record<string, string>;
   const docs = params.documentContext;
+  const docCount = params.documentCount ?? 0;
 
   return `You are a WELL Health-Safety Rating (HSR) consultant producing a Gap Analysis Report for a building operations team.
 
@@ -67,10 +69,11 @@ Wellness programs:             ${r.wellnessPrograms || "Unknown"}
 Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
 
-${docs ? `═══════════════════════════════════════════════════════════
+${docCount > 0 ? `═══════════════════════════════════════════════════════════
 UPLOADED DOCUMENTS
 ═══════════════════════════════════════════════════════════
-${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached to this message as PDFs. Read them visually — floor plans, drawings, schedules, and operational documents are included. Use what you observe in the documents alongside the questionnaire data below.
+${docs ? `\nExtracted text from documents (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS

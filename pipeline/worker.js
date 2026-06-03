@@ -351,10 +351,32 @@ Output as structured plain text.`
   }
 });
 
+// pipeline/lib/pdf-to-images.ts
+function preparePdfDocument(input, title) {
+  const buf = typeof input === "string" ? fs2.readFileSync(input) : input;
+  return {
+    type: "document",
+    source: {
+      type: "base64",
+      media_type: "application/pdf",
+      data: buf.toString("base64")
+    },
+    title
+  };
+}
+var fs2;
+var init_pdf_to_images = __esm({
+  "pipeline/lib/pdf-to-images.ts"() {
+    "use strict";
+    fs2 = __toESM(require("fs"));
+  }
+});
+
 // pipeline/prompts/gap-analysis-leed.ts
 function buildLeedGapAnalysisPrompt(params) {
   const r = params.responses;
   const docs = params.documentContext;
+  const docCount = params.documentCount ?? 0;
   return `You are a LEED BD+C v4.1 consultant producing a Gap Analysis Report for a project team.
 
 Your output is a complete, standalone HTML document using the Liminal design system CSS classes defined below. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
@@ -413,10 +435,13 @@ Commissioning authority:  ${r.cxAuthority || "Unknown"}
 Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `
 Contractor LEED experience: ${r.contractorLeedExperience}` : ""}
 
-${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
+${docs ? `
+Extracted text from documents (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -529,6 +554,7 @@ var init_gap_analysis_leed = __esm({
 function buildWellV2GapAnalysisPrompt(params) {
   const r = params.responses;
   const docs = params.documentContext;
+  const docCount = params.documentCount ?? 0;
   return `You are a WELL v2 consultant producing a Gap Analysis Report for a project team.
 
 Your output is a complete, standalone HTML document using the Liminal design system CSS classes. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
@@ -602,10 +628,13 @@ Universal design:          ${r.universalDesign || "Unknown"}
 Equity policy:             ${r.equityPolicy || "Unknown"}
 Community spaces:          ${r.communitySpaces || "Unknown"}
 
-${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
+${docs ? `
+Extracted text from documents (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -722,6 +751,7 @@ var init_gap_analysis_well_v2 = __esm({
 function buildWellHsrGapAnalysisPrompt(params) {
   const r = params.responses;
   const docs = params.documentContext;
+  const docCount = params.documentCount ?? 0;
   return `You are a WELL Health-Safety Rating (HSR) consultant producing a Gap Analysis Report for a building operations team.
 
 Your output is a complete, standalone HTML document using the Liminal design system CSS classes. Do not include <html>, <head>, or <body> tags \u2014 output the body content only, starting with the page-header div.
@@ -785,10 +815,13 @@ Wellness programs:             ${r.wellnessPrograms || "Unknown"}
 Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
 
-${docs ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docs}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and operational documents are included. Use what you observe in the documents alongside the questionnaire data below.
+${docs ? `
+Extracted text from documents (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -1275,6 +1308,7 @@ async function processGapAnalysis(orderId, runId) {
   const uploads = (storageFiles ?? []).filter((f) => f.name && !f.name.endsWith("/")).map((f) => ({ path: `${uploadsFolder}/${f.name}`, name: f.name }));
   console.log(`  Step 4: Found ${uploads.length} uploaded file(s)`);
   let documentContext = "";
+  const documentBlocks = [];
   for (const upload of uploads) {
     try {
       const { data: fileData } = await supabase.storage.from(UPLOADS_BUCKET).download(upload.path);
@@ -1282,6 +1316,7 @@ async function processGapAnalysis(orderId, runId) {
       const buffer = Buffer.from(await fileData.arrayBuffer());
       const isPdf = upload.name.toLowerCase().endsWith(".pdf");
       if (isPdf) {
+        documentBlocks.push(preparePdfDocument(buffer, upload.name));
         const result = await extractPdfContentFromBuffer(
           client2,
           buffer,
@@ -1296,13 +1331,14 @@ ${result.text.slice(0, 8e3)}
         }
       }
     } catch (err) {
-      console.warn(`  Step 5: Failed to extract ${upload.name}: ${err.message}`);
+      console.warn(`  Step 5: Failed to process ${upload.name}: ${err.message}`);
     }
   }
-  console.log(`  Step 5: Document context \u2014 ${documentContext.length} chars`);
+  console.log(`  Step 5: ${documentBlocks.length} document block(s) prepared, ${documentContext.length} chars extracted`);
   const promptFn = program === "well_v2" ? buildWellV2GapAnalysisPrompt : program === "well_hsr" ? buildWellHsrGapAnalysisPrompt : buildLeedGapAnalysisPrompt;
-  const prompt = promptFn({ responses, documentContext });
-  console.log(`  Step 6: Prompt built \u2014 ${prompt.length} chars`);
+  const prompt = promptFn({ responses, documentContext, documentCount: documentBlocks.length });
+  console.log(`  Step 6: Prompt built \u2014 ${prompt.length} chars, ${documentBlocks.length} visual block(s)`);
+  ;
   console.log(`  Step 7: Calling Claude...`);
   const message = await client2.messages.create({
     model: "claude-sonnet-4-6",
@@ -1310,7 +1346,7 @@ ${result.text.slice(0, 8e3)}
     messages: [
       {
         role: "user",
-        content: prompt
+        content: documentBlocks.length > 0 ? [...documentBlocks, { type: "text", text: prompt }] : prompt
       }
     ]
   });
@@ -1407,6 +1443,7 @@ var init_process_gap_analysis = __esm({
     init_supabase();
     init_make_editable();
     init_pdf_extract();
+    init_pdf_to_images();
     init_gap_analysis_leed();
     init_gap_analysis_well_v2();
     init_gap_analysis_well_hsr();
@@ -1447,11 +1484,11 @@ function parseRows(buffer) {
 }
 function loadWorkbook(program = "leed_bdc_v41") {
   const xlsxPath = path2.join(process.cwd(), AUTOMATION_XLSX_BY_PROGRAM[program] ?? AUTOMATION_XLSX_BY_PROGRAM.leed_bdc_v41);
-  if (!fs2.existsSync(xlsxPath)) {
+  if (!fs3.existsSync(xlsxPath)) {
     throw new Error(`Automation analysis XLSX not found: ${xlsxPath}`);
   }
   console.log(`  [loadWorkbook] reading file from disk: ${xlsxPath}`);
-  const buf = fs2.readFileSync(xlsxPath);
+  const buf = fs3.readFileSync(xlsxPath);
   console.log(`  [loadWorkbook] file read complete \u2014 ${buf.length} bytes \u2014 parsing XLSX...`);
   const result = parseRows(buf);
   console.log(`  [loadWorkbook] XLSX parse complete \u2014 ${result.rows.length} rows`);
@@ -1506,12 +1543,12 @@ function formatCreditDataForPrompt(data2) {
   ];
   return lines.join("\n");
 }
-var XLSX, fs2, path2, AUTOMATION_XLSX_BY_PROGRAM, COL;
+var XLSX, fs3, path2, AUTOMATION_XLSX_BY_PROGRAM, COL;
 var init_extract_xlsx_row = __esm({
   "pipeline/lib/extract-xlsx-row.ts"() {
     "use strict";
     XLSX = __toESM(require("xlsx"));
-    fs2 = __toESM(require("fs"));
+    fs3 = __toESM(require("fs"));
     path2 = __toESM(require("path"));
     AUTOMATION_XLSX_BY_PROGRAM = {
       leed_bdc_v41: "pipeline/reference/leed/LEED_v41_BDC_Automation_Analysis_v9.xlsx",
@@ -1540,27 +1577,6 @@ var init_extract_xlsx_row = __esm({
       calculatorInfo: 13
       // Column 3 partial: Calculator / Worksheet
     };
-  }
-});
-
-// pipeline/lib/pdf-to-images.ts
-function preparePdfDocument(input, title) {
-  const buf = typeof input === "string" ? fs3.readFileSync(input) : input;
-  return {
-    type: "document",
-    source: {
-      type: "base64",
-      media_type: "application/pdf",
-      data: buf.toString("base64")
-    },
-    title
-  };
-}
-var fs3;
-var init_pdf_to_images = __esm({
-  "pipeline/lib/pdf-to-images.ts"() {
-    "use strict";
-    fs3 = __toESM(require("fs"));
   }
 });
 
