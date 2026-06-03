@@ -484,7 +484,7 @@ export default function WellHsrQuestionnaireClient({ project }: Props) {
 
         {/* Project Narrative */}
         <Section title="Project Narrative"
-          note="Optional. Describe the building in your own words — age, recent upgrades, operational context, management structure, known health and safety initiatives, or anything else relevant. Claude reads this to provide more accurate analysis.">
+          note="Optional. Provide a general project description including intended occupancy, overall building context, and any other relevant characteristics of the project available at this stage of design. Describe the building's anticipated HVAC, lighting, and electrical systems to the extent currently known, noting any decisions still pending. Include planned base building systems and controls, and describe the current project scope of work. You also have the option of uploading a document of the narrative on the next page.">
           <textarea
             value={form.projectNarrative}
             onChange={(e) => setForm((f) => ({ ...f, projectNarrative: e.target.value }))}
