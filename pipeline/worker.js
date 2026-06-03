@@ -436,12 +436,20 @@ Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeed
 Contractor LEED experience: ${r.contractorLeedExperience}` : ""}
 
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `
-Extracted text from documents (supplement to visual reading):
-${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to LEED credits:
+- Floor plans / architectural drawings: bicycle storage room or racks, EV charging stations, building footprint and orientation, open space areas, stair locations and design
+- Mechanical/HVAC drawings: heating and cooling system type, refrigerant type, ventilation strategy, renewable energy equipment (solar panels, geothermal), commissioning scope
+- Plumbing drawings: fixture types (low-flow, dual-flush), irrigation system, water reuse connections (rainwater, greywater), cooling tower
+- Site plans: previously developed land, impervious surface area, exterior lighting fixtures, landscaping
+- Specifications: EPD-documented products, FSC-certified wood, low-emitting material callouts, recycled content
+- Reports/models: energy model outputs, commissioning plan or report, waste management plan, construction IAQ plan
+
+${docs ? `Extracted text (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -528,12 +536,23 @@ REPORT STRUCTURE \u2014 produce all sections in this order:
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending. Use the exact short codes only \u2014 no category prefixes, no full names. Examples: "EAc2", "LTc5", "EQc1", "WEc1", "MRc2", "SSc1", "LTc4". The Indoor Environmental Quality category uses EQ codes (EQc1, EQc2, etc.) \u2014 never IEQ. The Energy & Atmosphere category uses EA codes \u2014 never ENE. The Location & Transportation category uses LT codes \u2014 never LOC.
 
-DOCUMENT USAGE \u2014 CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals a design decision, system spec, or commitment not captured in the questionnaire, incorporate it into the relevant credit analysis
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence of readiness for a specific credit (e.g., an energy model, spec sheet, or policy), note it as supporting evidence under that credit
-- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE \u2014 MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every LEED category, check the documents for supporting or contradicting evidence:
+- LT (Location & Transportation): Do site or floor plans show bicycle storage, EV charging stations, or proximity to transit?
+- SS (Sustainable Sites): Does the site plan show open space, pervious surfaces, exterior lighting type, or previously developed land indicators?
+- WE (Water Efficiency): Do plumbing drawings show fixture types, irrigation design, or water reuse systems?
+- EA (Energy & Atmosphere): Do mechanical drawings show system type, fuel source, refrigerant, or renewable energy? Does an energy model or commissioning report exist?
+- MR (Materials & Resources): Do specs reference EPDs, FSC wood, recycled content, or a waste management plan?
+- IEQ (Indoor Environmental Quality): Do mechanical drawings show ventilation rates, filtration type, or a construction IAQ plan? Do floor plans show daylighting potential or acoustic treatment?
+
+When documents provide evidence:
+1. Reference it explicitly in the credit rationale ("Mechanical drawings show VRF system with no refrigerant specified", "Site plan confirms 12 bicycle spaces adjacent to main entry")
+2. Upgrade the effort level or recommendation if the document shows the project is further along than the questionnaire indicated
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support
@@ -629,12 +648,21 @@ Equity policy:             ${r.equityPolicy || "Unknown"}
 Community spaces:          ${r.communitySpaces || "Unknown"}
 
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `
-Extracted text from documents (supplement to visual reading):
-${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to WELL v2 concepts:
+- Floor plans: stair design and visibility, fitness rooms, wellness/meditation rooms, nursing rooms, food service areas, vending locations, outdoor access points, common areas, restroom locations
+- Mechanical/HVAC drawings: ventilation system type and rates, filtration equipment and MERV rating, humidification/dehumidification, radiant heating/cooling systems, individual zone controls
+- Plumbing drawings: point-of-use water filtration, drinking water access points, cooling tower presence, Legionella risk indicators
+- Lighting plans: window layout and glazing, circadian lighting fixtures, daylight sensors, individual lighting controls
+- Acoustic plans or specs: sound isolation details, background noise targets, acoustic ceiling or wall treatments
+- Specifications: cleaning product lists or policies, hazardous material survey, IPM policy, biophilic design elements
+- Reports: air quality test results, water test reports, commissioning records, occupant survey results
+
+${docs ? `Extracted text (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -726,12 +754,27 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 
-DOCUMENT USAGE \u2014 CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals a building specification, operational policy, or design detail not captured in the questionnaire, incorporate it into the relevant concept analysis
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence of readiness for a specific WELL feature (e.g., an air quality report, operations manual, or equipment spec), note it as supporting evidence under that feature
-- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE \u2014 MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every WELL v2 concept, check the documents for supporting or contradicting evidence:
+- Air (A): Do mechanical drawings show filtration MERV rating, ventilation rates, or combustion appliances? Does an IAQ report show pollutant levels?
+- Water (W): Do plumbing drawings show point-of-use filtration, drinking water access, or cooling tower? Does a water test report exist?
+- Nourishment (N): Does a floor plan show a cafeteria, food prep area, or vending location?
+- Light (L): Does a floor plan or lighting plan show window layout, glazing type, circadian lighting fixtures, or daylight sensors?
+- Movement (V): Does a floor plan show stair design, fitness room, shower/changing facilities, or outdoor access? Is the stair prominent and inviting?
+- Thermal Comfort (T): Do mechanical drawings show radiant systems, individual zone controls, or humidity management equipment?
+- Sound (S): Do acoustic plans or specs show sound isolation, background noise targets, or acoustic treatment?
+- Materials (X): Do specs include a cleaning products policy, hazardous material survey, or IPM policy?
+- Mind (M): Does a floor plan show biophilic elements (green walls, water features, views to nature), wellness rooms, or meditation spaces?
+- Community (C): Do drawings show universal design features (accessible routes, inclusive spaces) or dedicated community areas?
+
+When documents provide evidence:
+1. Reference it explicitly in the feature assessment ("Floor plan shows dedicated wellness room on level 3", "Mechanical drawing confirms MERV-13 filtration")
+2. Update the precondition status or readiness badge if the document shows stronger readiness than the questionnaire indicated
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements
@@ -816,12 +859,19 @@ Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
 
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-${docCount} document file(s) are attached to this message as PDFs. Read them visually \u2014 floor plans, drawings, schedules, and operational documents are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `
-Extracted text from documents (supplement to visual reading):
-${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to HSR concepts:
+- Floor plans: AED cabinet locations, first aid station locations, restroom locations, janitor/cleaning closets, emergency exit routes, common areas, wellness rooms
+- Mechanical/HVAC drawings: equipment type, filtration units, ventilation strategy, combustion appliances, outdoor air intakes
+- Plumbing drawings: water supply type, filtration systems, cooling tower presence, drinking water points
+- Operational documents: cleaning protocols, maintenance logs, training records, emergency plans, warden lists, occupant communication samples
+- Reports/certifications: water test results, IAQ monitoring data, previous WELL/LEED certifications, inspection records
+
+${docs ? `Extracted text (supplement to visual reading):
+${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 OUTPUT INSTRUCTIONS
@@ -906,12 +956,23 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 
-DOCUMENT USAGE \u2014 CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals an operational policy, protocol, maintenance record, or certification that wasn't captured in the questionnaire, incorporate it into the relevant concept assessment
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence that a specific HSR feature is already met (e.g., a cleaning protocol, water test report, emergency plan), note it as supporting evidence under that feature and update the readiness badge accordingly
-- After the Executive Summary, add a brief "Document Findings" note (1\u20133 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE \u2014 MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every HSR concept, check the documents for supporting or contradicting evidence:
+- SC (Cleaning): Does a protocol document show cleaning frequency, products, or staff training? Does a floor plan show cleaning station or janitor closet locations?
+- SE (Emergency): Does an emergency plan document exist? Does a floor plan show exit routes, warden stations, or AED/defibrillator locations?
+- SH (Health Services): Does a floor plan confirm AED cabinet placement? Are first aid kit records or inspection tags visible?
+- SA (Air Quality): Do mechanical drawings show filtration type, HVAC equipment, or outdoor air systems? Does a maintenance log show filter change schedule?
+- SS (Water Quality): Does a water test report show results and date? Do plumbing drawings show filtration units or cooling tower?
+- SI (Stakeholder Engagement): Are occupant communication samples, survey forms, or wellness program materials present?
+
+When documents provide evidence:
+1. Reference it explicitly in the concept assessment ("Floor plan shows AED cabinet on each floor", "Water test report dated [date] confirms...")
+2. Upgrade the readiness badge if the document supports a stronger assessment than the questionnaire alone
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail
@@ -1342,7 +1403,7 @@ ${result.text.slice(0, 8e3)}
   console.log(`  Step 7: Calling Claude...`);
   const message = await client2.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 16e3,
+    max_tokens: 32e3,
     messages: [
       {
         role: "user",

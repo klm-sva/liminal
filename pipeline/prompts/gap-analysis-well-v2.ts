@@ -81,10 +81,20 @@ Equity policy:             ${r.equityPolicy || "Unknown"}
 Community spaces:          ${r.communitySpaces || "Unknown"}
 
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT
 ═══════════════════════════════════════════════════════════
-${docCount} document file(s) are attached to this message as PDFs. Read them visually — floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `\nExtracted text from documents (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to WELL v2 concepts:
+- Floor plans: stair design and visibility, fitness rooms, wellness/meditation rooms, nursing rooms, food service areas, vending locations, outdoor access points, common areas, restroom locations
+- Mechanical/HVAC drawings: ventilation system type and rates, filtration equipment and MERV rating, humidification/dehumidification, radiant heating/cooling systems, individual zone controls
+- Plumbing drawings: point-of-use water filtration, drinking water access points, cooling tower presence, Legionella risk indicators
+- Lighting plans: window layout and glazing, circadian lighting fixtures, daylight sensors, individual lighting controls
+- Acoustic plans or specs: sound isolation details, background noise targets, acoustic ceiling or wall treatments
+- Specifications: cleaning product lists or policies, hazardous material survey, IPM policy, biophilic design elements
+- Reports: air quality test results, water test reports, commissioning records, occupant survey results
+
+${docs ? `Extracted text (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS
@@ -176,12 +186,27 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores based on the questionnaire. "recommended" should list WELL feature codes you are recommending (e.g. "A03", "L01"). Use short feature codes.
 
-DOCUMENT USAGE — CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals a building specification, operational policy, or design detail not captured in the questionnaire, incorporate it into the relevant concept analysis
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence of readiness for a specific WELL feature (e.g., an air quality report, operations manual, or equipment spec), note it as supporting evidence under that feature
-- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE — MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every WELL v2 concept, check the documents for supporting or contradicting evidence:
+- Air (A): Do mechanical drawings show filtration MERV rating, ventilation rates, or combustion appliances? Does an IAQ report show pollutant levels?
+- Water (W): Do plumbing drawings show point-of-use filtration, drinking water access, or cooling tower? Does a water test report exist?
+- Nourishment (N): Does a floor plan show a cafeteria, food prep area, or vending location?
+- Light (L): Does a floor plan or lighting plan show window layout, glazing type, circadian lighting fixtures, or daylight sensors?
+- Movement (V): Does a floor plan show stair design, fitness room, shower/changing facilities, or outdoor access? Is the stair prominent and inviting?
+- Thermal Comfort (T): Do mechanical drawings show radiant systems, individual zone controls, or humidity management equipment?
+- Sound (S): Do acoustic plans or specs show sound isolation, background noise targets, or acoustic treatment?
+- Materials (X): Do specs include a cleaning products policy, hazardous material survey, or IPM policy?
+- Mind (M): Does a floor plan show biophilic elements (green walls, water features, views to nature), wellness rooms, or meditation spaces?
+- Community (C): Do drawings show universal design features (accessible routes, inclusive spaces) or dedicated community areas?
+
+When documents provide evidence:
+1. Reference it explicitly in the feature assessment ("Floor plan shows dedicated wellness room on level 3", "Mechanical drawing confirms MERV-13 filtration")
+2. Update the precondition status or readiness badge if the document shows stronger readiness than the questionnaire indicated
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT give compliance thresholds, measurement protocols, or detailed technical requirements

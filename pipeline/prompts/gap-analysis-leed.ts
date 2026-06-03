@@ -64,10 +64,19 @@ Commissioning authority:  ${r.cxAuthority || "Unknown"}
 Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `\nContractor LEED experience: ${r.contractorLeedExperience}` : ""}
 
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT
 ═══════════════════════════════════════════════════════════
-${docCount} document file(s) are attached to this message as PDFs. Read them visually — floor plans, drawings, schedules, and specifications are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `\nExtracted text from documents (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to LEED credits:
+- Floor plans / architectural drawings: bicycle storage room or racks, EV charging stations, building footprint and orientation, open space areas, stair locations and design
+- Mechanical/HVAC drawings: heating and cooling system type, refrigerant type, ventilation strategy, renewable energy equipment (solar panels, geothermal), commissioning scope
+- Plumbing drawings: fixture types (low-flow, dual-flush), irrigation system, water reuse connections (rainwater, greywater), cooling tower
+- Site plans: previously developed land, impervious surface area, exterior lighting fixtures, landscaping
+- Specifications: EPD-documented products, FSC-certified wood, low-emitting material callouts, recycled content
+- Reports/models: energy model outputs, commissioning plan or report, waste management plan, construction IAQ plan
+
+${docs ? `Extracted text (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS
@@ -154,12 +163,23 @@ REPORT STRUCTURE — produce all sections in this order:
 
 Fill in actual estimated scores based on the questionnaire. The "recommended" array for each category should list the credit codes you are recommending. Use the exact short codes only — no category prefixes, no full names. Examples: "EAc2", "LTc5", "EQc1", "WEc1", "MRc2", "SSc1", "LTc4". The Indoor Environmental Quality category uses EQ codes (EQc1, EQc2, etc.) — never IEQ. The Energy & Atmosphere category uses EA codes — never ENE. The Location & Transportation category uses LT codes — never LOC.
 
-DOCUMENT USAGE — CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals a design decision, system spec, or commitment not captured in the questionnaire, incorporate it into the relevant credit analysis
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence of readiness for a specific credit (e.g., an energy model, spec sheet, or policy), note it as supporting evidence under that credit
-- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE — MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every LEED category, check the documents for supporting or contradicting evidence:
+- LT (Location & Transportation): Do site or floor plans show bicycle storage, EV charging stations, or proximity to transit?
+- SS (Sustainable Sites): Does the site plan show open space, pervious surfaces, exterior lighting type, or previously developed land indicators?
+- WE (Water Efficiency): Do plumbing drawings show fixture types, irrigation design, or water reuse systems?
+- EA (Energy & Atmosphere): Do mechanical drawings show system type, fuel source, refrigerant, or renewable energy? Does an energy model or commissioning report exist?
+- MR (Materials & Resources): Do specs reference EPDs, FSC wood, recycled content, or a waste management plan?
+- IEQ (Indoor Environmental Quality): Do mechanical drawings show ventilation rates, filtration type, or a construction IAQ plan? Do floor plans show daylighting potential or acoustic treatment?
+
+When documents provide evidence:
+1. Reference it explicitly in the credit rationale ("Mechanical drawings show VRF system with no refrigerant specified", "Site plan confirms 12 bicycle spaces adjacent to main entry")
+2. Upgrade the effort level or recommendation if the document shows the project is further along than the questionnaire indicated
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT say "contact us," "reach out," or mention support

@@ -70,10 +70,18 @@ Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
 
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
-UPLOADED DOCUMENTS
+UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT
 ═══════════════════════════════════════════════════════════
-${docCount} document file(s) are attached to this message as PDFs. Read them visually — floor plans, drawings, schedules, and operational documents are included. Use what you observe in the documents alongside the questionnaire data below.
-${docs ? `\nExtracted text from documents (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Analysis is based on questionnaire responses only."}
+${docCount} document file(s) are attached as PDFs. Visually read every page now, before generating the report.
+
+For each document, look for evidence relevant to HSR concepts:
+- Floor plans: AED cabinet locations, first aid station locations, restroom locations, janitor/cleaning closets, emergency exit routes, common areas, wellness rooms
+- Mechanical/HVAC drawings: equipment type, filtration units, ventilation strategy, combustion appliances, outdoor air intakes
+- Plumbing drawings: water supply type, filtration systems, cooling tower presence, drinking water points
+- Operational documents: cleaning protocols, maintenance logs, training records, emergency plans, warden lists, occupant communication samples
+- Reports/certifications: water test results, IAQ monitoring data, previous WELL/LEED certifications, inspection records
+
+${docs ? `Extracted text (supplement to visual reading):\n${docs}` : ""}` : "No documents were uploaded. Base analysis on questionnaire responses only."}
 
 ═══════════════════════════════════════════════════════════
 OUTPUT INSTRUCTIONS
@@ -158,12 +166,23 @@ REPORT STRUCTURE:
 
 Fill in actual estimated scores. "recommended" should list HSR feature codes you recommend (e.g. "SC3", "SE2"). 25 points is required for the HSR.
 
-DOCUMENT USAGE — CRITICAL:
-If the UPLOADED DOCUMENTS section above contains extracted text, you MUST actively use it to improve the analysis. Specifically:
-- If a document reveals an operational policy, protocol, maintenance record, or certification that wasn't captured in the questionnaire, incorporate it into the relevant concept assessment
-- If a document contradicts a questionnaire answer, trust the document and note the discrepancy
-- If a document provides evidence that a specific HSR feature is already met (e.g., a cleaning protocol, water test report, emergency plan), note it as supporting evidence under that feature and update the readiness badge accordingly
-- After the Executive Summary, add a brief "Document Findings" note (1–3 sentences) describing what the uploaded documents revealed and how they influenced the analysis. If no documents were uploaded, omit this section entirely.
+DOCUMENT USAGE — MANDATORY:
+${docCount > 0 ? `Documents are attached. You MUST actively use what you see in them. Do not produce an analysis based solely on questionnaire answers when documents are present.
+
+For every HSR concept, check the documents for supporting or contradicting evidence:
+- SC (Cleaning): Does a protocol document show cleaning frequency, products, or staff training? Does a floor plan show cleaning station or janitor closet locations?
+- SE (Emergency): Does an emergency plan document exist? Does a floor plan show exit routes, warden stations, or AED/defibrillator locations?
+- SH (Health Services): Does a floor plan confirm AED cabinet placement? Are first aid kit records or inspection tags visible?
+- SA (Air Quality): Do mechanical drawings show filtration type, HVAC equipment, or outdoor air systems? Does a maintenance log show filter change schedule?
+- SS (Water Quality): Does a water test report show results and date? Do plumbing drawings show filtration units or cooling tower?
+- SI (Stakeholder Engagement): Are occupant communication samples, survey forms, or wellness program materials present?
+
+When documents provide evidence:
+1. Reference it explicitly in the concept assessment ("Floor plan shows AED cabinet on each floor", "Water test report dated [date] confirms...")
+2. Upgrade the readiness badge if the document supports a stronger assessment than the questionnaire alone
+3. If a document contradicts a questionnaire answer, trust the document and note the discrepancy
+
+After the Executive Summary, include a "Document Findings" section (REQUIRED when documents are attached) that lists what each document revealed and how it changed or confirmed the analysis.` : "No documents were attached. Omit the Document Findings section."}
 
 IMPORTANT CONSTRAINTS:
 - Do NOT explain HSR scoring thresholds or feature-level compliance requirements in detail

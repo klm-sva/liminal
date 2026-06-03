@@ -145,7 +145,7 @@ export async function processGapAnalysis(orderId: string, runId: string): Promis
 
   const message = await client.messages.create({
     model:      "claude-sonnet-4-6",
-    max_tokens: 16000,
+    max_tokens: 32000,
     messages: [
       {
         role:    "user",
