@@ -47,6 +47,7 @@ export async function PATCH(
 
   if (Object.keys(updates).length === 0) return NextResponse.json({ ok: true });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any).from("projects").update(updates).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
