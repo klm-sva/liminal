@@ -1786,8 +1786,7 @@ async function reviewDrawings(customerId, projectId, drawingPaths) {
   const supabase = createServiceClient();
   console.log(`[drawing-review] Reviewing ${drawingPaths.length} drawing file(s)...`);
   const contentBlocks = [];
-  const pathsToReview = drawingPaths.slice(0, 3);
-  for (const drawingPath of pathsToReview) {
+  for (const drawingPath of drawingPaths) {
     const { data: data2, error } = await supabase.storage.from("customer-uploads").download(drawingPath);
     if (error || !data2) {
       console.warn(`  [drawing-review] Failed to download ${drawingPath}: ${error?.message}`);

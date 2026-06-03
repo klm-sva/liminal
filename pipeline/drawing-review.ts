@@ -56,10 +56,7 @@ export async function reviewDrawings(
 
   const contentBlocks: Anthropic.MessageParam["content"] = [];
 
-  // Review up to 3 drawing files — enough to assess the set without excessive cost
-  const pathsToReview = drawingPaths.slice(0, 3);
-
-  for (const drawingPath of pathsToReview) {
+  for (const drawingPath of drawingPaths) {
     const { data, error } = await supabase.storage
       .from("customer-uploads")
       .download(drawingPath);
