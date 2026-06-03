@@ -62,6 +62,7 @@ TEAM & PROCESS
 Pre-design charrette:     ${r.charrette || "Unknown"}
 Commissioning authority:  ${r.cxAuthority || "Unknown"}
 Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `\nContractor LEED experience: ${r.contractorLeedExperience}` : ""}
+${r.projectNarrative ? `\nPROJECT NARRATIVE (owner-provided — use this to supplement the above data):\n${r.projectNarrative}` : ""}
 
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
 UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT

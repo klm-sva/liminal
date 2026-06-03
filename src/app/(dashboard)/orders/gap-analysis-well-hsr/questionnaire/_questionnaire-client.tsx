@@ -62,6 +62,7 @@ type Form = {
   wellnessPrograms: string;
   wellnessChampion: string;
   hsrCommunicated: string;
+  projectNarrative: string;
 };
 
 function Pills({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
@@ -203,6 +204,7 @@ export default function WellHsrQuestionnaireClient({ project }: Props) {
     wellnessPrograms:            "",
     wellnessChampion:            "",
     hsrCommunicated:             "",
+    projectNarrative:            "",
   });
 
   const [locked, setLocked] = useState<Set<string>>(() => initLocked(project));
@@ -478,6 +480,18 @@ export default function WellHsrQuestionnaireClient({ project }: Props) {
             <Pills value={form.hsrCommunicated} onChange={set("hsrCommunicated")}
               options={["Yes — signage and/or website", "Internally only", "No", "Unknown"]} />
           </Q>
+        </Section>
+
+        {/* Project Narrative */}
+        <Section title="Project Narrative"
+          note="Optional. Describe the building in your own words — age, recent upgrades, operational context, management structure, known health and safety initiatives, or anything else relevant. Claude reads this to provide more accurate analysis.">
+          <textarea
+            value={form.projectNarrative}
+            onChange={(e) => setForm((f) => ({ ...f, projectNarrative: e.target.value }))}
+            rows={5}
+            placeholder="e.g. 8-story Class B office building built in 1988, renovated in 2015. Managed by an in-house facilities team of 4. HVAC was replaced in 2020 with MERV-11 filters. No previous WELL or LEED certifications. Building has a wellness room but no formal occupant wellness program."
+            className="mt-2 w-full text-sm border border-certify-white rounded-xl px-4 py-2.5 text-certify-deep placeholder:text-certify-cool-grey/40 focus:outline-none focus:border-certify-blue/40 bg-white resize-none"
+          />
         </Section>
 
         <button

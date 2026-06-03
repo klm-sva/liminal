@@ -902,6 +902,9 @@ export async function processOrder(
     ...(docProfilesBlock
       ? ["", docProfilesBlock]
       : []),
+    ...((project as any).project_narrative
+      ? ["", "PROJECT NARRATIVE (owner-provided context — use this to supplement drawing-extracted data):", `  ${(project as any).project_narrative}`]
+      : []),
   ].join("\n");
 
   const compliancePathBlock = run.compliance_path

@@ -7,15 +7,16 @@ import { Info, AlertTriangle } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 interface ProjectData {
-  id:            string;
-  name:          string;
-  address:       string | null;
-  gross_sqft:    number | null;
-  stories:       number | null;
-  building_type: string | null;
-  occupancy:     string | null;
-  description:   string | null;
-  flagged_fields: string[];
+  id:                string;
+  name:              string;
+  address:           string | null;
+  gross_sqft:        number | null;
+  stories:           number | null;
+  building_type:     string | null;
+  occupancy:         string | null;
+  description:       string | null;
+  project_narrative: string | null;
+  flagged_fields:    string[];
 }
 
 export default function EditProjectClient({ project }: { project: ProjectData }) {
@@ -28,6 +29,7 @@ export default function EditProjectClient({ project }: { project: ProjectData })
   const [bldgType,  setBldgType]  = useState(project.building_type ?? "");
   const [occupancy, setOccupancy] = useState(project.occupancy ?? "");
   const [desc,      setDesc]      = useState(project.description ?? "");
+  const [narrative, setNarrative] = useState(project.project_narrative ?? "");
   const [saving,    setSaving]    = useState(false);
 
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +47,10 @@ export default function EditProjectClient({ project }: { project: ProjectData })
           address:       address      || null,
           gross_sqft:    sqft         ? Number(sqft)    : null,
           stories:       stories      ? Number(stories) : null,
-          building_type: bldgType     || null,
-          occupancy:     occupancy    || null,
-          description:   desc         || null,
+          building_type:     bldgType   || null,
+          occupancy:         occupancy  || null,
+          description:       desc       || null,
+          project_narrative: narrative  || null,
         }),
       });
       if (!res.ok) {
@@ -121,6 +124,16 @@ export default function EditProjectClient({ project }: { project: ProjectData })
                 rows={3}
                 className="input-style resize-none"
                 placeholder="18-story commercial office tower in San Francisco's South of Market district…"
+              />
+            </Field>
+
+            <Field label="Project narrative">
+              <textarea
+                value={narrative}
+                onChange={(e) => setNarrative(e.target.value)}
+                rows={5}
+                className="block w-full bg-certify-white border border-certify-white rounded-xl px-4 py-3 text-sm text-certify-deep placeholder:text-certify-cool-grey/50 outline-none transition-all focus:border-certify-blue focus:ring-2 focus:ring-certify-blue/15 resize-none"
+                placeholder="Describe your project in your own words — construction type, building age, recent upgrades, mechanical systems, operational context, certification history, or anything else relevant. Claude reads this to provide more accurate analysis."
               />
             </Field>
           </div>

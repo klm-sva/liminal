@@ -79,7 +79,7 @@ COMMUNITY (Concept C)
 Universal design:          ${r.universalDesign || "Unknown"}
 Equity policy:             ${r.equityPolicy || "Unknown"}
 Community spaces:          ${r.communitySpaces || "Unknown"}
-
+${r.projectNarrative ? `\nPROJECT NARRATIVE (owner-provided — use this to supplement the above data):\n${r.projectNarrative}` : ""}
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
 UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT
 ═══════════════════════════════════════════════════════════

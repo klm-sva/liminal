@@ -68,7 +68,7 @@ Occupant surveys:              ${r.occupantSurveys || "Unknown"}
 Wellness programs:             ${r.wellnessPrograms || "Unknown"}
 Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
-
+${r.projectNarrative ? `\nPROJECT NARRATIVE (owner-provided — use this to supplement the above data):\n${r.projectNarrative}` : ""}
 ${docCount > 0 ? `═══════════════════════════════════════════════════════════
 UPLOADED DOCUMENTS — EXAMINE BEFORE WRITING THE REPORT
 ═══════════════════════════════════════════════════════════

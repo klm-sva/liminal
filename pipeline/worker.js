@@ -434,6 +434,9 @@ Pre-design charrette:     ${r.charrette || "Unknown"}
 Commissioning authority:  ${r.cxAuthority || "Unknown"}
 Contractor selected:      ${r.contractorSelected || "Unknown"}${r.contractorLeedExperience ? `
 Contractor LEED experience: ${r.contractorLeedExperience}` : ""}
+${r.projectNarrative ? `
+PROJECT NARRATIVE (owner-provided \u2014 use this to supplement the above data):
+${r.projectNarrative}` : ""}
 
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
@@ -646,7 +649,9 @@ COMMUNITY (Concept C)
 Universal design:          ${r.universalDesign || "Unknown"}
 Equity policy:             ${r.equityPolicy || "Unknown"}
 Community spaces:          ${r.communitySpaces || "Unknown"}
-
+${r.projectNarrative ? `
+PROJECT NARRATIVE (owner-provided \u2014 use this to supplement the above data):
+${r.projectNarrative}` : ""}
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
@@ -857,7 +862,9 @@ Occupant surveys:              ${r.occupantSurveys || "Unknown"}
 Wellness programs:             ${r.wellnessPrograms || "Unknown"}
 Wellness champion:             ${r.wellnessChampion || "Unknown"}
 HSR communicated publicly:     ${r.hsrCommunicated || "Unknown"}
-
+${r.projectNarrative ? `
+PROJECT NARRATIVE (owner-provided \u2014 use this to supplement the above data):
+${r.projectNarrative}` : ""}
 ${docCount > 0 ? `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 UPLOADED DOCUMENTS \u2014 EXAMINE BEFORE WRITING THE REPORT
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
@@ -4313,7 +4320,8 @@ async function processOrder(orderId, runId, additionalInstructions) {
     `  address: ${project.address ?? "(not provided)"}`,
     ...registrationLines.length > 0 ? ["", "PROJECT REGISTRATION DATA (owner-entered \u2014 use these values for all occupancy calculations, do not estimate):"].concat(registrationLines) : [],
     ...specsProfileBlock ? ["", specsProfileBlock] : [],
-    ...docProfilesBlock ? ["", docProfilesBlock] : []
+    ...docProfilesBlock ? ["", docProfilesBlock] : [],
+    ...project.project_narrative ? ["", "PROJECT NARRATIVE (owner-provided context \u2014 use this to supplement drawing-extracted data):", `  ${project.project_narrative}`] : []
   ].join("\n");
   const compliancePathBlock = run.compliance_path ? [
     "COMPLIANCE PATH (customer-selected \u2014 follow this path exclusively):",

@@ -59,6 +59,7 @@ type Form = {
   cxAuthority: string;
   contractorSelected: string;
   contractorLeedExperience: string;
+  projectNarrative: string;
 };
 
 const WATER_REUSE_OPTS = ["Rainwater harvesting", "Greywater reuse", "Blackwater treatment", "None", "Unknown"];
@@ -199,6 +200,7 @@ export default function GapAnalysisQuestionnaireClient({ project }: Props) {
     cxAuthority:              "",
     contractorSelected:       "",
     contractorLeedExperience: "",
+    projectNarrative:         "",
   });
 
   const [locked, setLocked] = useState<Set<string>>(() => initLocked(project));
@@ -468,6 +470,18 @@ export default function GapAnalysisQuestionnaireClient({ project }: Props) {
                 options={["Yes", "No", "Unknown"]} />
             </Q>
           )}
+        </Section>
+
+        {/* Project Narrative */}
+        <Section title="Project Narrative"
+          note="Optional. Describe the project in your own words — construction type, building age, recent upgrades, mechanical systems, operational context, or anything else relevant. Claude reads this to provide more accurate analysis.">
+          <textarea
+            value={form.projectNarrative}
+            onChange={(e) => setForm((f) => ({ ...f, projectNarrative: e.target.value }))}
+            rows={5}
+            placeholder="e.g. 18-story Class A office tower constructed in 2019. DOAS with ERV units on each floor. Chilled beam cooling. All-electric with rooftop solar array. LEED Gold certification was pursued but not completed due to a documentation gap on LT Credit: Bicycle Facilities."
+            className="mt-2 w-full text-sm border border-certify-white rounded-xl px-4 py-2.5 text-certify-deep placeholder:text-certify-cool-grey/40 focus:outline-none focus:border-certify-blue/40 bg-white resize-none"
+          />
         </Section>
 
         <button

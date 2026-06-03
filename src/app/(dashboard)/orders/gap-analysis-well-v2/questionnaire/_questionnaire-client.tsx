@@ -67,6 +67,7 @@ type Form = {
   universalDesign: string;
   equityPolicy: string;
   communitySpaces: string;
+  projectNarrative: string;
 };
 
 function Pills({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
@@ -213,6 +214,7 @@ export default function WellV2QuestionnaireClient({ project }: Props) {
     universalDesign:        "",
     equityPolicy:           "",
     communitySpaces:        "",
+    projectNarrative:       "",
   });
 
   const [locked, setLocked] = useState<Set<string>>(() => initLocked(project));
@@ -517,6 +519,18 @@ export default function WellV2QuestionnaireClient({ project }: Props) {
             <Pills value={form.communitySpaces} onChange={set("communitySpaces")}
               options={["Yes", "No", "Unknown"]} />
           </Q>
+        </Section>
+
+        {/* Project Narrative */}
+        <Section title="Project Narrative"
+          note="Optional. Describe the project in your own words — construction type, building age, recent upgrades, mechanical systems, operational context, or anything else relevant. Claude reads this to provide more accurate analysis.">
+          <textarea
+            value={form.projectNarrative}
+            onChange={(e) => setForm((f) => ({ ...f, projectNarrative: e.target.value }))}
+            rows={5}
+            placeholder="e.g. 12-story mixed-use building completed in 2017. Full DOAS ventilation with MERV-13 filtration. All occupants are long-term tenants. Building has a green roof and on-site fitness center. WELL v1 Silver was previously achieved."
+            className="mt-2 w-full text-sm border border-certify-white rounded-xl px-4 py-2.5 text-certify-deep placeholder:text-certify-cool-grey/40 focus:outline-none focus:border-certify-blue/40 bg-white resize-none"
+          />
         </Section>
 
         <button
