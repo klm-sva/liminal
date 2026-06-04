@@ -4313,6 +4313,8 @@ async function processOrder(orderId, runId, additionalInstructions) {
   if (project.regular_occupants != null) registrationLines.push(`  regular_occupants: ${project.regular_occupants}`);
   if (project.peak_visitors != null) registrationLines.push(`  peak_visitors: ${project.peak_visitors}`);
   const projectDataBlock = [
+    "DATA CONFLICT RULE: Where any uploaded document conflicts with owner-entered data below, always defer to the owner-entered data \u2014 the customer has reviewed and confirmed it. Use documents to fill gaps, not to override.",
+    "",
     "PROJECT DATA (extracted from construction drawings):",
     ...Object.entries(projectProfile).filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== void 0).map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
     "",
