@@ -4690,6 +4690,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   let gtfsAllStops = [];
   let gtfsLocationsForMap = [];
   let gtfsDataBlock = "";
+  let gtfsMapAnnotationHtml = "";
   if (requiredMapType === "transit-stops" && project.address) {
     console.log(`  Step 13.5: Running GTFS transit pre-fetch...`);
     try {
@@ -4764,6 +4765,54 @@ async function processOrder(orderId, runId, additionalInstructions) {
               `Retrieved: ${today}`,
               `${"\u2550".repeat(60)}`
             ].join("\n");
+            if (gtfsVerifiedStops.length > 0) {
+              const legendItems = gtfsVerifiedStops.slice(0, 8).map(
+                (v, i) => `<span style="display:inline-block;margin-right:20px;"><strong>${i + 1}</strong> = ${v.stop.name}</span>`
+              ).join("\n          ");
+              const tableRows = gtfsVerifiedStops.slice(0, 8).map((v, i) => {
+                const s = v.stop;
+                const type = s.isRail ? "Rail / Ferry" : s.routeType === 0 ? "Light Rail" : "Bus / BRT";
+                const threshold = s.isRail ? "0.5 mi" : "0.25 mi";
+                return `
+            <tr style="border-bottom:1px solid #e0e0e0;">
+              <td style="padding:7px 10px;text-align:center;">${i + 1}</td>
+              <td style="padding:7px 10px;">${s.name}</td>
+              <td style="padding:7px 10px;">${type}</td>
+              <td style="padding:7px 10px;">${s.agencyName}</td>
+              <td style="padding:7px 10px;">${s.routeNames.join(", ") || "\u2014"}</td>
+              <td style="padding:7px 10px;text-align:right;">${v.walkingFeet.toLocaleString()} ft&nbsp;(${v.walkingMiles.toFixed(2)} mi)</td>
+              <td style="padding:7px 10px;text-align:center;">${threshold}</td>
+              <td style="padding:7px 10px;text-align:right;">${s.weekdayDirectional.toLocaleString()}</td>
+              <td style="padding:7px 10px;text-align:center;color:#2e7d32;font-weight:600;">\u2713</td>
+            </tr>`;
+              }).join("");
+              gtfsMapAnnotationHtml = `
+<div style="margin:4px 0 24px;font-size:12px;font-family:inherit;">
+  <div style="background:#f0f4f8;border-radius:6px;padding:10px 16px;margin-bottom:12px;line-height:1.8;">
+    <strong style="display:block;margin-bottom:4px;color:#2b4044;font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Map Key</strong>
+    <span style="display:inline-block;margin-right:20px;"><strong>S</strong> = Project site (main building entry)</span>
+    ${legendItems}
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead>
+      <tr style="background:#2b4044;color:#fff;">
+        <th style="padding:7px 10px;text-align:center;">#</th>
+        <th style="padding:7px 10px;text-align:left;">Transit Stop</th>
+        <th style="padding:7px 10px;text-align:left;">Type</th>
+        <th style="padding:7px 10px;text-align:left;">Agency</th>
+        <th style="padding:7px 10px;text-align:left;">Routes</th>
+        <th style="padding:7px 10px;text-align:right;">Walking Distance</th>
+        <th style="padding:7px 10px;text-align:center;">Threshold</th>
+        <th style="padding:7px 10px;text-align:right;">Directional Trips/Day</th>
+        <th style="padding:7px 10px;text-align:center;">Qualifies</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}
+    </tbody>
+  </table>
+  <p style="margin:6px 0 0;color:#666;font-size:11px;">Walking distances measured by Google Maps Directions API (walking mode). Trip counts from official GTFS agency schedules. Retrieved ${today}.</p>
+</div>`;
+            }
           }
         }
       }
@@ -5017,10 +5066,9 @@ ${part1Html}` }] : [],
   }
   if (mapBuffer) {
     const mapDataUri = `data:image/png;base64,${mapBuffer.toString("base64")}`;
-    fullHtml = fullHtml.replace(
-      /<img\s+data-map-insert[^>]*\/?>/gi,
-      `<img src="${mapDataUri}" alt="Walking distance map" style="max-width:100%;height:auto;border-radius:8px;margin:16px 0;display:block;">`
-    );
+    const mapImgHtml = `<img src="${mapDataUri}" alt="Walking distance map" style="max-width:100%;height:auto;border-radius:8px;margin:16px 0 8px;display:block;">`;
+    const replacement = gtfsMapAnnotationHtml ? mapImgHtml + "\n" + gtfsMapAnnotationHtml : mapImgHtml;
+    fullHtml = fullHtml.replace(/<img\s+data-map-insert[^>]*\/?>/gi, replacement);
   }
   let calcGuide = null;
   const hasCalculator = !!creditData.platformFiles.calculatorInfo;
