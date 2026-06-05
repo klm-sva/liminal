@@ -38,7 +38,7 @@ import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
 import { analyzeDrawings } from "./drawing-analysis";
-import { generateMap, type MapType } from "./map-generation";
+import { generateMap, measureWalkingDistances, type MapType } from "./map-generation";
 import { logAuditEvent } from "./lib/supabase-ops";
 import { preparePdfDocument } from "./lib/pdf-to-images";
 import { injectTableCss, makeEditable } from "./lib/make-editable";
@@ -953,17 +953,18 @@ ${"═".repeat(60)}
 
 This credit requires a walking-distance map to qualifying transit stops. The map is generated programmatically from stop addresses — it cannot be generated without them.
 
-At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment containing all qualifying transit stops:
+At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment:
 
-<!-- QUALIFYING_TRANSIT_STOPS: [{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...] -->
+<!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": [{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...]} -->
 
 Rules:
-- Include every stop that qualifies for points in this credit — up to 8 stops
-- The "address" field must be a geocodable street address, intersection, or lat,lng string (e.g. "37.7749,-122.4194") — not a stop name alone
-- The "label" field is the human-readable stop name shown on the map
+- "threshold_miles": the maximum walking distance (in miles) that qualifies for this credit — set this from the credit requirements, not a guess
+- "stops": every stop confirmed as qualifying — only stops with verified Google Maps walking distances within threshold_miles. Do NOT include stops whose distance you estimated or could not verify via web search
+- The "address" field must be a geocodable street address or intersection (e.g. "Main St & 2nd Ave, Chicago, IL") or lat,lng string — NOT a stop name alone
+- The "label" field is the human-readable stop name or route shown on the map
 - Valid JSON only — no trailing commas, no single quotes
-- This comment is parsed programmatically; malformed JSON causes the map to be skipped
-- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: [] -->
+- The pipeline re-measures all distances via Google Maps and filters against threshold_miles — stops you include that are beyond the threshold will be excluded from the map
+- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
 ` : "";
 
   const systemPrompt = [
@@ -1035,17 +1036,38 @@ Rules:
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
 
     // Path 1: Parse structured transit stop comment (transit credits only)
-    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\[[\s\S]*?\])\s*-->/);
+    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
     if (transitComment) {
       try {
-        const raw: unknown[] = JSON.parse(transitComment[1]);
-        locationsForMap = (raw as Array<{ address: string; label: string }>)
+        const parsed = JSON.parse(transitComment[1]) as {
+          threshold_miles?: number;
+          stops?: Array<{ address: string; label: string }>;
+        };
+        const thresholdMiles = typeof parsed.threshold_miles === "number" ? parsed.threshold_miles : 0.5;
+        const rawStops = (parsed.stops ?? [])
           .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0)
           .slice(0, 8)
-          .map((l) => ({ address: l.address.trim(), label: l.label ?? String(locationsForMap.length + 1) }));
-        console.log(`    Parsed ${locationsForMap.length} qualifying transit stop(s) from structured comment`);
+          .map((l, i) => ({ address: l.address.trim(), label: l.label ?? String(i + 1) }));
+
+        console.log(`    Parsed ${rawStops.length} transit stop(s) from structured comment (threshold: ${thresholdMiles} mi)`);
+
+        if (rawStops.length > 0) {
+          // Re-measure actual walking distances via Google Maps — filters out stops
+          // Claude incorrectly included due to estimated (vs. real) distances
+          console.log(`    Re-measuring walking distances via Google Maps...`);
+          const routes = await measureWalkingDistances(project.address!, rawStops);
+          for (const route of routes) {
+            const actualMi = route.distanceMiles;
+            const qualifies = actualMi <= thresholdMiles;
+            console.log(`      ${route.destination.label}: ${actualMi.toFixed(2)} mi (threshold ${thresholdMiles} mi) — ${qualifies ? "INCLUDED" : "EXCLUDED"}`);
+            if (qualifies) {
+              locationsForMap.push(route.destination);
+            }
+          }
+          console.log(`    ${locationsForMap.length} of ${rawStops.length} stop(s) confirmed within threshold`);
+        }
       } catch (err) {
-        console.warn(`  Step 15.7: Transit stop comment parse failed: ${(err as Error).message} — falling back to Haiku`);
+        console.warn(`  Step 15.7: Transit stop comment parse/measure failed: ${(err as Error).message} — falling back to Haiku`);
       }
     }
 

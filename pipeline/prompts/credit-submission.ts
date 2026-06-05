@@ -35,7 +35,7 @@ You have web search available. Use it extensively and thoroughly. For any credit
 
 - Search multiple sources — never rely on a single search result.
 - For transit: search for all transit agencies serving this city, all routes near this address, all stop locations within required distances. Do not limit to one agency.
-- For distance measurement: use your knowledge of standard walking speeds and block lengths to estimate distances when exact data is unavailable, but always prefer measured data from web search.
+- For distance measurement: use ONLY verified data from web search — Google Maps walking directions, MapQuest, OpenStreetMap, or transit agency route data. NEVER estimate or approximate walking distances using block counts, walking speed math, straight-line math, or training knowledge. If you cannot retrieve an exact walking distance from a web source, exclude that item from qualifying calculations entirely. A missing distance is better than a wrong distance.
 - For trip counts: search agency websites, GTFS feeds via transit.land or mobilitydata.org, and published schedules. Use the most authoritative source available.
 - For census data, density, land use: search US Census, city planning department, or equivalent authoritative sources.
 - For utility rates: search the utility provider's published rate schedule.

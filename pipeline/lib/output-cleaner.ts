@@ -247,6 +247,29 @@ function scrubHtml(html: string, counts: Record<string, number>): string {
     return `>${scrubbed}<`;
   });
 
+  // 5. Wrap bare camelCase field IDs in <span class="field-id"> so CSS hides them.
+  //    Claude outputs form schema field IDs as plain text (e.g. tranServHv1yrShelter,
+  //    mapPath2Docs) instead of wrapping them. This step catches any that slipped through.
+  //    Pattern: lowercase-start token with 2+ uppercase-led segments and 10+ total chars.
+  //    Applied only to text nodes (between tags), never inside script/style blocks.
+  const FIELD_ID_RE = /\b([a-z][a-z0-9]*(?:[A-Z][a-zA-Z0-9]*){2,})\b/g;
+  let inScriptOrStyle = false;
+  result = result.replace(/(<(?:script|style)[^>]*>)|(<\/(?:script|style)>)|(>([^<]{3,})<)/gi,
+    (match, openScriptStyle, closeScriptStyle, textNodeFull, textContent) => {
+      if (openScriptStyle)  { inScriptOrStyle = true;  return match; }
+      if (closeScriptStyle) { inScriptOrStyle = false; return match; }
+      if (inScriptOrStyle || !textContent) return match;
+
+      const cleaned = textContent.replace(FIELD_ID_RE, (token: string) => {
+        // Only wrap tokens 10+ chars with at least 2 uppercase transitions
+        if (token.length < 10) return token;
+        inc(counts, "field-id-wrapped");
+        return `<span class="field-id">${token}</span>`;
+      });
+      return `>${cleaned}<`;
+    },
+  );
+
   return result;
 }
 

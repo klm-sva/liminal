@@ -2154,6 +2154,14 @@ async function getRoute(origin, dest, mode = "walking") {
 async function getWalkingRoute(origin, dest) {
   return getRoute(origin, dest, "walking");
 }
+async function measureWalkingDistances(originAddress, destinations) {
+  const routes = [];
+  for (const dest of destinations) {
+    const route = await getWalkingRoute(originAddress, dest);
+    if (route) routes.push(route);
+  }
+  return routes;
+}
 async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   const key = MAPS_API_KEY();
   const scale2 = 2;
@@ -3088,7 +3096,7 @@ You have web search available. Use it extensively and thoroughly. For any credit
 
 - Search multiple sources \u2014 never rely on a single search result.
 - For transit: search for all transit agencies serving this city, all routes near this address, all stop locations within required distances. Do not limit to one agency.
-- For distance measurement: use your knowledge of standard walking speeds and block lengths to estimate distances when exact data is unavailable, but always prefer measured data from web search.
+- For distance measurement: use ONLY verified data from web search \u2014 Google Maps walking directions, MapQuest, OpenStreetMap, or transit agency route data. NEVER estimate or approximate walking distances using block counts, walking speed math, straight-line math, or training knowledge. If you cannot retrieve an exact walking distance from a web source, exclude that item from qualifying calculations entirely. A missing distance is better than a wrong distance.
 - For trip counts: search agency websites, GTFS feeds via transit.land or mobilitydata.org, and published schedules. Use the most authoritative source available.
 - For census data, density, land use: search US Census, city planning department, or equivalent authoritative sources.
 - For utility rates: search the utility provider's published rate schedule.
@@ -3660,6 +3668,28 @@ function scrubHtml(html, counts) {
     const scrubbed = scrubSentencesInBlock(textNode, counts);
     return `>${scrubbed}<`;
   });
+  const FIELD_ID_RE = /\b([a-z][a-z0-9]*(?:[A-Z][a-zA-Z0-9]*){2,})\b/g;
+  let inScriptOrStyle = false;
+  result = result.replace(
+    /(<(?:script|style)[^>]*>)|(<\/(?:script|style)>)|(>([^<]{3,})<)/gi,
+    (match, openScriptStyle, closeScriptStyle, textNodeFull, textContent) => {
+      if (openScriptStyle) {
+        inScriptOrStyle = true;
+        return match;
+      }
+      if (closeScriptStyle) {
+        inScriptOrStyle = false;
+        return match;
+      }
+      if (inScriptOrStyle || !textContent) return match;
+      const cleaned = textContent.replace(FIELD_ID_RE, (token) => {
+        if (token.length < 10) return token;
+        inc(counts, "field-id-wrapped");
+        return `<span class="field-id">${token}</span>`;
+      });
+      return `>${cleaned}<`;
+    }
+  );
   return result;
 }
 function containsNarration(content) {
@@ -4362,17 +4392,18 @@ ${"\u2550".repeat(60)}
 
 This credit requires a walking-distance map to qualifying transit stops. The map is generated programmatically from stop addresses \u2014 it cannot be generated without them.
 
-At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment containing all qualifying transit stops:
+At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment:
 
-<!-- QUALIFYING_TRANSIT_STOPS: [{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...] -->
+<!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": [{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...]} -->
 
 Rules:
-- Include every stop that qualifies for points in this credit \u2014 up to 8 stops
-- The "address" field must be a geocodable street address, intersection, or lat,lng string (e.g. "37.7749,-122.4194") \u2014 not a stop name alone
-- The "label" field is the human-readable stop name shown on the map
+- "threshold_miles": the maximum walking distance (in miles) that qualifies for this credit \u2014 set this from the credit requirements, not a guess
+- "stops": every stop confirmed as qualifying \u2014 only stops with verified Google Maps walking distances within threshold_miles. Do NOT include stops whose distance you estimated or could not verify via web search
+- The "address" field must be a geocodable street address or intersection (e.g. "Main St & 2nd Ave, Chicago, IL") or lat,lng string \u2014 NOT a stop name alone
+- The "label" field is the human-readable stop name or route shown on the map
 - Valid JSON only \u2014 no trailing commas, no single quotes
-- This comment is parsed programmatically; malformed JSON causes the map to be skipped
-- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: [] -->
+- The pipeline re-measures all distances via Google Maps and filters against threshold_miles \u2014 stops you include that are beyond the threshold will be excluded from the map
+- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
 ` : "";
   const systemPrompt = [
     basePrompt,
@@ -4419,14 +4450,28 @@ ${additionalInstructions}`] : []
   let locationsForMap = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
-    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\[[\s\S]*?\])\s*-->/);
+    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
     if (transitComment) {
       try {
-        const raw = JSON.parse(transitComment[1]);
-        locationsForMap = raw.filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0).slice(0, 8).map((l) => ({ address: l.address.trim(), label: l.label ?? String(locationsForMap.length + 1) }));
-        console.log(`    Parsed ${locationsForMap.length} qualifying transit stop(s) from structured comment`);
+        const parsed = JSON.parse(transitComment[1]);
+        const thresholdMiles = typeof parsed.threshold_miles === "number" ? parsed.threshold_miles : 0.5;
+        const rawStops = (parsed.stops ?? []).filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0).slice(0, 8).map((l, i) => ({ address: l.address.trim(), label: l.label ?? String(i + 1) }));
+        console.log(`    Parsed ${rawStops.length} transit stop(s) from structured comment (threshold: ${thresholdMiles} mi)`);
+        if (rawStops.length > 0) {
+          console.log(`    Re-measuring walking distances via Google Maps...`);
+          const routes = await measureWalkingDistances(project.address, rawStops);
+          for (const route of routes) {
+            const actualMi = route.distanceMiles;
+            const qualifies = actualMi <= thresholdMiles;
+            console.log(`      ${route.destination.label}: ${actualMi.toFixed(2)} mi (threshold ${thresholdMiles} mi) \u2014 ${qualifies ? "INCLUDED" : "EXCLUDED"}`);
+            if (qualifies) {
+              locationsForMap.push(route.destination);
+            }
+          }
+          console.log(`    ${locationsForMap.length} of ${rawStops.length} stop(s) confirmed within threshold`);
+        }
       } catch (err) {
-        console.warn(`  Step 15.7: Transit stop comment parse failed: ${err.message} \u2014 falling back to Haiku`);
+        console.warn(`  Step 15.7: Transit stop comment parse/measure failed: ${err.message} \u2014 falling back to Haiku`);
       }
     }
     if (locationsForMap.length === 0) {
