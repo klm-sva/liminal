@@ -2244,9 +2244,9 @@ async function generateMap(request) {
 ${today}`;
   const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
   if (request.outputPath) {
-    const { mkdirSync, writeFileSync: writeFileSync4 } = await import("fs");
-    mkdirSync(path5.dirname(request.outputPath), { recursive: true });
-    writeFileSync4(request.outputPath, pngBuffer);
+    const { mkdirSync: mkdirSync2, writeFileSync: writeFileSync5 } = await import("fs");
+    mkdirSync2(path5.dirname(request.outputPath), { recursive: true });
+    writeFileSync5(request.outputPath, pngBuffer);
     console.log(`  \u2713 Map saved: ${request.outputPath}`);
   }
   console.log(`  \u2713 Map generated (${Math.round(pngBuffer.length / 1024)} KB PNG)`);
@@ -2277,6 +2277,368 @@ var init_map_generation = __esm({
       if (!key) throw new Error("GOOGLE_MAPS_API_KEY not set in .env.local");
       return key;
     };
+  }
+});
+
+// pipeline/lib/gtfs-transit.ts
+function haversineMiles(lat1, lon1, lat2, lon2) {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function splitCsvLine(line) {
+  const fields = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else inQ = !inQ;
+    } else if (ch === "," && !inQ) {
+      fields.push(cur.trim());
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  fields.push(cur.trim());
+  return fields;
+}
+function parseGtfsCsv(text) {
+  const clean = text.replace(/^﻿/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = clean.split("\n").filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]);
+  const results = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = splitCsvLine(lines[i]);
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = values[j] ?? "";
+    }
+    results.push(obj);
+  }
+  return results;
+}
+async function findGtfsFeedUrls(lat, lon) {
+  console.log(`  [GTFS] Searching Mobility Database catalog for feeds near ${lat.toFixed(4)}, ${lon.toFixed(4)}...`);
+  let catalogText = "";
+  try {
+    const res = await axiosGetWithRetry(MOBILITY_DB_CATALOG, {}, 3e4, "Mobility Database catalog");
+    catalogText = typeof res.data === "string" ? res.data : Buffer.from(res.data).toString("utf-8");
+  } catch (e) {
+    console.warn(`  [GTFS] Mobility Database catalog fetch failed: ${e.message}`);
+    return [];
+  }
+  const rows2 = parseGtfsCsv(catalogText);
+  const matching = rows2.filter((r) => {
+    if (r["data_type"] !== "gtfs") return false;
+    if (r["location.country_code"] !== "US") return false;
+    const url = r["urls.latest"] || r["urls.direct_download"];
+    if (!url) return false;
+    const minLat = parseFloat(r["location.bounding_box.minimum_latitude"] ?? "");
+    const maxLat = parseFloat(r["location.bounding_box.maximum_latitude"] ?? "");
+    const minLon = parseFloat(r["location.bounding_box.minimum_longitude"] ?? "");
+    const maxLon = parseFloat(r["location.bounding_box.maximum_longitude"] ?? "");
+    if (isNaN(minLat) || isNaN(maxLat) || isNaN(minLon) || isNaN(maxLon)) return false;
+    return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
+  });
+  console.log(`  [GTFS] Found ${matching.length} feed(s) covering this location`);
+  return matching.map((r) => ({
+    url: r["urls.latest"] || r["urls.direct_download"],
+    name: r["provider"] || r["name"] || "Unknown Agency"
+  }));
+}
+async function downloadGtfsZip(feedUrl, agencyName) {
+  fs7.mkdirSync(CACHE_DIR, { recursive: true });
+  const cacheKey = feedUrl.replace(/[^a-z0-9]/gi, "_").slice(-80);
+  const cachePath = path6.join(CACHE_DIR, `${cacheKey}.zip`);
+  if (fs7.existsSync(cachePath)) {
+    const age = Date.now() - fs7.statSync(cachePath).mtimeMs;
+    if (age < CACHE_TTL) {
+      console.log(`  [GTFS] Using cached feed for ${agencyName} (${Math.round(age / 36e5)}h old)`);
+      return fs7.readFileSync(cachePath);
+    }
+  }
+  console.log(`  [GTFS] Downloading feed for ${agencyName} from ${feedUrl}...`);
+  const res = await import_axios2.default.get(feedUrl, {
+    responseType: "arraybuffer",
+    timeout: 6e4,
+    maxContentLength: 300 * 1024 * 1024
+    // 300 MB max
+  });
+  const buf = Buffer.from(res.data);
+  fs7.writeFileSync(cachePath, buf);
+  console.log(`  [GTFS] Downloaded ${Math.round(buf.length / 1024 / 1024 * 10) / 10} MB \u2014 cached`);
+  return buf;
+}
+function parseGtfsZip(zipBuffer, agencyName) {
+  const zip = new import_adm_zip.default(zipBuffer);
+  const readEntry = (name) => {
+    const entry = zip.getEntry(name) ?? zip.getEntries().find((e) => e.entryName.endsWith("/" + name) || e.entryName === name);
+    if (!entry) {
+      console.warn(`  [GTFS] ${name} not found in ${agencyName} feed`);
+      return [];
+    }
+    console.log(`  [GTFS] Parsing ${name} (${Math.round(entry.header.size / 1024)} KB uncompressed)...`);
+    return parseGtfsCsv(entry.getData().toString("utf-8"));
+  };
+  const agencyRows = readEntry("agency.txt");
+  const resolvedAgency = agencyRows[0]?.agency_name ?? agencyName;
+  const stopsMap = /* @__PURE__ */ new Map();
+  for (const row of readEntry("stops.txt")) {
+    if (!row.stop_id) continue;
+    stopsMap.set(row.stop_id, {
+      name: row.stop_name ?? "",
+      lat: parseFloat(row.stop_lat ?? "0"),
+      lon: parseFloat(row.stop_lon ?? "0")
+    });
+  }
+  console.log(`  [GTFS] ${stopsMap.size} stops loaded`);
+  const routesMap = /* @__PURE__ */ new Map();
+  for (const row of readEntry("routes.txt")) {
+    if (!row.route_id) continue;
+    routesMap.set(row.route_id, {
+      shortName: row.route_short_name ?? "",
+      longName: row.route_long_name ?? "",
+      type: parseInt(row.route_type ?? "3", 10)
+    });
+  }
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "");
+  const weekdayServiceIds = /* @__PURE__ */ new Set();
+  const weekendServiceIds = /* @__PURE__ */ new Set();
+  for (const row of readEntry("calendar.txt")) {
+    if (!row.service_id) continue;
+    if (row.end_date && row.end_date < todayStr) continue;
+    const weekday = ["monday", "tuesday", "wednesday", "thursday", "friday"].some((d) => row[d] === "1");
+    const weekend = ["saturday", "sunday"].some((d) => row[d] === "1");
+    if (weekday) weekdayServiceIds.add(row.service_id);
+    if (weekend) weekendServiceIds.add(row.service_id);
+  }
+  if (weekdayServiceIds.size === 0) {
+    console.warn(`  [GTFS] calendar.txt yielded no active services \u2014 trying calendar_dates.txt`);
+    const byService = /* @__PURE__ */ new Map();
+    for (const row of readEntry("calendar_dates.txt")) {
+      if (!row.service_id || row.exception_type !== "1") continue;
+      const d = new Date(row.date.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3"));
+      if (isNaN(d.getTime())) continue;
+      const dow = d.getDay();
+      if (!byService.has(row.service_id)) byService.set(row.service_id, /* @__PURE__ */ new Set());
+      byService.get(row.service_id).add(dow);
+    }
+    for (const [sid, days] of byService) {
+      if ([1, 2, 3, 4, 5].some((d) => days.has(d))) weekdayServiceIds.add(sid);
+      if ([0, 6].some((d) => days.has(d))) weekendServiceIds.add(sid);
+    }
+  }
+  console.log(`  [GTFS] Active service_ids \u2014 weekday: ${weekdayServiceIds.size}, weekend: ${weekendServiceIds.size}`);
+  const tripsMap = /* @__PURE__ */ new Map();
+  for (const row of readEntry("trips.txt")) {
+    if (!row.trip_id) continue;
+    tripsMap.set(row.trip_id, {
+      routeId: row.route_id ?? "",
+      serviceId: row.service_id ?? "",
+      directionId: parseInt(row.direction_id ?? "0", 10)
+    });
+  }
+  console.log(`  [GTFS] ${tripsMap.size} trips loaded`);
+  const stopWeekdayTrips = /* @__PURE__ */ new Map();
+  const stopWeekendTrips = /* @__PURE__ */ new Map();
+  const stopRoutes = /* @__PURE__ */ new Map();
+  const stopWeekdayDepartures = /* @__PURE__ */ new Map();
+  const seenStopTrip = /* @__PURE__ */ new Set();
+  let rowCount = 0;
+  for (const row of readEntry("stop_times.txt")) {
+    const { trip_id, stop_id, departure_time } = row;
+    if (!trip_id || !stop_id) continue;
+    const dedupeKey = `${stop_id}|${trip_id}`;
+    if (seenStopTrip.has(dedupeKey)) continue;
+    seenStopTrip.add(dedupeKey);
+    const trip = tripsMap.get(trip_id);
+    if (!trip) continue;
+    if (!stopRoutes.has(stop_id)) stopRoutes.set(stop_id, /* @__PURE__ */ new Set());
+    stopRoutes.get(stop_id).add(trip.routeId);
+    if (weekdayServiceIds.has(trip.serviceId)) {
+      if (!stopWeekdayTrips.has(stop_id)) stopWeekdayTrips.set(stop_id, /* @__PURE__ */ new Set());
+      stopWeekdayTrips.get(stop_id).add(trip_id);
+      if (departure_time && departure_time.length > 0) {
+        if (!stopWeekdayDepartures.has(stop_id)) stopWeekdayDepartures.set(stop_id, []);
+        stopWeekdayDepartures.get(stop_id).push({ routeId: trip.routeId, time: departure_time });
+      }
+    }
+    if (weekendServiceIds.has(trip.serviceId)) {
+      if (!stopWeekendTrips.has(stop_id)) stopWeekendTrips.set(stop_id, /* @__PURE__ */ new Set());
+      stopWeekendTrips.get(stop_id).add(trip_id);
+    }
+    rowCount++;
+  }
+  console.log(`  [GTFS] ${rowCount} stop_time records processed`);
+  return { stops: stopsMap, routes: routesMap, trips: tripsMap, stopWeekdayTrips, stopWeekendTrips, stopRoutes, stopWeekdayDepartures, agencyName: resolvedAgency };
+}
+function clusterStops(nearbyStopIds, gtfs) {
+  const clusters = [];
+  for (const stopId of nearbyStopIds) {
+    const stop = gtfs.stops.get(stopId);
+    if (!stop) continue;
+    const existing = clusters.find(
+      (c) => haversineMiles(c.lat, c.lon, stop.lat, stop.lon) <= CLUSTER_RADIUS_MILES
+    );
+    if (existing) {
+      existing.stopIds.push(stopId);
+      if (stop.name.length > existing.name.length) existing.name = stop.name;
+      for (const rid of gtfs.stopRoutes.get(stopId) ?? []) existing.routeIds.add(rid);
+    } else {
+      clusters.push({
+        name: stop.name,
+        lat: stop.lat,
+        lon: stop.lon,
+        stopIds: [stopId],
+        routeIds: new Set(gtfs.stopRoutes.get(stopId) ?? [])
+      });
+    }
+  }
+  return clusters;
+}
+async function getGtfsStopsNearProject(projectLat, projectLon, feedUrls) {
+  const allResults = [];
+  for (const feed of feedUrls) {
+    console.log(`
+  [GTFS] Processing feed: ${feed.name}`);
+    let zipBuffer;
+    try {
+      zipBuffer = await downloadGtfsZip(feed.url, feed.name);
+    } catch (e) {
+      console.warn(`  [GTFS] Download failed for ${feed.name}: ${e.message} \u2014 skipping`);
+      continue;
+    }
+    let gtfs;
+    try {
+      gtfs = parseGtfsZip(zipBuffer, feed.name);
+    } catch (e) {
+      console.warn(`  [GTFS] Parse failed for ${feed.name}: ${e.message} \u2014 skipping`);
+      continue;
+    }
+    const nearbyStopIds = [];
+    for (const [stopId, stop] of gtfs.stops) {
+      const dist = haversineMiles(projectLat, projectLon, stop.lat, stop.lon);
+      if (dist <= RAIL_RADIUS_MILES) nearbyStopIds.push(stopId);
+    }
+    console.log(`  [GTFS] ${nearbyStopIds.length} stop_ids within ${RAIL_RADIUS_MILES} miles`);
+    if (nearbyStopIds.length === 0) continue;
+    const clusters = clusterStops(nearbyStopIds, gtfs);
+    console.log(`  [GTFS] ${clusters.length} physical stop locations after clustering`);
+    for (const cluster of clusters) {
+      let totalWeekdayTrips = 0;
+      let totalWeekendTrips = 0;
+      for (const sid of cluster.stopIds) {
+        totalWeekdayTrips += gtfs.stopWeekdayTrips.get(sid)?.size ?? 0;
+        totalWeekendTrips += gtfs.stopWeekendTrips.get(sid)?.size ?? 0;
+      }
+      const weekdayDirectional = Math.round(totalWeekdayTrips / 2);
+      const weekendDirectional = Math.round(totalWeekendTrips / 2);
+      const routeTypes = [...cluster.routeIds].map((rid) => gtfs.routes.get(rid)?.type ?? 3);
+      const minRouteType = Math.min(...routeTypes, 3);
+      const isRail = RAIL_ROUTE_TYPES.has(minRouteType);
+      const distMiles = haversineMiles(projectLat, projectLon, cluster.lat, cluster.lon);
+      const distThreshold = isRail ? RAIL_RADIUS_MILES : BUS_RADIUS_MILES;
+      const tripThreshold = isRail ? RAIL_MIN_DIRECTIONAL : BUS_MIN_DIRECTIONAL;
+      const qualifies = distMiles <= distThreshold && weekdayDirectional >= tripThreshold;
+      const routeNames = [...cluster.routeIds].map((rid) => {
+        const r = gtfs.routes.get(rid);
+        return r?.shortName || r?.longName || rid;
+      }).filter(Boolean).sort();
+      const departuresByRoute = /* @__PURE__ */ new Map();
+      for (const sid of cluster.stopIds) {
+        for (const dep of gtfs.stopWeekdayDepartures.get(sid) ?? []) {
+          const routeLabel = (gtfs.routes.get(dep.routeId)?.shortName || gtfs.routes.get(dep.routeId)?.longName || dep.routeId).trim();
+          if (!departuresByRoute.has(routeLabel)) departuresByRoute.set(routeLabel, /* @__PURE__ */ new Set());
+          departuresByRoute.get(routeLabel).add(dep.time);
+        }
+      }
+      const weekdaySchedule = [...departuresByRoute.entries()].map(([route, timesSet]) => {
+        const times = [...timesSet].sort();
+        return { route, times, count: times.length };
+      }).sort((a, b) => a.route.localeCompare(b.route, void 0, { numeric: true }));
+      allResults.push({
+        name: cluster.name,
+        lat: cluster.lat,
+        lon: cluster.lon,
+        distanceMiles: Math.round(distMiles * 1e4) / 1e4,
+        routeNames,
+        routeType: minRouteType,
+        isRail,
+        weekdayTrips: totalWeekdayTrips,
+        weekendTrips: totalWeekendTrips,
+        weekdayDirectional,
+        qualifiesLeedPath1: qualifies,
+        dataSource: `GTFS: ${gtfs.agencyName} \u2014 ${feed.url}`,
+        agencyName: gtfs.agencyName,
+        feedUrl: feed.url,
+        weekdaySchedule
+      });
+    }
+  }
+  return allResults.sort((a, b) => {
+    if (a.qualifiesLeedPath1 !== b.qualifiesLeedPath1) return a.qualifiesLeedPath1 ? -1 : 1;
+    return a.distanceMiles - b.distanceMiles;
+  });
+}
+var import_axios2, import_adm_zip, fs7, path6, os2, RAIL_RADIUS_MILES, BUS_RADIUS_MILES, BUS_MIN_DIRECTIONAL, RAIL_MIN_DIRECTIONAL, CLUSTER_RADIUS_MILES, RAIL_ROUTE_TYPES, CACHE_DIR, CACHE_TTL, MOBILITY_DB_CATALOG;
+var init_gtfs_transit = __esm({
+  "pipeline/lib/gtfs-transit.ts"() {
+    "use strict";
+    import_axios2 = __toESM(require("axios"));
+    import_adm_zip = __toESM(require("adm-zip"));
+    fs7 = __toESM(require("fs"));
+    path6 = __toESM(require("path"));
+    os2 = __toESM(require("os"));
+    init_pipeline_utils();
+    RAIL_RADIUS_MILES = 0.5;
+    BUS_RADIUS_MILES = 0.25;
+    BUS_MIN_DIRECTIONAL = 100;
+    RAIL_MIN_DIRECTIONAL = 4;
+    CLUSTER_RADIUS_MILES = 0.03;
+    RAIL_ROUTE_TYPES = /* @__PURE__ */ new Set([0, 1, 2, 4, 5, 7, 12]);
+    CACHE_DIR = path6.join(os2.tmpdir(), "liminal-gtfs-cache");
+    CACHE_TTL = 24 * 60 * 60 * 1e3;
+    MOBILITY_DB_CATALOG = "https://bit.ly/catalogs-csv";
+  }
+});
+
+// pipeline/lib/geocode.ts
+async function validateAddress(address) {
+  if (!address || address.trim().length < 5) {
+    return { valid: false, reason: "No project address was provided. Please add a full street address to your project before submitting." };
+  }
+  return { valid: true, reason: "Address present" };
+}
+async function geocodeAddress(address) {
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  if (!key) return null;
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${key}`;
+    const { data: data2 } = await import_axios3.default.get(url, { timeout: 1e4 });
+    if (data2.status === "OK" && data2.results?.[0]?.geometry?.location) {
+      const { lat, lng } = data2.results[0].geometry.location;
+      return { lat, lon: lng };
+    }
+    console.warn(`  [geocode] No result for "${address}" \u2014 status: ${data2.status}`);
+    return null;
+  } catch (err) {
+    console.warn(`  [geocode] Geocoding failed: ${err.message}`);
+    return null;
+  }
+}
+var import_axios3;
+var init_geocode = __esm({
+  "pipeline/lib/geocode.ts"() {
+    "use strict";
+    import_axios3 = __toESM(require("axios"));
   }
 });
 
@@ -2550,7 +2912,7 @@ async function generateCalculatorGuide(client2, creditRow, creditName, projectDa
   if (!creditRow.toLowerCase().includes("calculator")) {
     return null;
   }
-  const rawSchemas = fs7.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs7.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
+  const rawSchemas = fs8.existsSync(CALC_SCHEMA_PATH) ? JSON.parse(fs8.readFileSync(CALC_SCHEMA_PATH, "utf-8")) : {};
   const schemas = rawSchemas.calculators ?? {};
   const schema = findSchemaForCredit(creditName, schemas);
   if (!schema) {
@@ -2595,13 +2957,13 @@ function skippedHtml(creditName, reason) {
   </span>
 </div>`;
 }
-var fs7, path6, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
+var fs8, path7, CALC_SCHEMA_PATH, PRIMARY, LIGHT_BG, PALE_BG, BODY_TEXT, WHITE;
 var init_calculator_guide = __esm({
   "pipeline/lib/calculator-guide.ts"() {
     "use strict";
-    fs7 = __toESM(require("fs"));
-    path6 = __toESM(require("path"));
-    CALC_SCHEMA_PATH = path6.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
+    fs8 = __toESM(require("fs"));
+    path7 = __toESM(require("path"));
+    CALC_SCHEMA_PATH = path7.join(process.cwd(), "pipeline/reference/leed/leed_v41_calculator_schemas.json");
     PRIMARY = "#327cb9";
     LIGHT_BG = "#abcde8";
     PALE_BG = "#f7fafd";
@@ -2612,10 +2974,10 @@ var init_calculator_guide = __esm({
 
 // pipeline/lib/specs-extract.ts
 function convertToText(buffer, filename2) {
-  const ext = path7.extname(filename2).toLowerCase();
-  const tmp = path7.join(os2.tmpdir(), `certify-specs-${Date.now()}${ext}`);
+  const ext = path8.extname(filename2).toLowerCase();
+  const tmp = path8.join(os3.tmpdir(), `certify-specs-${Date.now()}${ext}`);
   try {
-    fs8.writeFileSync(tmp, buffer);
+    fs9.writeFileSync(tmp, buffer);
     if (ext === ".rtf") {
       return (0, import_child_process2.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
     }
@@ -2632,7 +2994,7 @@ function convertToText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs8.unlinkSync(tmp);
+      fs9.unlinkSync(tmp);
     } catch {
     }
   }
@@ -2728,7 +3090,7 @@ async function extractSpecsContent(files, client2, usage2) {
   const summaries2 = [];
   const sourceFiles = [];
   for (const file of files) {
-    const ext = path7.extname(file.filename).toLowerCase();
+    const ext = path8.extname(file.filename).toLowerCase();
     sourceFiles.push(file.filename);
     if (file.mimeType === "application/pdf" || ext === ".pdf") {
       const result = await extractPdfChunked(client2, file.buffer, file.filename, usage2);
@@ -2811,14 +3173,14 @@ function formatSpecsProfileForContext(profile) {
   }
   return lines.filter((l) => l !== void 0).join("\n");
 }
-var import_sdk4, fs8, path7, os2, import_child_process2, UPLOADS_BUCKET2, PROFILE_FILENAME, EXTRACTION_PROMPT;
+var import_sdk4, fs9, path8, os3, import_child_process2, UPLOADS_BUCKET2, PROFILE_FILENAME, EXTRACTION_PROMPT;
 var init_specs_extract = __esm({
   "pipeline/lib/specs-extract.ts"() {
     "use strict";
     import_sdk4 = __toESM(require("@anthropic-ai/sdk"));
-    fs8 = __toESM(require("fs"));
-    path7 = __toESM(require("path"));
-    os2 = __toESM(require("os"));
+    fs9 = __toESM(require("fs"));
+    path8 = __toESM(require("path"));
+    os3 = __toESM(require("os"));
     import_child_process2 = require("child_process");
     init_supabase();
     UPLOADS_BUCKET2 = "customer-uploads";
@@ -2856,10 +3218,10 @@ Return ONLY the JSON \u2014 no markdown, no explanation.`;
 
 // pipeline/lib/document-extract.ts
 function toText(buffer, filename2) {
-  const ext = path8.extname(filename2).toLowerCase();
-  const tmp = path8.join(os3.tmpdir(), `certify-doc-${Date.now()}${ext}`);
+  const ext = path9.extname(filename2).toLowerCase();
+  const tmp = path9.join(os4.tmpdir(), `certify-doc-${Date.now()}${ext}`);
   try {
-    fs9.writeFileSync(tmp, buffer);
+    fs10.writeFileSync(tmp, buffer);
     if ([".rtf", ".docx", ".doc"].includes(ext)) {
       try {
         return (0, import_child_process3.execSync)(`textutil -convert txt -stdout "${tmp}"`, { maxBuffer: 20 * 1024 * 1024 }).toString("utf-8");
@@ -2870,13 +3232,13 @@ function toText(buffer, filename2) {
     return buffer.toString("utf-8");
   } finally {
     try {
-      fs9.unlinkSync(tmp);
+      fs10.unlinkSync(tmp);
     } catch {
     }
   }
 }
 function buildContentBlocks(buffer, filename2) {
-  const ext = path8.extname(filename2).toLowerCase();
+  const ext = path9.extname(filename2).toLowerCase();
   if (ext === ".pdf") {
     return [{
       type: "document",
@@ -2996,14 +3358,14 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
-var import_sdk5, fs9, path8, os3, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
+var import_sdk5, fs10, path9, os4, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
 var init_document_extract = __esm({
   "pipeline/lib/document-extract.ts"() {
     "use strict";
     import_sdk5 = __toESM(require("@anthropic-ai/sdk"));
-    fs9 = __toESM(require("fs"));
-    path8 = __toESM(require("path"));
-    os3 = __toESM(require("os"));
+    fs10 = __toESM(require("fs"));
+    path9 = __toESM(require("path"));
+    os4 = __toESM(require("os"));
     import_child_process3 = require("child_process");
     init_supabase();
     UPLOADS_BUCKET3 = "customer-uploads";
@@ -3424,19 +3786,6 @@ Do not place any marker or signal in the output. Simply write the policy content
   }
 });
 
-// pipeline/lib/geocode.ts
-async function validateAddress(address) {
-  if (!address || address.trim().length < 5) {
-    return { valid: false, reason: "No project address was provided. Please add a full street address to your project before submitting." };
-  }
-  return { valid: true, reason: "Address present" };
-}
-var init_geocode = __esm({
-  "pipeline/lib/geocode.ts"() {
-    "use strict";
-  }
-});
-
 // src/lib/qa-token.ts
 function secret() {
   return process.env.QA_SECRET ?? process.env.CRON_SECRET ?? "";
@@ -3816,9 +4165,9 @@ function buildExpectedPdfName(program, creditCode, creditName) {
   return `WELL_HSR_${code}_${name}.pdf`;
 }
 function findCategoryFolder(programDir, category, creditCode) {
-  if (!fs10.existsSync(programDir)) return void 0;
-  const allFolders = fs10.readdirSync(programDir).filter(
-    (d) => fs10.statSync(path9.join(programDir, d)).isDirectory()
+  if (!fs11.existsSync(programDir)) return void 0;
+  const allFolders = fs11.readdirSync(programDir).filter(
+    (d) => fs11.statSync(path10.join(programDir, d)).isDirectory()
   );
   const categoryLow = category.toLowerCase();
   const exact = allFolders.find((d) => d.toLowerCase() === categoryLow);
@@ -3840,23 +4189,23 @@ function findCategoryFolder(programDir, category, creditCode) {
 function findCreditPdfBuffer(program, category, creditCode, creditName) {
   const subdir = PROGRAM_REF_SUBDIR[program];
   if (!subdir) return { found: false, searchedDir: "(unknown program)", filesFound: [] };
-  const programDir = path9.join(REF_BASE, subdir);
+  const programDir = path10.join(REF_BASE, subdir);
   const categoryDir = findCategoryFolder(programDir, category, creditCode);
-  const searchedDir = categoryDir ? path9.join(programDir, categoryDir) : path9.join(programDir, category);
+  const searchedDir = categoryDir ? path10.join(programDir, categoryDir) : path10.join(programDir, category);
   if (!categoryDir) return { found: false, searchedDir, filesFound: [] };
-  const folderPath = path9.join(programDir, categoryDir);
-  const allFiles = fs10.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
+  const folderPath = path10.join(programDir, categoryDir);
+  const allFiles = fs11.readdirSync(folderPath).filter((f) => f.toLowerCase().endsWith(".pdf"));
   const expectedName = buildExpectedPdfName(program, creditCode, creditName);
   const exact = allFiles.find((f) => f.toLowerCase() === expectedName.toLowerCase());
   if (exact) {
-    const fullPath = path9.join(folderPath, exact);
-    return { buffer: fs10.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path10.join(folderPath, exact);
+    return { buffer: fs11.readFileSync(fullPath), resolvedPath: fullPath };
   }
   const nameLower = creditName.toLowerCase();
   const match = allFiles.find((f) => f.includes(creditCode)) ?? allFiles.find((f) => f.toLowerCase().includes(nameLower));
   if (match) {
-    const fullPath = path9.join(folderPath, match);
-    return { buffer: fs10.readFileSync(fullPath), resolvedPath: fullPath };
+    const fullPath = path10.join(folderPath, match);
+    return { buffer: fs11.readFileSync(fullPath), resolvedPath: fullPath };
   }
   return { found: false, searchedDir, filesFound: allFiles };
 }
@@ -3872,8 +4221,8 @@ function scanPdfForAppendixRefs(buffer) {
   return [...nums].sort((a, b) => a - b);
 }
 function loadLeedAppendices(referencedNums) {
-  const leedDir = path9.join(REF_BASE, "leed");
-  const allFiles = fs10.existsSync(leedDir) ? fs10.readdirSync(leedDir) : [];
+  const leedDir = path10.join(REF_BASE, "leed");
+  const allFiles = fs11.existsSync(leedDir) ? fs11.readdirSync(leedDir) : [];
   const appendixFiles = allFiles.filter((f) => {
     const fl = f.toLowerCase();
     return fl.startsWith("appendix") && fl.endsWith(".pdf");
@@ -3885,7 +4234,7 @@ function loadLeedAppendices(referencedNums) {
       return fl.includes(`appendix ${num} `) || fl.includes(`appendix ${num}.`);
     });
     if (match) {
-      results.push({ num, buffer: fs10.readFileSync(path9.join(leedDir, match)), filename: match });
+      results.push({ num, buffer: fs11.readFileSync(path10.join(leedDir, match)), filename: match });
     } else {
       console.warn(`  Step 12.7: Appendix ${num} referenced but not found in pipeline/reference/leed/`);
     }
@@ -3909,9 +4258,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     "for any form field ID, calculator input label, or credit requirement.",
     ""
   ];
-  const formSchemaPath = path9.join(REF_BASE, "leed/leed_v41_form_schemas.json");
+  const formSchemaPath = path10.join(REF_BASE, "leed/leed_v41_form_schemas.json");
   try {
-    const allSchemas = JSON.parse(fs10.readFileSync(formSchemaPath, "utf-8"));
+    const allSchemas = JSON.parse(fs11.readFileSync(formSchemaPath, "utf-8"));
     const formKey = creditCodeToFormKey(creditCode);
     const creditSchema = allSchemas.credits?.[formKey] ?? Object.values(allSchemas.credits ?? {}).find(
       (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -3927,9 +4276,9 @@ function loadLeedReferenceData(creditCode, creditName, hasCalculator) {
     lines.push(`FORM FIELD SCHEMA: failed to load \u2014 ${err.message}`);
   }
   if (hasCalculator) {
-    const calcSchemaPath = path9.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
+    const calcSchemaPath = path10.join(REF_BASE, "leed/leed_v41_calculator_schemas.json");
     try {
-      const allCalcSchemas = JSON.parse(fs10.readFileSync(calcSchemaPath, "utf-8"));
+      const allCalcSchemas = JSON.parse(fs11.readFileSync(calcSchemaPath, "utf-8"));
       const formKey = creditCodeToFormKey(creditCode);
       const calcSchema = allCalcSchemas.calculators?.[formKey] ?? Object.values(allCalcSchemas.calculators ?? {}).find(
         (c) => (c.name ?? "").toLowerCase().includes(creditName.toLowerCase().slice(0, 12))
@@ -4203,7 +4552,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 10.5: Checking specs extraction status...`);
   let specsProfileBlock = "";
   const specFiles = uploadBuffers.filter((u) => {
-    const ext = path9.extname(u.filename).toLowerCase();
+    const ext = path10.extname(u.filename).toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc", ".txt"].includes(ext) && !u.filename.toLowerCase().includes("drawing") && !u.filename.toLowerCase().includes("annotated");
   });
   if (!project.specs_extracted && specFiles.length > 0) {
@@ -4233,7 +4582,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   let docProfilesBlock = "";
   const docProfiles = project.doc_profiles_extracted ?? {};
   const docFiles = uploadBuffers.filter((u) => {
-    const ext = path9.extname(u.filename).toLowerCase();
+    const ext = path10.extname(u.filename).toLowerCase();
     const name = u.filename.toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc"].includes(ext) && !name.includes("drawing") && !name.includes("annotated") && !name.includes("spec") && !name.includes("specification");
   });
@@ -4299,7 +4648,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     return { orderId, runId, status: "failed", issues: [errMsg] };
   }
   const reqPdfBuffer = pdfLookup.buffer;
-  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path9.sep, "")}`);
+  console.log(`    \u2713 Found: ${pdfLookup.resolvedPath.replace(process.cwd() + path10.sep, "")}`);
   const appendixDocBlocks = [];
   if (isLeed(credit.credit_code)) {
     const appendixNums = scanPdfForAppendixRefs(reqPdfBuffer);
@@ -4337,6 +4686,94 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 13: Checking for required map outputs...`);
   const requiredMapType = detectRequiredMapType(creditData.outputs);
   console.log(`    Map required: ${requiredMapType ?? "none"}`);
+  let gtfsVerifiedStops = [];
+  let gtfsAllStops = [];
+  let gtfsLocationsForMap = [];
+  let gtfsDataBlock = "";
+  if (requiredMapType === "transit-stops" && project.address) {
+    console.log(`  Step 13.5: Running GTFS transit pre-fetch...`);
+    try {
+      const coords = await geocodeAddress(project.address);
+      if (!coords) {
+        console.warn(`  Step 13.5: Could not geocode project address \u2014 Claude will search for transit data`);
+      } else {
+        const feedUrls = await findGtfsFeedUrls(coords.lat, coords.lon);
+        if (feedUrls.length === 0) {
+          console.warn(`  Step 13.5: No GTFS feeds found for this location \u2014 Claude will search for transit data`);
+        } else {
+          gtfsAllStops = await getGtfsStopsNearProject(coords.lat, coords.lon, feedUrls);
+          console.log(`  Step 13.5: ${gtfsAllStops.length} total stops found across ${feedUrls.length} feed(s)`);
+          if (gtfsAllStops.length > 0) {
+            const destinations = gtfsAllStops.map((s) => ({
+              address: `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`,
+              label: s.name
+            }));
+            const routes = await measureWalkingDistances(project.address, destinations);
+            for (const stop of gtfsAllStops) {
+              const route = routes.find((r) => r.destination.label === stop.name);
+              if (!route) continue;
+              const distThreshold = stop.isRail ? 0.5 : 0.25;
+              const tripThreshold = stop.isRail ? 4 : 100;
+              if (route.distanceMiles <= distThreshold && stop.weekdayDirectional >= tripThreshold) {
+                gtfsVerifiedStops.push({
+                  stop,
+                  walkingMiles: route.distanceMiles,
+                  walkingFeet: Math.round(route.distanceMiles * 5280),
+                  walkingRoute: route
+                });
+              }
+            }
+            console.log(`  Step 13.5: ${gtfsVerifiedStops.length} qualifying stop(s) confirmed via Google Maps`);
+            gtfsLocationsForMap = gtfsVerifiedStops.slice(0, 8).map((v, i) => ({
+              address: `${v.stop.lat.toFixed(5)},${v.stop.lon.toFixed(5)}`,
+              label: String(i + 1)
+            }));
+            const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+            const qualifyingLines = gtfsVerifiedStops.map((v, i) => {
+              const s = v.stop;
+              return [
+                `  ${i + 1}. ${s.name} (${s.isRail ? "Rail/Ferry" : "Bus/BRT"}) \u2014 ${s.agencyName}`,
+                `     Routes: ${s.routeNames.join(", ") || "\u2014"}`,
+                `     Walking distance: ${v.walkingFeet.toLocaleString()} ft / ${v.walkingMiles.toFixed(2)} mi (Google Maps) | Threshold: ${s.isRail ? "0.5" : "0.25"} mi \u2713`,
+                `     Weekday directional trips: ${s.weekdayDirectional} | Required: ${s.isRail ? 4 : 100} \u2713`,
+                `     GPS coordinates: ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`,
+                `     Data source: ${s.dataSource}`
+              ].join("\n");
+            });
+            const nonQualifyingLines = gtfsAllStops.filter((s) => !gtfsVerifiedStops.some((v) => v.stop.name === s.name)).slice(0, 10).map((s) => {
+              const route = routes.find((r) => r.destination.label === s.name);
+              const actualMi = route ? route.distanceMiles.toFixed(2) : "not measured";
+              const distThreshold = s.isRail ? 0.5 : 0.25;
+              const failReason = route ? route.distanceMiles > distThreshold ? `too far: ${actualMi} mi > ${distThreshold} mi threshold` : `insufficient trips: ${s.weekdayDirectional} directional < ${s.isRail ? 4 : 100} required` : "walking route not available";
+              return `  \u2022 ${s.name} \u2014 ${failReason}`;
+            });
+            gtfsDataBlock = [
+              `${"\u2550".repeat(60)}`,
+              `TRANSIT DATA \u2014 GTFS VERIFIED \u2014 DO NOT SEARCH FOR STOPS`,
+              `${"\u2550".repeat(60)}`,
+              ``,
+              `Transit stop data was retrieved from official agency GTFS feeds before this prompt ran.`,
+              `Walking distances were measured by Google Maps Directions API (walking mode).`,
+              `You MUST use this data exclusively. Do NOT use web_search to find transit stops.`,
+              `Do NOT report any stops or distances other than those listed below.`,
+              ``,
+              `QUALIFYING STOPS (${gtfsVerifiedStops.length} total \u2014 use these for form fields and supporting documentation):`,
+              ...qualifyingLines.length > 0 ? qualifyingLines : ["  None \u2014 no stops meet both distance and trip count thresholds"],
+              ``,
+              ...nonQualifyingLines.length > 0 ? [`EVALUATED BUT NON-QUALIFYING (document these in Supporting Documentation as not meeting criteria):`, ...nonQualifyingLines, ``] : [],
+              `Retrieved: ${today}`,
+              `${"\u2550".repeat(60)}`
+            ].join("\n");
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`  Step 13.5: GTFS pre-fetch failed: ${err.message} \u2014 Claude will search for transit data`);
+      gtfsVerifiedStops = [];
+      gtfsAllStops = [];
+      gtfsDataBlock = "";
+    }
+  }
   console.log(`  Step 14: Building prompt...`);
   const creditDataBlock = formatCreditDataForPrompt(creditData);
   const registrationLines = [];
@@ -4365,6 +4802,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     creditDataBlock,
     "",
     projectDataBlock,
+    ...gtfsDataBlock ? ["", gtfsDataBlock] : [],
     ...compliancePathBlock ? ["", compliancePathBlock] : [],
     "",
     "Generate PART 1 \u2014 THE ONLINE FORM SECTION for this credit as instructed."
@@ -4373,6 +4811,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     creditDataBlock,
     "",
     projectDataBlock,
+    ...gtfsDataBlock ? ["", gtfsDataBlock] : [],
     ...compliancePathBlock ? ["", compliancePathBlock] : [],
     "",
     "Generate PART 2 \u2014 SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 \u2014 COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either."
@@ -4384,7 +4823,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   };
   const programDisplayName = PROGRAM_DISPLAY_NAMES[credit.program] ?? credit.program;
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
-  const transitMapInstruction = requiredMapType === "transit-stops" ? `
+  const transitMapInstruction = requiredMapType === "transit-stops" && gtfsDataBlock === "" ? `
 
 ${"\u2550".repeat(60)}
 TRANSIT MAP \u2014 REQUIRED STRUCTURED OUTPUT \u2014 NO EXCEPTIONS
@@ -4449,40 +4888,45 @@ ${additionalInstructions}`] : []
   }
   let locationsForMap = [];
   if (requiredMapType && project.address) {
-    console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
-    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
-    if (transitComment) {
-      try {
-        const parsed = JSON.parse(transitComment[1]);
-        const thresholdMiles = typeof parsed.threshold_miles === "number" ? parsed.threshold_miles : 0.5;
-        const rawStops = (parsed.stops ?? []).filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0).slice(0, 8).map((l, i) => ({ address: l.address.trim(), label: l.label ?? String(i + 1) }));
-        console.log(`    Parsed ${rawStops.length} transit stop(s) from structured comment (threshold: ${thresholdMiles} mi)`);
-        if (rawStops.length > 0) {
-          console.log(`    Re-measuring walking distances via Google Maps...`);
-          const routes = await measureWalkingDistances(project.address, rawStops);
-          for (const route of routes) {
-            const actualMi = route.distanceMiles;
-            const qualifies = actualMi <= thresholdMiles;
-            console.log(`      ${route.destination.label}: ${actualMi.toFixed(2)} mi (threshold ${thresholdMiles} mi) \u2014 ${qualifies ? "INCLUDED" : "EXCLUDED"}`);
-            if (qualifies) {
-              locationsForMap.push(route.destination);
-            }
-          }
-          console.log(`    ${locationsForMap.length} of ${rawStops.length} stop(s) confirmed within threshold`);
-        }
-      } catch (err) {
-        console.warn(`  Step 15.7: Transit stop comment parse/measure failed: ${err.message} \u2014 falling back to Haiku`);
-      }
+    if (gtfsLocationsForMap.length > 0) {
+      locationsForMap = gtfsLocationsForMap;
+      console.log(`  Step 15.7: Using ${locationsForMap.length} GTFS-verified stop coordinate(s) \u2014 skipping extraction`);
     }
     if (locationsForMap.length === 0) {
-      try {
-        const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15e3);
-        const locExtract = await client2.messages.create({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 512,
-          messages: [{
-            role: "user",
-            content: `The project is located at: ${project.address}
+      console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
+      const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
+      if (transitComment) {
+        try {
+          const parsed = JSON.parse(transitComment[1]);
+          const thresholdMiles = typeof parsed.threshold_miles === "number" ? parsed.threshold_miles : 0.5;
+          const rawStops = (parsed.stops ?? []).filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0).slice(0, 8).map((l, i) => ({ address: l.address.trim(), label: l.label ?? String(i + 1) }));
+          console.log(`    Parsed ${rawStops.length} transit stop(s) from structured comment (threshold: ${thresholdMiles} mi)`);
+          if (rawStops.length > 0) {
+            console.log(`    Re-measuring walking distances via Google Maps...`);
+            const routes = await measureWalkingDistances(project.address, rawStops);
+            for (const route of routes) {
+              const actualMi = route.distanceMiles;
+              const qualifies = actualMi <= thresholdMiles;
+              console.log(`      ${route.destination.label}: ${actualMi.toFixed(2)} mi (threshold ${thresholdMiles} mi) \u2014 ${qualifies ? "INCLUDED" : "EXCLUDED"}`);
+              if (qualifies) {
+                locationsForMap.push(route.destination);
+              }
+            }
+            console.log(`    ${locationsForMap.length} of ${rawStops.length} stop(s) confirmed within threshold`);
+          }
+        } catch (err) {
+          console.warn(`  Step 15.7: Transit stop comment parse/measure failed: ${err.message} \u2014 falling back to Haiku`);
+        }
+      }
+      if (locationsForMap.length === 0) {
+        try {
+          const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15e3);
+          const locExtract = await client2.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 512,
+            messages: [{
+              role: "user",
+              content: `The project is located at: ${project.address}
 
 Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
 1. They are documented as qualifying for points in this credit \u2014 meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
@@ -4491,22 +4935,23 @@ Extract up to 2 specific named locations (street addresses, transit stops, stati
 Return ONLY a valid JSON array of strings. If none found return [].
 
 ${plainText}`
-          }]
-        });
-        const locText = locExtract.content[0]?.text ?? "[]";
-        const jsonMatch = locText.match(/\[[\s\S]*?\]/);
-        if (jsonMatch) {
-          const raw = JSON.parse(jsonMatch[0]);
-          locationsForMap = raw.filter((l) => typeof l === "string" && l.trim().length > 0).slice(0, 2).map((addr, i) => ({ address: addr, label: String(i + 1) }));
+            }]
+          });
+          const locText = locExtract.content[0]?.text ?? "[]";
+          const jsonMatch = locText.match(/\[[\s\S]*?\]/);
+          if (jsonMatch) {
+            const raw = JSON.parse(jsonMatch[0]);
+            locationsForMap = raw.filter((l) => typeof l === "string" && l.trim().length > 0).slice(0, 2).map((addr, i) => ({ address: addr, label: String(i + 1) }));
+          }
+          console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
+        } catch (err) {
+          console.warn(`  Step 15.7: Haiku extraction failed: ${err.message} \u2014 using claudeRetrieves fallback`);
         }
-        console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
-      } catch (err) {
-        console.warn(`  Step 15.7: Haiku extraction failed: ${err.message} \u2014 using claudeRetrieves fallback`);
       }
-    }
-    if (locationsForMap.length === 0) {
-      locationsForMap = creditData.claudeRetrieves.slice(0, 2).map((r, i) => ({ address: r, label: String(i + 1) }));
-      console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
+      if (locationsForMap.length === 0) {
+        locationsForMap = creditData.claudeRetrieves.slice(0, 2).map((r, i) => ({ address: r, label: String(i + 1) }));
+        console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
+      }
     }
   }
   let mapBuffer = null;
@@ -4776,19 +5221,21 @@ ${part1Html}` }] : [],
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
-var import_sdk6, path9, fs10, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var import_sdk6, path10, fs11, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
 var init_process_order = __esm({
   "pipeline/process-order.ts"() {
     "use strict";
     import_sdk6 = __toESM(require("@anthropic-ai/sdk"));
-    path9 = __toESM(require("path"));
-    fs10 = __toESM(require("fs"));
+    path10 = __toESM(require("path"));
+    fs11 = __toESM(require("fs"));
     init_supabase();
     init_extract_xlsx_row();
     init_document_review();
     init_drawing_review();
     init_drawing_analysis();
     init_map_generation();
+    init_gtfs_transit();
+    init_geocode();
     init_supabase_ops();
     init_pdf_to_images();
     init_make_editable();
@@ -4802,9 +5249,9 @@ var init_process_order = __esm({
     init_validate_output();
     init_pipeline_utils();
     init_output_cleaner();
-    envPath3 = path9.resolve(__dirname, "../.env.local");
-    if (fs10.existsSync(envPath3)) {
-      for (const line of fs10.readFileSync(envPath3, "utf-8").split("\n")) {
+    envPath3 = path10.resolve(__dirname, "../.env.local");
+    if (fs11.existsSync(envPath3)) {
+      for (const line of fs11.readFileSync(envPath3, "utf-8").split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
         const eqIdx = trimmed.indexOf("=");
@@ -4814,7 +5261,7 @@ var init_process_order = __esm({
     }
     UPLOADS_BUCKET4 = "customer-uploads";
     OUTPUTS_BUCKET2 = "order-outputs";
-    REF_BASE = path9.join(process.cwd(), "pipeline/reference");
+    REF_BASE = path10.join(process.cwd(), "pipeline/reference");
     PROGRAM_REF_SUBDIR = {
       leed_bdc_v41: "leed",
       well_v2: "well-v2",
@@ -4832,13 +5279,13 @@ var init_process_order = __esm({
 });
 
 // pipeline/worker.ts
-var path10 = __toESM(require("path"));
-var fs11 = __toESM(require("fs"));
+var path11 = __toESM(require("path"));
+var fs12 = __toESM(require("fs"));
 console.log("[worker] starting up...");
 try {
-  const envPath4 = path10.resolve(__dirname, "../.env.local");
-  if (fs11.existsSync(envPath4)) {
-    for (const line of fs11.readFileSync(envPath4, "utf-8").split("\n")) {
+  const envPath4 = path11.resolve(__dirname, "../.env.local");
+  if (fs12.existsSync(envPath4)) {
+    for (const line of fs12.readFileSync(envPath4, "utf-8").split("\n")) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");

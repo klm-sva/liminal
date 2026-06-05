@@ -38,7 +38,9 @@ import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
 import { analyzeDrawings } from "./drawing-analysis";
-import { generateMap, measureWalkingDistances, type MapType } from "./map-generation";
+import { generateMap, measureWalkingDistances, type MapType, type WalkingRoute } from "./map-generation";
+import { findGtfsFeedUrls, getGtfsStopsNearProject, type GtfsStopResult } from "./lib/gtfs-transit";
+import { geocodeAddress } from "./lib/geocode";
 import { logAuditEvent } from "./lib/supabase-ops";
 import { preparePdfDocument } from "./lib/pdf-to-images";
 import { injectTableCss, makeEditable } from "./lib/make-editable";
@@ -875,6 +877,126 @@ export async function processOrder(
   const requiredMapType = detectRequiredMapType(creditData.outputs);
   console.log(`    Map required: ${requiredMapType ?? "none"}`);
 
+  // ── Step 13.5: GTFS transit pre-fetch (transit credits only) ─────────────
+  // Runs BEFORE Claude so authoritative stop data is injected into the prompt.
+  // Claude receives verified stops and must NOT search for transit stops.
+  // Falls back to Claude web_search if GTFS pipeline fails.
+
+  interface GtfsVerifiedStop {
+    stop:         GtfsStopResult;
+    walkingMiles: number;
+    walkingFeet:  number;
+    walkingRoute: WalkingRoute;
+  }
+
+  let gtfsVerifiedStops: GtfsVerifiedStop[]                  = [];
+  let gtfsAllStops:       GtfsStopResult[]                   = [];
+  let gtfsLocationsForMap: Array<{ address: string; label: string }> = [];
+  let gtfsDataBlock = "";
+
+  if (requiredMapType === "transit-stops" && project.address) {
+    console.log(`  Step 13.5: Running GTFS transit pre-fetch...`);
+    try {
+      const coords = await geocodeAddress(project.address);
+      if (!coords) {
+        console.warn(`  Step 13.5: Could not geocode project address — Claude will search for transit data`);
+      } else {
+        const feedUrls = await findGtfsFeedUrls(coords.lat, coords.lon);
+        if (feedUrls.length === 0) {
+          console.warn(`  Step 13.5: No GTFS feeds found for this location — Claude will search for transit data`);
+        } else {
+          gtfsAllStops = await getGtfsStopsNearProject(coords.lat, coords.lon, feedUrls);
+          console.log(`  Step 13.5: ${gtfsAllStops.length} total stops found across ${feedUrls.length} feed(s)`);
+
+          if (gtfsAllStops.length > 0) {
+            // Re-qualify using actual Google Maps walking distances (not GTFS straight-line)
+            const destinations = gtfsAllStops.map((s) => ({
+              address: `${s.lat.toFixed(5)},${s.lon.toFixed(5)}`,
+              label:   s.name,
+            }));
+            const routes = await measureWalkingDistances(project.address, destinations);
+
+            for (const stop of gtfsAllStops) {
+              const route = routes.find((r) => r.destination.label === stop.name);
+              if (!route) continue;
+              const distThreshold = stop.isRail ? 0.5 : 0.25;
+              const tripThreshold = stop.isRail ? 4    : 100;
+              if (route.distanceMiles <= distThreshold && stop.weekdayDirectional >= tripThreshold) {
+                gtfsVerifiedStops.push({
+                  stop,
+                  walkingMiles: route.distanceMiles,
+                  walkingFeet:  Math.round(route.distanceMiles * 5280),
+                  walkingRoute: route,
+                });
+              }
+            }
+            console.log(`  Step 13.5: ${gtfsVerifiedStops.length} qualifying stop(s) confirmed via Google Maps`);
+
+            // Build locations for map using exact GTFS GPS coordinates
+            gtfsLocationsForMap = gtfsVerifiedStops.slice(0, 8).map((v, i) => ({
+              address: `${v.stop.lat.toFixed(5)},${v.stop.lon.toFixed(5)}`,
+              label:   String(i + 1),
+            }));
+
+            // Build context block injected into Claude's prompt
+            const today = new Date().toISOString().slice(0, 10);
+            const qualifyingLines = gtfsVerifiedStops.map((v, i) => {
+              const s = v.stop;
+              return [
+                `  ${i + 1}. ${s.name} (${s.isRail ? "Rail/Ferry" : "Bus/BRT"}) — ${s.agencyName}`,
+                `     Routes: ${s.routeNames.join(", ") || "—"}`,
+                `     Walking distance: ${v.walkingFeet.toLocaleString()} ft / ${v.walkingMiles.toFixed(2)} mi (Google Maps) | Threshold: ${s.isRail ? "0.5" : "0.25"} mi ✓`,
+                `     Weekday directional trips: ${s.weekdayDirectional} | Required: ${s.isRail ? 4 : 100} ✓`,
+                `     GPS coordinates: ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`,
+                `     Data source: ${s.dataSource}`,
+              ].join("\n");
+            });
+
+            const nonQualifyingLines = gtfsAllStops
+              .filter((s) => !gtfsVerifiedStops.some((v) => v.stop.name === s.name))
+              .slice(0, 10)
+              .map((s) => {
+                const route = routes.find((r) => r.destination.label === s.name);
+                const actualMi = route ? route.distanceMiles.toFixed(2) : "not measured";
+                const distThreshold = s.isRail ? 0.5 : 0.25;
+                const failReason = route
+                  ? (route.distanceMiles > distThreshold
+                    ? `too far: ${actualMi} mi > ${distThreshold} mi threshold`
+                    : `insufficient trips: ${s.weekdayDirectional} directional < ${s.isRail ? 4 : 100} required`)
+                  : "walking route not available";
+                return `  • ${s.name} — ${failReason}`;
+              });
+
+            gtfsDataBlock = [
+              `${"═".repeat(60)}`,
+              `TRANSIT DATA — GTFS VERIFIED — DO NOT SEARCH FOR STOPS`,
+              `${"═".repeat(60)}`,
+              ``,
+              `Transit stop data was retrieved from official agency GTFS feeds before this prompt ran.`,
+              `Walking distances were measured by Google Maps Directions API (walking mode).`,
+              `You MUST use this data exclusively. Do NOT use web_search to find transit stops.`,
+              `Do NOT report any stops or distances other than those listed below.`,
+              ``,
+              `QUALIFYING STOPS (${gtfsVerifiedStops.length} total — use these for form fields and supporting documentation):`,
+              ...(qualifyingLines.length > 0 ? qualifyingLines : ["  None — no stops meet both distance and trip count thresholds"]),
+              ``,
+              ...(nonQualifyingLines.length > 0
+                ? [`EVALUATED BUT NON-QUALIFYING (document these in Supporting Documentation as not meeting criteria):`, ...nonQualifyingLines, ``]
+                : []),
+              `Retrieved: ${today}`,
+              `${"═".repeat(60)}`,
+            ].join("\n");
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`  Step 13.5: GTFS pre-fetch failed: ${(err as Error).message} — Claude will search for transit data`);
+      gtfsVerifiedStops = [];
+      gtfsAllStops      = [];
+      gtfsDataBlock     = "";
+    }
+  }
+
   // ── Step 14: Build prompt ─────────────────────────────────────────────────
   console.log(`  Step 14: Building prompt...`);
   const creditDataBlock = formatCreditDataForPrompt(creditData);
@@ -922,6 +1044,7 @@ export async function processOrder(
     creditDataBlock,
     "",
     projectDataBlock,
+    ...(gtfsDataBlock ? ["", gtfsDataBlock] : []),
     ...(compliancePathBlock ? ["", compliancePathBlock] : []),
     "",
     "Generate PART 1 — THE ONLINE FORM SECTION for this credit as instructed.",
@@ -931,6 +1054,7 @@ export async function processOrder(
     creditDataBlock,
     "",
     projectDataBlock,
+    ...(gtfsDataBlock ? ["", gtfsDataBlock] : []),
     ...(compliancePathBlock ? ["", compliancePathBlock] : []),
     "",
     "Generate PART 2 — SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 — COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either.",
@@ -945,7 +1069,10 @@ export async function processOrder(
 
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
 
-  const transitMapInstruction = requiredMapType === "transit-stops" ? `
+  // When GTFS pre-fetch succeeded the pipeline already has verified stop coordinates —
+  // no structured comment needed. When GTFS failed, fall back to the structured comment
+  // so Step 15.7 can attempt to extract locations from Claude's output.
+  const transitMapInstruction = requiredMapType === "transit-stops" && gtfsDataBlock === "" ? `
 
 ${"═".repeat(60)}
 TRANSIT MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
@@ -1026,16 +1153,25 @@ Rules:
     console.log(`    No form link — skipping Part 1, running single-pass`);
   }
 
-  // ── Step 15.7: Extract locations from Part 1 output for map generation ──────
-  // For transit credits: Claude embeds qualifying stop data as a structured HTML comment.
-  // Parse that first — it's authoritative and skips the Haiku re-extraction step.
-  // For non-transit credits: use Claude Haiku to extract named locations from HTML text.
-  // Falls back to creditData.claudeRetrieves if all extraction paths fail.
+  // ── Step 15.7: Resolve map destinations ──────────────────────────────────────
+  // Priority order:
+  //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred
+  //   2. Structured comment from Claude's Part 1 output (transit fallback)
+  //   3. Haiku extraction from Part 1 HTML (non-transit credits)
+  //   4. creditData.claudeRetrieves fallback
   let locationsForMap: Array<{ address: string; label: string }> = [];
   if (requiredMapType && project.address) {
+
+    // Path 1: GTFS pre-fetch succeeded — use exact GPS coordinates directly, skip all extraction
+    if (gtfsLocationsForMap.length > 0) {
+      locationsForMap = gtfsLocationsForMap;
+      console.log(`  Step 15.7: Using ${locationsForMap.length} GTFS-verified stop coordinate(s) — skipping extraction`);
+    }
+
+    if (locationsForMap.length === 0) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
 
-    // Path 1: Parse structured transit stop comment (transit credits only)
+    // Path 2: Parse structured transit stop comment (transit fallback when GTFS unavailable)
     const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
     if (transitComment) {
       try {
@@ -1071,7 +1207,7 @@ Rules:
       }
     }
 
-    // Path 2: Haiku extraction (non-transit credits, or transit comment missing/malformed)
+    // Path 3: Haiku extraction (non-transit credits, or transit comment missing/malformed)
     if (locationsForMap.length === 0) {
       try {
         const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
@@ -1106,13 +1242,14 @@ ${plainText}`,
       }
     }
 
-    // Path 3: claudeRetrieves fallback
+    // Path 4: claudeRetrieves fallback
     if (locationsForMap.length === 0) {
       locationsForMap = creditData.claudeRetrieves
         .slice(0, 2)
         .map((r, i) => ({ address: r, label: String(i + 1) }));
       console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
     }
+    } // end: locationsForMap.length === 0 (GTFS bypass)
   }
 
   // ── Step 15.8: Generate map before Part 2 so it can be embedded in output ──
