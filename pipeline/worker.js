@@ -4354,7 +4354,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   };
   const programDisplayName = PROGRAM_DISPLAY_NAMES[credit.program] ?? credit.program;
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
-  const transitMapInstruction = requiredMapType === "transit" ? `
+  const transitMapInstruction = requiredMapType === "transit-stops" ? `
 
 ${"\u2550".repeat(60)}
 TRANSIT MAP \u2014 REQUIRED STRUCTURED OUTPUT \u2014 NO EXCEPTIONS

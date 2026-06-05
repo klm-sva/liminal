@@ -945,7 +945,7 @@ export async function processOrder(
 
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
 
-  const transitMapInstruction = requiredMapType === "transit" ? `
+  const transitMapInstruction = requiredMapType === "transit-stops" ? `
 
 ${"═".repeat(60)}
 TRANSIT MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
