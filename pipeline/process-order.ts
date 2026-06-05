@@ -944,9 +944,35 @@ export async function processOrder(
   const programDisplayName = PROGRAM_DISPLAY_NAMES[credit.program] ?? credit.program;
 
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
-  const systemPrompt = additionalInstructions
-    ? `${basePrompt}\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`
-    : basePrompt;
+
+  const transitMapInstruction = requiredMapType === "transit" ? `
+
+${"═".repeat(60)}
+TRANSIT MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
+${"═".repeat(60)}
+
+This credit requires a walking-distance map to qualifying transit stops. The map is generated programmatically from stop addresses — it cannot be generated without them.
+
+At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment containing all qualifying transit stops:
+
+<!-- QUALIFYING_TRANSIT_STOPS: [{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...] -->
+
+Rules:
+- Include every stop that qualifies for points in this credit — up to 8 stops
+- The "address" field must be a geocodable street address, intersection, or lat,lng string (e.g. "37.7749,-122.4194") — not a stop name alone
+- The "label" field is the human-readable stop name shown on the map
+- Valid JSON only — no trailing commas, no single quotes
+- This comment is parsed programmatically; malformed JSON causes the map to be skipped
+- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: [] -->
+` : "";
+
+  const systemPrompt = [
+    basePrompt,
+    transitMapInstruction,
+    ...(additionalInstructions
+      ? [`\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`]
+      : []),
+  ].join("");
 
   // Build content blocks for each API call
   const reqDocBlock = preparePdfDocument(reqPdfBuffer, `Requirements: ${credit.credit_code}`);
@@ -1000,20 +1026,39 @@ export async function processOrder(
   }
 
   // ── Step 15.7: Extract locations from Part 1 output for map generation ──────
-  // Uses Claude Haiku (fast/cheap) to pull named locations from the HTML text.
-  // Locations are filtered to the project city (string match, no geocoding).
-  // Falls back to creditData.claudeRetrieves if extraction fails or returns empty.
+  // For transit credits: Claude embeds qualifying stop data as a structured HTML comment.
+  // Parse that first — it's authoritative and skips the Haiku re-extraction step.
+  // For non-transit credits: use Claude Haiku to extract named locations from HTML text.
+  // Falls back to creditData.claudeRetrieves if all extraction paths fail.
   let locationsForMap: Array<{ address: string; label: string }> = [];
   if (requiredMapType && project.address) {
     console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
-    try {
-      const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
-      const locExtract = await (client.messages.create as any)({
-        model:      "claude-haiku-4-5-20251001",
-        max_tokens: 512,
-        messages:   [{
-          role:    "user",
-          content: `The project is located at: ${project.address}
+
+    // Path 1: Parse structured transit stop comment (transit credits only)
+    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\[[\s\S]*?\])\s*-->/);
+    if (transitComment) {
+      try {
+        const raw: unknown[] = JSON.parse(transitComment[1]);
+        locationsForMap = (raw as Array<{ address: string; label: string }>)
+          .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0)
+          .slice(0, 8)
+          .map((l) => ({ address: l.address.trim(), label: l.label ?? String(locationsForMap.length + 1) }));
+        console.log(`    Parsed ${locationsForMap.length} qualifying transit stop(s) from structured comment`);
+      } catch (err) {
+        console.warn(`  Step 15.7: Transit stop comment parse failed: ${(err as Error).message} — falling back to Haiku`);
+      }
+    }
+
+    // Path 2: Haiku extraction (non-transit credits, or transit comment missing/malformed)
+    if (locationsForMap.length === 0) {
+      try {
+        const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
+        const locExtract = await (client.messages.create as any)({
+          model:      "claude-haiku-4-5-20251001",
+          max_tokens: 512,
+          messages:   [{
+            role:    "user",
+            content: `The project is located at: ${project.address}
 
 Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
 1. They are documented as qualifying for points in this credit — meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
@@ -1022,23 +1067,24 @@ Extract up to 2 specific named locations (street addresses, transit stops, stati
 Return ONLY a valid JSON array of strings. If none found return [].
 
 ${plainText}`,
-        }],
-      });
-      const locText   = locExtract.content[0]?.text ?? "[]";
-      const jsonMatch = locText.match(/\[[\s\S]*?\]/);
-      if (jsonMatch) {
-        const raw: unknown[] = JSON.parse(jsonMatch[0]);
-        locationsForMap = raw
-          .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-          .slice(0, 2)
-          .map((addr, i) => ({ address: addr, label: String(i + 1) }));
+          }],
+        });
+        const locText   = locExtract.content[0]?.text ?? "[]";
+        const jsonMatch = locText.match(/\[[\s\S]*?\]/);
+        if (jsonMatch) {
+          const raw: unknown[] = JSON.parse(jsonMatch[0]);
+          locationsForMap = raw
+            .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
+            .slice(0, 2)
+            .map((addr, i) => ({ address: addr, label: String(i + 1) }));
+        }
+        console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
+      } catch (err) {
+        console.warn(`  Step 15.7: Haiku extraction failed: ${(err as Error).message} — using claudeRetrieves fallback`);
       }
-      console.log(`    Extracted ${locationsForMap.length} location(s) from Part 1`);
-    } catch (err) {
-      console.warn(`  Step 15.7: Location extraction failed: ${(err as Error).message} — using claudeRetrieves fallback`);
     }
 
-    // Fallback: use claudeRetrieves from XLSX, capped at 2
+    // Path 3: claudeRetrieves fallback
     if (locationsForMap.length === 0) {
       locationsForMap = creditData.claudeRetrieves
         .slice(0, 2)
