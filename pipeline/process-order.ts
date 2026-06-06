@@ -1158,25 +1158,12 @@ Rules:
   const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
 
 ${"═".repeat(60)}
-BICYCLE FACILITIES MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
+BICYCLE FACILITIES MAP — DESTINATION TABLE FORMAT
 ${"═".repeat(60)}
 
-This credit requires a map showing bicycle routes from the project to every qualifying diverse use. The map is generated programmatically — it cannot be generated without the destination data you provide.
+This credit requires a map showing bicycle routes from the project to every qualifying diverse use.
 
-Build your qualifying destinations table first. Number every qualifying destination sequentially starting at 1 (row #1, row #2, etc.). The map will display matching numbered pins — pin 1 on the map must be the same destination as row 1 in your table.
-
-At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment using the same sequential numbers you used in the table:
-
-<!-- QUALIFYING_BICYCLE_DESTINATIONS: {"destinations": [{"address":"FULL_STREET_ADDRESS_OR_INTERSECTION, CITY, STATE","label":"1","name":"Place Name"},{"address":"FULL_STREET_ADDRESS, CITY, STATE","label":"2","name":"Place Name"},...]} -->
-
-Rules:
-- Include every destination you listed as qualifying in the table — all must appear in the comment
-- "label" must exactly match the row number assigned in your table (row 1 → label "1", row 2 → label "2")
-- "address" must be a geocodable full street address or intersection — NOT a place name alone
-- "name" is the human-readable place name shown in the table
-- The pipeline re-measures every distance via Google Maps bicycling mode along the actual bicycle network and filters at the credit threshold — any destination you include that exceeds the limit will be excluded from the map but will remain in your table
-- Valid JSON only — no trailing commas, no single quotes
-- If no destinations qualify, append: <!-- QUALIFYING_BICYCLE_DESTINATIONS: {"destinations": []} -->
+Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table. Include the full street address for each destination in the address column of your table (e.g. "123 Main St, Miami, FL 33101" — not just a place name).
 ` : "";
 
   const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
@@ -1273,8 +1260,8 @@ If a document contains data that conflicts with owner-entered project data, defe
   // Priority order:
   //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred (transit only)
   //   2. Structured transit comment from Claude's Part 1 output (transit fallback)
-  //   2a. Structured bicycle destinations comment from Claude's Part 1 output (bicycle credits)
-  //   3. Haiku extraction from Part 1 HTML (other credits, or structured comment missing/malformed)
+  //   2a. Direct HTML table parse from Part 1 output (bicycle credits) — row number + address column
+  //   3. Haiku extraction from Part 1 HTML (other credits, or table parse yielded nothing)
   //   4. creditData.claudeRetrieves fallback
   let locationsForMap: Array<{ address: string; label: string }> = [];
   if (requiredMapType && project.address) {
@@ -1324,29 +1311,38 @@ If a document contains data that conflicts with owner-entered project data, defe
       }
     }
 
-    // Path 2a: Parse structured bicycle destinations comment
-    const bicycleComment = part1Html.match(/<!--\s*QUALIFYING_BICYCLE_DESTINATIONS:\s*(\{[\s\S]*?\})\s*-->/);
-    if (bicycleComment && locationsForMap.length === 0) {
-      try {
-        const parsed = JSON.parse(bicycleComment[1]) as {
-          destinations?: Array<{ address: string; label: string; name?: string }>;
-        };
-        const rawDests = (parsed.destinations ?? [])
-          .filter((d) => d && typeof d.address === "string" && d.address.trim().length > 0)
-          .slice(0, 12)
-          .map((d) => ({ address: d.address.trim(), label: d.label ?? "" }));
-
-        console.log(`    Parsed ${rawDests.length} bicycle destination(s) from structured comment`);
-
-        if (rawDests.length > 0) {
-          // Pass all destinations directly — Claude verified these via web search.
-          // Do NOT filter by bicycling API success: bicycling mode fails for most
-          // destinations and would silently drop them from the map.
-          locationsForMap = rawDests;
-          console.log(`    ${locationsForMap.length} bicycle destination(s) from structured comment → passing all to map`);
+    // Path 2a: Parse qualifying destinations directly from the Part 1 HTML table (bicycle credits)
+    // The addresses are already in Claude's output table — no structured comment needed.
+    if (requiredMapType === "bicycle-facilities" && locationsForMap.length === 0) {
+      const tableDests: Array<{ address: string; label: string }> = [];
+      const seenLabels = new Set<string>();
+      for (const rowMatch of part1Html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+        const cells: string[] = [];
+        for (const cellMatch of rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)) {
+          cells.push(
+            cellMatch[1].replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
+          );
         }
-      } catch (err) {
-        console.warn(`  Step 15.7: Bicycle destinations comment parse/measure failed: ${(err as Error).message} — falling back to Haiku`);
+        if (cells.length < 2) continue;
+        // First cell must be a sequential row number 1–20
+        if (!/^\d{1,2}$/.test(cells[0])) continue;
+        const n = parseInt(cells[0], 10);
+        if (n < 1 || n > 20 || seenLabels.has(cells[0])) continue;
+        // Find the cell containing a geocodable address: has digits AND a comma + 2-letter state code
+        const addrCell = cells.slice(1).find(
+          (c) => /\d/.test(c) && /,\s*[A-Z]{2}(?:[\s,]+\d{5})?/.test(c)
+        );
+        if (addrCell) {
+          seenLabels.add(cells[0]);
+          tableDests.push({ label: cells[0], address: addrCell.replace(/\s*\(.*?\)\s*$/, "").trim() });
+        }
+      }
+      tableDests.sort((a, b) => parseInt(a.label) - parseInt(b.label));
+      if (tableDests.length > 0) {
+        locationsForMap = tableDests;
+        console.log(`    ${locationsForMap.length} bicycle destination(s) parsed from Part 1 HTML table → passing all to map`);
+      } else {
+        console.warn(`    No bicycle destinations found in HTML table — will fall through to Haiku`);
       }
     }
 
