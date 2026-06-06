@@ -260,15 +260,21 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
 
   console.log(`[map-generation] ${request.mapType} — ${request.destinations.length} destination(s)`);
 
-  const routingMode = request.mapType === "bicycle-facilities" ? "bicycling" : "walking";
+  const primaryMode = request.mapType === "bicycle-facilities" ? "bicycling" : "walking";
 
-  // 1. Get routes from Directions API using mode appropriate for the map type
+  // 1. Get routes from Directions API. For bicycle credits, try bicycling mode first
+  // and fall back to walking if bicycling returns no route — bicycling mode coverage
+  // is incomplete and silently drops destinations that walking mode handles fine.
   const routes: WalkingRoute[] = [];
   for (const dest of request.destinations) {
-    const route = await getRoute(request.originAddress, dest, routingMode);
+    let route = await getRoute(request.originAddress, dest, primaryMode);
+    if (!route && primaryMode === "bicycling") {
+      route = await getRoute(request.originAddress, dest, "walking");
+      if (route) console.log(`    ↳ ${dest.label}: bicycling route unavailable — using walking route`);
+    }
     if (route) routes.push(route);
   }
-  if (routes.length === 0) throw new Error(`No ${routingMode} routes returned from Google Maps Directions API`);
+  if (routes.length === 0) throw new Error(`No routes returned from Google Maps Directions API`);
 
   // 2. Calculate padded bounding box from all route geometry (polyline points + markers)
   const allPoints = routes.flatMap((r) => r.polylinePoints);

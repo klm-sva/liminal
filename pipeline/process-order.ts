@@ -1339,17 +1339,11 @@ If a document contains data that conflicts with owner-entered project data, defe
         console.log(`    Parsed ${rawDests.length} bicycle destination(s) from structured comment`);
 
         if (rawDests.length > 0) {
-          console.log(`    Re-measuring bicycling distances via Google Maps...`);
-          const routes = await measureBicyclingDistances(project.address!, rawDests);
-          for (const route of routes) {
-            const actualMi = route.distanceMiles;
-            const qualifies = actualMi <= 3.0;
-            console.log(`      Dest ${route.destination.label}: ${actualMi.toFixed(2)} mi along bicycle network — ${qualifies ? "INCLUDED" : "EXCLUDED (>3 mi)"}`);
-            if (qualifies) {
-              locationsForMap.push(route.destination);
-            }
-          }
-          console.log(`    ${locationsForMap.length} of ${rawDests.length} destination(s) confirmed within 3-mile bicycle network`);
+          // Pass all destinations directly — Claude verified these via web search.
+          // Do NOT filter by bicycling API success: bicycling mode fails for most
+          // destinations and would silently drop them from the map.
+          locationsForMap = rawDests;
+          console.log(`    ${locationsForMap.length} bicycle destination(s) from structured comment → passing all to map`);
         }
       } catch (err) {
         console.warn(`  Step 15.7: Bicycle destinations comment parse/measure failed: ${(err as Error).message} — falling back to Haiku`);
