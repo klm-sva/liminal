@@ -165,6 +165,84 @@ export async function measureBicyclingDistances(
   return routes;
 }
 
+// ─── Geocoding API (for marker placement, independent of routing) ─────────────
+
+async function geocodeForMap(address: string): Promise<{ lat: number; lng: number } | null> {
+  const key = MAPS_API_KEY();
+  try {
+    const res = await axiosGetWithRetry(
+      "https://maps.googleapis.com/maps/api/geocode/json",
+      { params: { address, key } },
+      10000,
+      `Geocode: ${address.slice(0, 60)}`,
+    );
+    const data = res.data;
+    if (data.status === "OK" && data.results?.[0]?.geometry?.location) {
+      const { lat, lng } = data.results[0].geometry.location;
+      return { lat, lng };
+    }
+    console.warn(`  [geocode] No result for "${address}" — ${data.status}`);
+    return null;
+  } catch (err) {
+    console.warn(`  [geocode] Failed: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+interface GeocodedDestination {
+  dest: Destination;
+  coord: { lat: number; lng: number };
+}
+
+// Bicycle-facilities map: markers placed from Geocoding API (always reliable),
+// route polylines drawn from Directions API where available (best-effort).
+async function fetchMapWithGeocodedMarkers(
+  geocodedDests: GeocodedDestination[],
+  originCoord: { lat: number; lng: number },
+  routes: WalkingRoute[],
+  visibleCorners: Array<{ lat: number; lng: number }>,
+  imgWidth: number,
+  imgHeight: number,
+): Promise<Buffer> {
+  const key   = MAPS_API_KEY();
+  const scale = 2;
+  const base  = "https://maps.googleapis.com/maps/api/staticmap";
+
+  const params: string[] = [
+    `size=${imgWidth / scale}x${imgHeight / scale}`,
+    `scale=${scale}`,
+    `maptype=roadmap`,
+    `style=feature:poi|visibility:off`,
+    `style=feature:transit|element:labels|visibility:off`,
+    `key=${key}`,
+  ];
+
+  for (const pt of visibleCorners) {
+    params.push(`visible=${pt.lat},${pt.lng}`);
+  }
+
+  // Origin marker — dark pin
+  params.push(`markers=color:0x2b4044|size:mid|label:S|${originCoord.lat},${originCoord.lng}`);
+
+  // Destination markers — all geocoded destinations regardless of routing success
+  for (const { dest, coord } of geocodedDests) {
+    const n = parseInt(dest.label, 10);
+    const pinChar = (!isNaN(n) && n >= 10)
+      ? String.fromCharCode(65 + n - 10)
+      : dest.label.slice(0, 1);
+    params.push(`markers=color:0x327cb9|size:mid|label:${pinChar}|${coord.lat},${coord.lng}`);
+  }
+
+  // Route polylines — best-effort from Directions API; missing routes leave the marker in place
+  for (const route of routes) {
+    params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
+  }
+
+  const url = `${base}?${params.join("&")}`;
+  const res = await axiosGetWithRetry(url, { responseType: "arraybuffer" }, 10000, "Static Maps API");
+  return Buffer.from(res.data);
+}
+
 // ─── Static Maps API with encoded polylines ───────────────────────────────────
 
 async function fetchMapWithRoutes(
@@ -260,18 +338,93 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
 
   console.log(`[map-generation] ${request.mapType} — ${request.destinations.length} destination(s)`);
 
-  const primaryMode = request.mapType === "bicycle-facilities" ? "bicycling" : "walking";
+  const isBicycle = request.mapType === "bicycle-facilities";
 
-  // 1. Get routes from Directions API. For bicycle credits, try bicycling mode first
-  // and fall back to walking if bicycling returns no route — bicycling mode coverage
-  // is incomplete and silently drops destinations that walking mode handles fine.
+  // ── Bicycle-facilities path ──────────────────────────────────────────────────
+  // Marker placement is driven by the Geocoding API, not the Directions API.
+  // Routing is attempted in parallel for polyline overlays only; a failed route
+  // never removes a destination from the map.
+  if (isBicycle) {
+    // 1. Geocode origin
+    const originCoord = await geocodeForMap(request.originAddress);
+    if (!originCoord) throw new Error(`Could not geocode project address: ${request.originAddress}`);
+
+    // 2. Geocode every destination — highly reliable, independent of routing
+    const geocodedDests: GeocodedDestination[] = [];
+    for (const dest of request.destinations) {
+      const coord = await geocodeForMap(dest.address);
+      if (coord) {
+        geocodedDests.push({ dest, coord });
+      } else {
+        console.warn(`  ⚠ Could not geocode destination ${dest.label}: ${dest.address}`);
+      }
+    }
+    if (geocodedDests.length === 0) throw new Error(`No destinations could be geocoded`);
+    console.log(`  Geocoded ${geocodedDests.length}/${request.destinations.length} destination(s)`);
+
+    // 3. Attempt Directions API for polylines (best-effort, bicycling → walking fallback)
+    const routes: WalkingRoute[] = [];
+    for (const dest of request.destinations) {
+      let route = await getRoute(request.originAddress, dest, "bicycling");
+      if (!route) {
+        route = await getRoute(request.originAddress, dest, "walking");
+        if (route) console.log(`    ↳ ${dest.label}: bicycling route unavailable — using walking route for polyline`);
+      }
+      if (route) routes.push(route);
+    }
+    console.log(`  ${routes.length}/${request.destinations.length} route polyline(s) from Directions API`);
+
+    // 4. Bounding box from geocoded destination coords + origin + any route points
+    const allPoints: Array<{ lat: number; lng: number }> = [
+      originCoord,
+      ...geocodedDests.map((g) => g.coord),
+      ...routes.flatMap((r) => r.polylinePoints),
+    ];
+    const lats   = allPoints.map((p) => p.lat);
+    const lngs   = allPoints.map((p) => p.lng);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const latPad = (maxLat - minLat) * 0.15;
+    const lngPad = (maxLng - minLng) * 0.15;
+    const visibleCorners = [
+      { lat: minLat - latPad, lng: minLng - lngPad },
+      { lat: minLat - latPad, lng: maxLng + lngPad },
+      { lat: maxLat + latPad, lng: minLng - lngPad },
+      { lat: maxLat + latPad, lng: maxLng + lngPad },
+    ];
+    const centerLat = (minLat + maxLat) / 2;
+    const centerLng = (minLng + maxLng) / 2;
+    console.log(`  Center: ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}`);
+
+    // 5. Fetch map — markers from geocoding, polylines from routing
+    console.log(`  Fetching bicycle map: ${geocodedDests.length} marker(s), ${routes.length} polyline(s)...`);
+    const mapImage = await fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes, visibleCorners, WIDTH, HEIGHT);
+
+    // 6. Citation overlay
+    const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const citationText = `Source: Google Maps — Bicycling distances along bicycle network routes.\n${today}`;
+    const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
+
+    if (request.outputPath) {
+      const { mkdirSync, writeFileSync } = await import("fs");
+      mkdirSync(path.dirname(request.outputPath), { recursive: true });
+      writeFileSync(request.outputPath, pngBuffer);
+      console.log(`  ✓ Map saved: ${request.outputPath}`);
+    }
+
+    console.log(`  ✓ Bicycle map generated (${Math.round(pngBuffer.length / 1024)} KB PNG, ${geocodedDests.length} pin(s))`);
+    geocodedDests.forEach(({ dest }) => console.log(`    • Pin ${dest.label}: ${dest.address}`));
+
+    return { pngBuffer, routes, mapType: request.mapType };
+  }
+
+  // ── All other map types (transit-stops, surrounding-density, site-context) ───
+  // Marker placement driven by Directions API routing success (existing behavior).
+
+  // 1. Get routes from Directions API
   const routes: WalkingRoute[] = [];
   for (const dest of request.destinations) {
-    let route = await getRoute(request.originAddress, dest, primaryMode);
-    if (!route && primaryMode === "bicycling") {
-      route = await getRoute(request.originAddress, dest, "walking");
-      if (route) console.log(`    ↳ ${dest.label}: bicycling route unavailable — using walking route`);
-    }
+    const route = await getRoute(request.originAddress, dest, "walking");
     if (route) routes.push(route);
   }
   if (routes.length === 0) throw new Error(`No routes returned from Google Maps Directions API`);
@@ -305,11 +458,9 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
   const mapImage = await fetchMapWithRoutes(routes, visibleCorners, WIDTH, HEIGHT);
 
   // 4. Add citation text overlay
-  const today       = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  const citationText = request.mapType === "bicycle-facilities"
-    ? `Source: Google Maps — Bicycling distances along bicycle network routes.\n${today}`
-    : `Source: Google Maps — Walking distances along pedestrian routes.\n${today}`;
-  const pngBuffer   = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
+  const today        = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const citationText = `Source: Google Maps — Walking distances along pedestrian routes.\n${today}`;
+  const pngBuffer    = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
 
   // 5. Write to file if requested
   if (request.outputPath) {

@@ -38,7 +38,7 @@ import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
 import { analyzeDrawings } from "./drawing-analysis";
-import { generateMap, measureWalkingDistances, measureBicyclingDistances, type MapType, type WalkingRoute } from "./map-generation";
+import { generateMap, measureWalkingDistances, type MapType, type WalkingRoute } from "./map-generation";
 import { findGtfsFeedUrls, getGtfsStopsNearProject, type GtfsStopResult } from "./lib/gtfs-transit";
 import { geocodeAddress } from "./lib/geocode";
 import { logAuditEvent } from "./lib/supabase-ops";
