@@ -1359,13 +1359,26 @@ If a document contains data that conflicts with owner-entered project data, defe
     // Path 3: Haiku extraction (non-transit/non-bicycle credits, or structured comment missing/malformed)
     if (locationsForMap.length === 0) {
       try {
-        const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
+        const isBicycle  = requiredMapType === "bicycle-facilities";
+        const maxDestinations = isBicycle ? 12 : 2;
+        const plainText  = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
         const locExtract = await (client.messages.create as any)({
           model:      "claude-haiku-4-5-20251001",
-          max_tokens: 512,
+          max_tokens: isBicycle ? 2048 : 512,
           messages:   [{
             role:    "user",
-            content: `The project is located at: ${project.address}
+            content: isBicycle
+              ? `The project is located at: ${project.address}
+
+Extract up to 12 qualifying diverse-use destinations from the text below. These are destinations listed as qualifying in the bicycle facilities compliance table (restaurants, retail, services, parks, civic uses, schools, etc. within 3-mile biking distance).
+
+For each destination return an object with "address" (full geocodable street address) and "label" (the row number from the table, as a string).
+
+Return ONLY a valid JSON array of objects like: [{"address":"123 Main St, City, FL","label":"1"},{"address":"456 Oak Ave, City, FL","label":"2"}]
+If none found return [].
+
+${plainText}`
+              : `The project is located at: ${project.address}
 
 Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
 1. They are documented as qualifying for points in this credit — meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
@@ -1380,10 +1393,17 @@ ${plainText}`,
         const jsonMatch = locText.match(/\[[\s\S]*?\]/);
         if (jsonMatch) {
           const raw: unknown[] = JSON.parse(jsonMatch[0]);
-          locationsForMap = raw
-            .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-            .slice(0, 2)
-            .map((addr, i) => ({ address: addr, label: String(i + 1) }));
+          if (isBicycle) {
+            locationsForMap = (raw as Array<{ address?: string; label?: string }>)
+              .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0)
+              .slice(0, maxDestinations)
+              .map((l, i) => ({ address: l.address!.trim(), label: l.label ?? String(i + 1) }));
+          } else {
+            locationsForMap = (raw as unknown[])
+              .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
+              .slice(0, maxDestinations)
+              .map((addr, i) => ({ address: addr, label: String(i + 1) }));
+          }
         }
         console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
       } catch (err) {

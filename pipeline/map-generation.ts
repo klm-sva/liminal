@@ -197,9 +197,14 @@ async function fetchMapWithRoutes(
   params.push(`markers=color:0x2b4044|size:mid|label:S|${origin.lat},${origin.lng}`);
 
   // Destination markers — blue pins, numbered
+  // Google Static Maps only supports single-character labels. Labels 1–9 pass through;
+  // labels 10+ map to A, B, C … so the pin matches the letter shown in the table footer.
   for (const route of routes) {
-    const label = route.destination.label.slice(0, 1);
-    params.push(`markers=color:0x327cb9|size:mid|label:${label}|${route.destLatLng.lat},${route.destLatLng.lng}`);
+    const n = parseInt(route.destination.label, 10);
+    const pinChar = (!isNaN(n) && n >= 10)
+      ? String.fromCharCode(65 + n - 10)  // 10→A, 11→B, 12→C …
+      : route.destination.label.slice(0, 1);
+    params.push(`markers=color:0x327cb9|size:mid|label:${pinChar}|${route.destLatLng.lat},${route.destLatLng.lng}`);
   }
 
   // Walking routes — encoded polylines drawn by Static Maps API along real paths
@@ -255,13 +260,15 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
 
   console.log(`[map-generation] ${request.mapType} — ${request.destinations.length} destination(s)`);
 
-  // 1. Get walking routes from Directions API
+  const routingMode = request.mapType === "bicycle-facilities" ? "bicycling" : "walking";
+
+  // 1. Get routes from Directions API using mode appropriate for the map type
   const routes: WalkingRoute[] = [];
   for (const dest of request.destinations) {
-    const route = await getWalkingRoute(request.originAddress, dest);
+    const route = await getRoute(request.originAddress, dest, routingMode);
     if (route) routes.push(route);
   }
-  if (routes.length === 0) throw new Error("No walking routes returned from Google Maps Directions API");
+  if (routes.length === 0) throw new Error(`No ${routingMode} routes returned from Google Maps Directions API`);
 
   // 2. Calculate padded bounding box from all route geometry (polyline points + markers)
   const allPoints = routes.flatMap((r) => r.polylinePoints);
@@ -293,7 +300,9 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
 
   // 4. Add citation text overlay
   const today       = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  const citationText = `Source: Google Maps — Walking distances along pedestrian routes.\n${today}`;
+  const citationText = request.mapType === "bicycle-facilities"
+    ? `Source: Google Maps — Bicycling distances along bicycle network routes.\n${today}`
+    : `Source: Google Maps — Walking distances along pedestrian routes.\n${today}`;
   const pngBuffer   = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
 
   // 5. Write to file if requested
