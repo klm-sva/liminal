@@ -110,6 +110,10 @@ export default function UploadClient({ orderId, creditCode, creditName, required
               ))}
             </ul>
             <p className="text-xs text-red-600 mt-3">Please upload the missing items and resubmit.</p>
+            <div className="border-t border-red-200 mt-4 pt-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-red-500 mb-1">Or click Proceed below without uploading additional documents</p>
+              <p className="text-xs text-red-500 leading-relaxed">We will process the order with the information we already have and with the extent of information we can collect from the provided drawings.</p>
+            </div>
           </div>
         )}
 
