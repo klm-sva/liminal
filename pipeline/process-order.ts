@@ -350,7 +350,13 @@ const MAP_OUTPUT_KEYWORDS: Record<MapType, string[]> = {
   "site-context":        ["site context", "site map", "vicinity map", "walking distance"],
 };
 
-function detectRequiredMapType(outputs: string[]): MapType | null {
+function detectRequiredMapType(outputs: string[], creditCode?: string): MapType | null {
+  // LT Credit 6 (Bicycle Facilities) uses camelCase form field names in Col 4
+  // that don't contain plain-English bicycle keywords — match by credit code directly.
+  if (creditCode) {
+    const cc = creditCode.toLowerCase().replace(/\s+/g, "");
+    if (cc === "ltc6" || cc === "ltcredit6") return "bicycle-facilities";
+  }
   const combined = outputs.join(" ").toLowerCase();
   for (const [mapType, keywords] of Object.entries(MAP_OUTPUT_KEYWORDS)) {
     if (keywords.some((kw) => combined.includes(kw))) {
@@ -874,7 +880,7 @@ export async function processOrder(
 
   // ── Step 13: Check Col 4 outputs — detect map requirement ────────────────
   console.log(`  Step 13: Checking for required map outputs...`);
-  const requiredMapType = detectRequiredMapType(creditData.outputs);
+  const requiredMapType = detectRequiredMapType(creditData.outputs, credit.credit_code);
   console.log(`    Map required: ${requiredMapType ?? "none"}`);
 
   // ── Step 13.5: GTFS transit pre-fetch (transit credits only) ─────────────
