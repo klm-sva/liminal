@@ -1316,6 +1316,20 @@ If a document contains data that conflicts with owner-entered project data, defe
     if (requiredMapType === "bicycle-facilities" && locationsForMap.length === 0) {
       const tableDests: Array<{ address: string; label: string }> = [];
       const seenLabels = new Set<string>();
+
+      // Determine address column index from the table header row
+      let addressColIdx = -1;
+      const theadMatch = part1Html.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
+      if (theadMatch) {
+        const headerCells: string[] = [];
+        for (const thMatch of theadMatch[1].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)) {
+          headerCells.push(thMatch[1].replace(/<[^>]+>/g, "").trim().toLowerCase());
+        }
+        const idx = headerCells.findIndex((h) => /address|location/.test(h));
+        if (idx > 0) addressColIdx = idx; // column 0 is the row-number column
+      }
+      console.log(`    Bicycle table parse — address column: ${addressColIdx >= 0 ? addressColIdx : "heuristic"}`);
+
       for (const rowMatch of part1Html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
         const cells: string[] = [];
         for (const cellMatch of rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)) {
@@ -1324,19 +1338,31 @@ If a document contains data that conflicts with owner-entered project data, defe
           );
         }
         if (cells.length < 2) continue;
-        // First cell must be a sequential row number 1–20
-        if (!/^\d{1,2}$/.test(cells[0])) continue;
-        const n = parseInt(cells[0], 10);
-        if (n < 1 || n > 20 || seenLabels.has(cells[0])) continue;
-        // Find the cell containing a geocodable address: has digits AND a comma + 2-letter state code
-        const addrCell = cells.slice(1).find(
-          (c) => /\d/.test(c) && /,\s*[A-Z]{2}(?:[\s,]+\d{5})?/.test(c)
-        );
-        if (addrCell) {
-          seenLabels.add(cells[0]);
-          tableDests.push({ label: cells[0], address: addrCell.replace(/\s*\(.*?\)\s*$/, "").trim() });
+
+        // First cell must be a row number 1–20 (strip stray punctuation like "1." or "#1")
+        const rowLabel = cells[0].replace(/[^0-9]/g, "");
+        if (!rowLabel || seenLabels.has(rowLabel)) continue;
+        const n = parseInt(rowLabel, 10);
+        if (n < 1 || n > 20) continue;
+
+        let addrCell: string | undefined;
+        if (addressColIdx >= 1 && addressColIdx < cells.length) {
+          // Preferred: use the header-identified address column
+          addrCell = cells[addressColIdx];
+        } else {
+          // Fallback: pick the cell that starts with a street number OR contains a comma
+          // Skip cells that are just a distance ("1.2 mi", "800 ft") or short label
+          addrCell = cells.slice(1).find(
+            (c) => c.length > 8 && (/^\d+\s+\w/.test(c) || (c.includes(",") && !/^\d+(\.\d+)?\s*(mi|ft|miles|feet)$/i.test(c)))
+          );
+        }
+
+        if (addrCell && addrCell.trim().length > 5) {
+          seenLabels.add(rowLabel);
+          tableDests.push({ label: rowLabel, address: addrCell.replace(/\s*\(.*?\)\s*$/, "").trim() });
         }
       }
+
       tableDests.sort((a, b) => parseInt(a.label) - parseInt(b.label));
       if (tableDests.length > 0) {
         locationsForMap = tableDests;
@@ -1351,7 +1377,12 @@ If a document contains data that conflicts with owner-entered project data, defe
       try {
         const isBicycle  = requiredMapType === "bicycle-facilities";
         const maxDestinations = isBicycle ? 12 : 2;
-        const plainText  = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
+        // Bicycle: use raw HTML so table structure is preserved; no character slice so the
+        // qualifying destinations table (often near the end of Part 1) isn't cut off.
+        // Other credits: strip tags and slice — the locations are usually near the top.
+        const extractInput = isBicycle
+          ? part1Html
+          : part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
         const locExtract = await (client.messages.create as any)({
           model:      "claude-haiku-4-5-20251001",
           max_tokens: isBicycle ? 2048 : 512,
@@ -1360,14 +1391,14 @@ If a document contains data that conflicts with owner-entered project data, defe
             content: isBicycle
               ? `The project is located at: ${project.address}
 
-Extract up to 12 qualifying diverse-use destinations from the text below. These are destinations listed as qualifying in the bicycle facilities compliance table (restaurants, retail, services, parks, civic uses, schools, etc. within 3-mile biking distance).
+Extract up to 12 qualifying diverse-use destinations from the HTML table below. These are destinations listed as qualifying in the bicycle facilities compliance table (numbered rows with use name, address, and distance).
 
-For each destination return an object with "address" (full geocodable street address) and "label" (the row number from the table, as a string).
+For each numbered table row return an object with "address" (the full street address from the address column) and "label" (the row number, as a string).
 
 Return ONLY a valid JSON array of objects like: [{"address":"123 Main St, City, FL","label":"1"},{"address":"456 Oak Ave, City, FL","label":"2"}]
 If none found return [].
 
-${plainText}`
+${extractInput}`
               : `The project is located at: ${project.address}
 
 Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
@@ -1376,7 +1407,7 @@ Extract up to 2 specific named locations (street addresses, transit stops, stati
 
 Return ONLY a valid JSON array of strings. If none found return [].
 
-${plainText}`,
+${extractInput}`,
           }],
         });
         const locText   = locExtract.content[0]?.text ?? "[]";
