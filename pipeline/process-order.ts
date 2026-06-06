@@ -1158,12 +1158,24 @@ Rules:
   const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
 
 ${"═".repeat(60)}
-BICYCLE FACILITIES MAP — DESTINATION TABLE FORMAT
+BICYCLE FACILITIES MAP — DESTINATION DATA REQUIRED
 ${"═".repeat(60)}
 
 This credit requires a map showing bicycle routes from the project to every qualifying diverse use.
 
-Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table. Include the full street address for each destination in the address column of your table (e.g. "123 Main St, Miami, FL 33101" — not just a place name).
+Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table.
+
+At the very end of your Part 1 output, after all other content, append this exact block with one JSON object per qualifying destination:
+
+<script type="application/json" id="bicycle-destinations">
+[{"label":"1","address":"FULL STREET ADDRESS, CITY, STATE"},{"label":"2","address":"FULL STREET ADDRESS, CITY, STATE"}]
+</script>
+
+Rules:
+- One entry per qualifying destination — every row in your table must appear here
+- "label" matches the row number in your table exactly ("1", "2", "3", …)
+- "address" is a full geocodable street address (e.g. "123 Main St, Miami, FL 33101") — not a place name alone
+- Valid JSON only — no trailing commas
 ` : "";
 
   const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
@@ -1311,64 +1323,24 @@ If a document contains data that conflicts with owner-entered project data, defe
       }
     }
 
-    // Path 2a: Parse qualifying destinations directly from the Part 1 HTML table (bicycle credits)
-    // The addresses are already in Claude's output table — no structured comment needed.
+    // Path 2a: Parse bicycle destinations from the <script id="bicycle-destinations"> block
     if (requiredMapType === "bicycle-facilities" && locationsForMap.length === 0) {
-      const tableDests: Array<{ address: string; label: string }> = [];
-      const seenLabels = new Set<string>();
-
-      // Determine address column index from the table header row
-      let addressColIdx = -1;
-      const theadMatch = part1Html.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
-      if (theadMatch) {
-        const headerCells: string[] = [];
-        for (const thMatch of theadMatch[1].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)) {
-          headerCells.push(thMatch[1].replace(/<[^>]+>/g, "").trim().toLowerCase());
+      const scriptMatch = part1Html.match(/<script[^>]+id="bicycle-destinations"[^>]*>([\s\S]*?)<\/script>/i);
+      if (scriptMatch) {
+        try {
+          const parsed = JSON.parse(scriptMatch[1].trim()) as Array<{ label?: string; address?: string }>;
+          const dests = parsed
+            .filter((d) => d && typeof d.address === "string" && d.address.trim().length > 0)
+            .map((d, i) => ({ label: d.label?.trim() ?? String(i + 1), address: d.address!.trim() }));
+          if (dests.length > 0) {
+            locationsForMap = dests;
+            console.log(`    ${locationsForMap.length} bicycle destination(s) from script block → passing all to map`);
+          }
+        } catch (err) {
+          console.warn(`    bicycle-destinations script block found but JSON parse failed: ${(err as Error).message} — falling through to Haiku`);
         }
-        const idx = headerCells.findIndex((h) => /address|location/.test(h));
-        if (idx > 0) addressColIdx = idx; // column 0 is the row-number column
-      }
-      console.log(`    Bicycle table parse — address column: ${addressColIdx >= 0 ? addressColIdx : "heuristic"}`);
-
-      for (const rowMatch of part1Html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
-        const cells: string[] = [];
-        for (const cellMatch of rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)) {
-          cells.push(
-            cellMatch[1].replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
-          );
-        }
-        if (cells.length < 2) continue;
-
-        // First cell must be a row number 1–20 (strip stray punctuation like "1." or "#1")
-        const rowLabel = cells[0].replace(/[^0-9]/g, "");
-        if (!rowLabel || seenLabels.has(rowLabel)) continue;
-        const n = parseInt(rowLabel, 10);
-        if (n < 1 || n > 20) continue;
-
-        let addrCell: string | undefined;
-        if (addressColIdx >= 1 && addressColIdx < cells.length) {
-          // Preferred: use the header-identified address column
-          addrCell = cells[addressColIdx];
-        } else {
-          // Fallback: pick the cell that starts with a street number OR contains a comma
-          // Skip cells that are just a distance ("1.2 mi", "800 ft") or short label
-          addrCell = cells.slice(1).find(
-            (c) => c.length > 8 && (/^\d+\s+\w/.test(c) || (c.includes(",") && !/^\d+(\.\d+)?\s*(mi|ft|miles|feet)$/i.test(c)))
-          );
-        }
-
-        if (addrCell && addrCell.trim().length > 5) {
-          seenLabels.add(rowLabel);
-          tableDests.push({ label: rowLabel, address: addrCell.replace(/\s*\(.*?\)\s*$/, "").trim() });
-        }
-      }
-
-      tableDests.sort((a, b) => parseInt(a.label) - parseInt(b.label));
-      if (tableDests.length > 0) {
-        locationsForMap = tableDests;
-        console.log(`    ${locationsForMap.length} bicycle destination(s) parsed from Part 1 HTML table → passing all to map`);
       } else {
-        console.warn(`    No bicycle destinations found in HTML table — will fall through to Haiku`);
+        console.warn(`    No bicycle-destinations script block found in Part 1 — falling through to Haiku`);
       }
     }
 
