@@ -1443,51 +1443,53 @@ ${plainText}`,
     fullHtml += "\n" + part2Html;
   }
 
-  // ── Step 15.7b: Extract bicycle destinations from Part 2 HTML ────────────────
-  // The qualifying destinations table (Section A-2) is generated in Part 2.
-  // Extract row number + address from the table header + rows directly.
+  // ── Step 15.7b: Extract bicycle destinations from Part 2 via Haiku ──────────
+  // Haiku reads the plain-text version of Part 2 and pulls every destination
+  // address from the qualifying diverse-use table — same mechanism as Step 15.7
+  // but pointed at Part 2 (where the table lives) with no cap on count.
   if (requiredMapType === "bicycle-facilities" && project.address) {
-    console.log(`  Step 15.7b: Extracting bicycle destinations from Part 2 HTML...`);
-    const tableDests: Array<{ address: string; label: string }> = [];
-    const seenLabels = new Set<string>();
+    console.log(`  Step 15.7b: Extracting bicycle destinations from Part 2 via Haiku...`);
+    try {
+      const plainText = part2Html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .slice(0, 30000);
+      const locExtract = await (client.messages.create as any)({
+        model:      "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        messages:   [{
+          role:    "user",
+          content: `Extract ALL qualifying destination entries from the numbered destinations table in the text below.
+Return ONLY a valid JSON array of objects:
+[{"label":"1","address":"full street address"},{"label":"2","address":"full street address"},...]
 
-    // Find Address column index from the thead
-    let addressColIdx = 2; // default: known structure has # | Name | Address | Category | Type | Route
-    const theadMatch = part2Html.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
-    if (theadMatch) {
-      const headers: string[] = [];
-      for (const m of theadMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)) {
-        headers.push(m[1].replace(/<[^>]+>/g, "").trim().toLowerCase());
-      }
-      const idx = headers.findIndex((h) => h.includes("address"));
-      if (idx >= 0) addressColIdx = idx;
-    }
-    console.log(`    Address column index: ${addressColIdx}`);
+Rules:
+- Include every numbered row
+- Use the full street address exactly as it appears
+- label is the row number as a string
+- Return [] if no table is found
 
-    for (const rowMatch of part2Html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
-      const cells: string[] = [];
-      for (const m of rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)) {
-        cells.push(m[1].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim());
+${plainText}`,
+        }],
+      });
+      const locText   = locExtract.content[0]?.text ?? "[]";
+      const jsonMatch = locText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const raw = JSON.parse(jsonMatch[0]) as Array<{ label: string; address: string }>;
+        const extracted = raw
+          .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 3)
+          .map((l) => ({ address: l.address.trim(), label: String(l.label ?? "") }));
+        if (extracted.length > 0) {
+          locationsForMap = extracted;
+          console.log(`    ${locationsForMap.length} destination(s) extracted from Part 2`);
+          locationsForMap.forEach((d) => console.log(`      ${d.label}: ${d.address}`));
+        } else {
+          console.warn(`    Haiku returned no destinations — bicycle map will be skipped`);
+        }
       }
-      if (cells.length <= addressColIdx) continue;
-      const label = cells[0].trim();
-      if (!/^\d{1,2}$/.test(label) || seenLabels.has(label)) continue;
-      const n = parseInt(label, 10);
-      if (n < 1 || n > 20) continue;
-      const address = cells[addressColIdx]?.trim();
-      if (address && address.length > 3) {
-        seenLabels.add(label);
-        tableDests.push({ label, address });
-      }
-    }
-    tableDests.sort((a, b) => parseInt(a.label) - parseInt(b.label));
-
-    if (tableDests.length > 0) {
-      locationsForMap = tableDests;
-      console.log(`    ${locationsForMap.length} destination(s) extracted from Part 2 table`);
-      locationsForMap.forEach((d) => console.log(`      ${d.label}: ${d.address}`));
-    } else {
-      console.warn(`    No destinations found in Part 2 table — bicycle map will be skipped`);
+    } catch (err) {
+      console.warn(`  Step 15.7b: Haiku extraction failed: ${(err as Error).message} — bicycle map skipped`);
     }
   }
 

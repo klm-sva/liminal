@@ -2162,6 +2162,55 @@ async function measureWalkingDistances(originAddress, destinations) {
   }
   return routes;
 }
+async function geocodeForMap(address) {
+  const key = MAPS_API_KEY();
+  try {
+    const res = await axiosGetWithRetry(
+      "https://maps.googleapis.com/maps/api/geocode/json",
+      { params: { address, key } },
+      1e4,
+      `Geocode: ${address.slice(0, 60)}`
+    );
+    const data2 = res.data;
+    if (data2.status === "OK" && data2.results?.[0]?.geometry?.location) {
+      const { lat, lng } = data2.results[0].geometry.location;
+      return { lat, lng };
+    }
+    console.warn(`  [geocode] No result for "${address}" \u2014 ${data2.status}`);
+    return null;
+  } catch (err) {
+    console.warn(`  [geocode] Failed: ${err.message}`);
+    return null;
+  }
+}
+async function fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes, visibleCorners, imgWidth, imgHeight) {
+  const key = MAPS_API_KEY();
+  const scale2 = 2;
+  const base = "https://maps.googleapis.com/maps/api/staticmap";
+  const params = [
+    `size=${imgWidth / scale2}x${imgHeight / scale2}`,
+    `scale=${scale2}`,
+    `maptype=roadmap`,
+    `style=feature:poi|visibility:off`,
+    `style=feature:transit|element:labels|visibility:off`,
+    `key=${key}`
+  ];
+  for (const pt of visibleCorners) {
+    params.push(`visible=${pt.lat},${pt.lng}`);
+  }
+  params.push(`markers=color:0x2b4044|size:mid|label:S|${originCoord.lat},${originCoord.lng}`);
+  for (const { dest, coord } of geocodedDests) {
+    const n = parseInt(dest.label, 10);
+    const pinChar = !isNaN(n) && n >= 10 ? String.fromCharCode(65 + n - 10) : dest.label.slice(0, 1);
+    params.push(`markers=color:0x327cb9|size:mid|label:${pinChar}|${coord.lat},${coord.lng}`);
+  }
+  for (const route of routes) {
+    params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
+  }
+  const url = `${base}?${params.join("&")}`;
+  const res = await axiosGetWithRetry(url, { responseType: "arraybuffer" }, 1e4, "Static Maps API");
+  return Buffer.from(res.data);
+}
 async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   const key = MAPS_API_KEY();
   const scale2 = 2;
@@ -2180,8 +2229,9 @@ async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   const origin = routes[0].originLatLng;
   params.push(`markers=color:0x2b4044|size:mid|label:S|${origin.lat},${origin.lng}`);
   for (const route of routes) {
-    const label = route.destination.label.slice(0, 1);
-    params.push(`markers=color:0x327cb9|size:mid|label:${label}|${route.destLatLng.lat},${route.destLatLng.lng}`);
+    const n = parseInt(route.destination.label, 10);
+    const pinChar = !isNaN(n) && n >= 10 ? String.fromCharCode(65 + n - 10) : route.destination.label.slice(0, 1);
+    params.push(`markers=color:0x327cb9|size:mid|label:${pinChar}|${route.destLatLng.lat},${route.destLatLng.lng}`);
   }
   for (const route of routes) {
     params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
@@ -2213,12 +2263,73 @@ async function generateMap(request) {
   const WIDTH = 1200;
   const HEIGHT = 900;
   console.log(`[map-generation] ${request.mapType} \u2014 ${request.destinations.length} destination(s)`);
+  const isBicycle = request.mapType === "bicycle-facilities";
+  if (isBicycle) {
+    const originCoord = await geocodeForMap(request.originAddress);
+    if (!originCoord) throw new Error(`Could not geocode project address: ${request.originAddress}`);
+    const geocodedDests = [];
+    for (const dest of request.destinations) {
+      const coord = await geocodeForMap(dest.address);
+      if (coord) {
+        geocodedDests.push({ dest, coord });
+      } else {
+        console.warn(`  \u26A0 Could not geocode destination ${dest.label}: ${dest.address}`);
+      }
+    }
+    if (geocodedDests.length === 0) throw new Error(`No destinations could be geocoded`);
+    console.log(`  Geocoded ${geocodedDests.length}/${request.destinations.length} destination(s)`);
+    const routes2 = [];
+    for (const dest of request.destinations) {
+      let route = await getRoute(request.originAddress, dest, "bicycling");
+      if (!route) {
+        route = await getRoute(request.originAddress, dest, "walking");
+        if (route) console.log(`    \u21B3 ${dest.label}: bicycling route unavailable \u2014 using walking route for polyline`);
+      }
+      if (route) routes2.push(route);
+    }
+    console.log(`  ${routes2.length}/${request.destinations.length} route polyline(s) from Directions API`);
+    const allPoints2 = [
+      originCoord,
+      ...geocodedDests.map((g) => g.coord),
+      ...routes2.flatMap((r) => r.polylinePoints)
+    ];
+    const lats2 = allPoints2.map((p) => p.lat);
+    const lngs2 = allPoints2.map((p) => p.lng);
+    const minLat2 = Math.min(...lats2), maxLat2 = Math.max(...lats2);
+    const minLng2 = Math.min(...lngs2), maxLng2 = Math.max(...lngs2);
+    const latPad2 = (maxLat2 - minLat2) * 0.15;
+    const lngPad2 = (maxLng2 - minLng2) * 0.15;
+    const visibleCorners2 = [
+      { lat: minLat2 - latPad2, lng: minLng2 - lngPad2 },
+      { lat: minLat2 - latPad2, lng: maxLng2 + lngPad2 },
+      { lat: maxLat2 + latPad2, lng: minLng2 - lngPad2 },
+      { lat: maxLat2 + latPad2, lng: maxLng2 + lngPad2 }
+    ];
+    const centerLat2 = (minLat2 + maxLat2) / 2;
+    const centerLng2 = (minLng2 + maxLng2) / 2;
+    console.log(`  Center: ${centerLat2.toFixed(4)}, ${centerLng2.toFixed(4)}`);
+    console.log(`  Fetching bicycle map: ${geocodedDests.length} marker(s), ${routes2.length} polyline(s)...`);
+    const mapImage2 = await fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes2, visibleCorners2, WIDTH, HEIGHT);
+    const today2 = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const citationText2 = `Source: Google Maps \u2014 Bicycling distances along bicycle network routes.
+${today2}`;
+    const pngBuffer2 = await addCitationOverlay(mapImage2, citationText2, WIDTH, HEIGHT);
+    if (request.outputPath) {
+      const { mkdirSync: mkdirSync2, writeFileSync: writeFileSync5 } = await import("fs");
+      mkdirSync2(path5.dirname(request.outputPath), { recursive: true });
+      writeFileSync5(request.outputPath, pngBuffer2);
+      console.log(`  \u2713 Map saved: ${request.outputPath}`);
+    }
+    console.log(`  \u2713 Bicycle map generated (${Math.round(pngBuffer2.length / 1024)} KB PNG, ${geocodedDests.length} pin(s))`);
+    geocodedDests.forEach(({ dest }) => console.log(`    \u2022 Pin ${dest.label}: ${dest.address}`));
+    return { pngBuffer: pngBuffer2, routes: routes2, mapType: request.mapType };
+  }
   const routes = [];
   for (const dest of request.destinations) {
-    const route = await getWalkingRoute(request.originAddress, dest);
+    const route = await getRoute(request.originAddress, dest, "walking");
     if (route) routes.push(route);
   }
-  if (routes.length === 0) throw new Error("No walking routes returned from Google Maps Directions API");
+  if (routes.length === 0) throw new Error(`No routes returned from Google Maps Directions API`);
   const allPoints = routes.flatMap((r) => r.polylinePoints);
   allPoints.push(routes[0].originLatLng);
   routes.forEach((r) => allPoints.push(r.destLatLng));
@@ -3602,7 +3713,7 @@ WHAT DRIVES THE OUTPUT \u2014 READ FIRST
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
 1. Read the automation analysis spreadsheet row for this credit and identify:
-   - Column 1: Documents the project team provided (attached)
+   - Column 1: Documents the project team provided (attached as PDFs \u2014 read every one before writing output)
    - Column 2: Items retrieved automatically without customer involvement
    - Column 3: Platform reference files \u2014 requirements PDF, form link, calculator
    - Column 4: EXACT list of outputs to produce \u2014 generate every item, nothing else
@@ -4317,7 +4428,11 @@ function drawingsPath(customerId, projectId) {
 async function dbCall(query, label) {
   return withTimeout(Promise.resolve(query), 1e4, `Supabase: ${label}`);
 }
-function detectRequiredMapType(outputs) {
+function detectRequiredMapType(outputs, creditCode) {
+  if (creditCode) {
+    const cc2 = creditCode.toLowerCase().replace(/\s+/g, "");
+    if (cc2 === "ltc6" || cc2 === "ltcredit6") return "bicycle-facilities";
+  }
   const combined = outputs.join(" ").toLowerCase();
   for (const [mapType, keywords] of Object.entries(MAP_OUTPUT_KEYWORDS)) {
     if (keywords.some((kw) => combined.includes(kw))) {
@@ -4688,7 +4803,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
     console.warn(`  Step 12.5: WELL reference files not yet loaded \u2014 processing with web search and customer documents only`);
   }
   console.log(`  Step 13: Checking for required map outputs...`);
-  const requiredMapType = detectRequiredMapType(creditData.outputs);
+  const requiredMapType = detectRequiredMapType(creditData.outputs, credit.credit_code);
   console.log(`    Map required: ${requiredMapType ?? "none"}`);
   let gtfsVerifiedStops = [];
   let gtfsAllStops = [];
@@ -4904,9 +5019,49 @@ Rules:
 - The pipeline re-measures all distances via Google Maps and filters against threshold_miles \u2014 stops you include that are beyond the threshold will be excluded from the map
 - If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
 ` : "";
+  const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
+
+${"\u2550".repeat(60)}
+BICYCLE FACILITIES MAP \u2014 DESTINATION TABLE FORMAT
+${"\u2550".repeat(60)}
+
+This credit requires a map showing bicycle routes from the project to every qualifying diverse use.
+
+Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, \u2026). The map will display matching numbered pins \u2014 pin 1 corresponds to row 1 in your table. The table must include an "Address" column with a full street address for each destination (e.g. "123 Main St, Gainesville, FL 32601" \u2014 not a place name alone).
+` : "";
+  const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
+  const uploadedDocsInstruction = pdfUploads.length > 0 ? `
+
+${"\u2550".repeat(60)}
+CUSTOMER-UPLOADED DOCUMENTS \u2014 READ BEFORE WRITING OUTPUT
+${"\u2550".repeat(60)}
+
+${pdfUploads.length} document file(s) are attached as PDFs:
+${pdfUploads.map((u, i) => `  ${i + 1}. ${u.filename}`).join("\n")}
+
+Read every page of every attached document before generating any output. These are the project team's proprietary documents \u2014 drawings, specifications, reports, and other materials that cannot come from any public source.
+
+Extract all evidence relevant to this credit's compliance requirements. Specifically look for:
+- Architectural/floor plan drawings: space dimensions, room labels, occupant counts, accessible routes, bicycle storage, stair locations
+- Site plans: site boundaries, impervious area, open space, exterior features, parking layout
+- Mechanical/HVAC drawings: system type, equipment schedules, refrigerant type, ventilation rates, energy systems
+- Plumbing drawings: fixture types and counts, water reuse systems, irrigation connections
+- Civil/structural drawings: grading, drainage, stormwater features, structural systems
+- Specifications: product data, material certifications (EPD, FSC, low-emitting), recycled content, commissioning scope
+- Reports/models: energy model outputs, commissioning reports, acoustic reports, geotechnical data
+
+Use what you find in these documents to:
+1. Populate form fields with real project values instead of placeholders
+2. Confirm or contradict compliance determinations \u2014 if a drawing shows something that affects credit eligibility, use it
+3. Fill gaps in the project data that cannot be retrieved from public sources
+4. Reduce [OWNER TO CONFIRM] items \u2014 if the answer is in an uploaded document, use it and do not ask the owner
+
+If a document contains data that conflicts with owner-entered project data, defer to the owner-entered data (the customer has reviewed and confirmed it). Use documents to fill gaps, not to override confirmed owner decisions.` : "";
   const systemPrompt = [
     basePrompt,
+    uploadedDocsInstruction,
     transitMapInstruction,
+    bicycleMapInstruction,
     ...additionalInstructions ? [`
 
 ${"\u2550".repeat(60)}
@@ -4947,7 +5102,7 @@ ${additionalInstructions}`] : []
     console.log(`    No form link \u2014 skipping Part 1, running single-pass`);
   }
   let locationsForMap = [];
-  if (requiredMapType && project.address) {
+  if (requiredMapType && project.address && requiredMapType !== "bicycle-facilities") {
     if (gtfsLocationsForMap.length > 0) {
       locationsForMap = gtfsLocationsForMap;
       console.log(`  Step 15.7: Using ${locationsForMap.length} GTFS-verified stop coordinate(s) \u2014 skipping extraction`);
@@ -5016,7 +5171,7 @@ ${plainText}`
   }
   let mapBuffer = null;
   let mapBase64 = null;
-  if (requiredMapType && project.address && locationsForMap.length > 0) {
+  if (requiredMapType && requiredMapType !== "bicycle-facilities" && project.address && locationsForMap.length > 0) {
     console.log(`  Step 15.8: Generating ${requiredMapType} map (${locationsForMap.length} destination(s))...`);
     try {
       const mapResult = await generateMap({
@@ -5030,9 +5185,9 @@ ${plainText}`
     } catch (e) {
       console.warn(`  Step 15.8: Map generation failed: ${e.message} \u2014 continuing without map`);
     }
-  } else if (requiredMapType) {
+  } else if (requiredMapType && requiredMapType !== "bicycle-facilities") {
     console.log(`  Step 15.8: Map required but no destinations found \u2014 skipping`);
-  } else {
+  } else if (!requiredMapType) {
     console.log(`  Step 15.8: No map required`);
   }
   const mapContentBlocks = mapBase64 ? [
@@ -5043,6 +5198,11 @@ ${plainText}`
     {
       type: "image",
       source: { type: "base64", media_type: "image/png", data: mapBase64 }
+    }
+  ] : requiredMapType === "bicycle-facilities" ? [
+    {
+      type: "text",
+      text: "A bicycle network map will be generated and inserted into this document after Section A-2 is complete. In Section A-2, immediately after the closing </table> tag of the qualifying diverse-use destinations table, place this exact placeholder on its own line:\n<img data-map-insert='1'>\nDo not place it anywhere else. The system will replace it with the actual map image."
     }
   ] : [];
   const part2Response = await client2.messages.create({
@@ -5074,6 +5234,61 @@ ${part1Html}` }] : [],
     fullHtml = fullHtml.slice(0, bodyCloseIdx) + "\n" + part2Html + "\n</body></html>";
   } else {
     fullHtml += "\n" + part2Html;
+  }
+  if (requiredMapType === "bicycle-facilities" && project.address) {
+    console.log(`  Step 15.7b: Extracting bicycle destinations from Part 2 via Haiku...`);
+    try {
+      const plainText = part2Html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").slice(0, 3e4);
+      const locExtract = await client2.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        messages: [{
+          role: "user",
+          content: `Extract ALL qualifying destination entries from the numbered destinations table in the text below.
+Return ONLY a valid JSON array of objects:
+[{"label":"1","address":"full street address"},{"label":"2","address":"full street address"},...]
+
+Rules:
+- Include every numbered row
+- Use the full street address exactly as it appears
+- label is the row number as a string
+- Return [] if no table is found
+
+${plainText}`
+        }]
+      });
+      const locText = locExtract.content[0]?.text ?? "[]";
+      const jsonMatch = locText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const raw = JSON.parse(jsonMatch[0]);
+        const extracted = raw.filter((l) => l && typeof l.address === "string" && l.address.trim().length > 3).map((l) => ({ address: l.address.trim(), label: String(l.label ?? "") }));
+        if (extracted.length > 0) {
+          locationsForMap = extracted;
+          console.log(`    ${locationsForMap.length} destination(s) extracted from Part 2`);
+          locationsForMap.forEach((d) => console.log(`      ${d.label}: ${d.address}`));
+        } else {
+          console.warn(`    Haiku returned no destinations \u2014 bicycle map will be skipped`);
+        }
+      }
+    } catch (err) {
+      console.warn(`  Step 15.7b: Haiku extraction failed: ${err.message} \u2014 bicycle map skipped`);
+    }
+  }
+  if (requiredMapType === "bicycle-facilities" && project.address && locationsForMap.length > 0) {
+    console.log(`  Step 15.8b: Generating bicycle-facilities map (${locationsForMap.length} destination(s))...`);
+    try {
+      const mapResult = await generateMap({
+        originAddress: project.address,
+        destinations: locationsForMap,
+        mapType: "bicycle-facilities"
+      });
+      mapBuffer = mapResult.pngBuffer;
+      console.log(`  Step 15.8b: \u2713 Bicycle map generated \u2014 ${mapBuffer.length} bytes`);
+    } catch (e) {
+      console.warn(`  Step 15.8b: Bicycle map generation failed: ${e.message} \u2014 continuing without map`);
+    }
+  } else if (requiredMapType === "bicycle-facilities") {
+    console.log(`  Step 15.8b: No bicycle destinations found \u2014 map skipped`);
   }
   if (mapBuffer) {
     const mapDataUri = `data:image/png;base64,${mapBuffer.toString("base64")}`;
