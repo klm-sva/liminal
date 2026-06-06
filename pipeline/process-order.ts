@@ -38,7 +38,7 @@ import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
 import { analyzeDrawings } from "./drawing-analysis";
-import { generateMap, measureWalkingDistances, type MapType, type WalkingRoute } from "./map-generation";
+import { generateMap, measureWalkingDistances, measureBicyclingDistances, type MapType, type WalkingRoute } from "./map-generation";
 import { findGtfsFeedUrls, getGtfsStopsNearProject, type GtfsStopResult } from "./lib/gtfs-transit";
 import { geocodeAddress } from "./lib/geocode";
 import { logAuditEvent } from "./lib/supabase-ops";
@@ -1155,6 +1155,30 @@ Rules:
 - If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
 ` : "";
 
+  const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
+
+${"═".repeat(60)}
+BICYCLE FACILITIES MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
+${"═".repeat(60)}
+
+This credit requires a map showing bicycle routes from the project to every qualifying diverse use. The map is generated programmatically — it cannot be generated without the destination data you provide.
+
+Build your qualifying destinations table first. Number every qualifying destination sequentially starting at 1 (row #1, row #2, etc.). The map will display matching numbered pins — pin 1 on the map must be the same destination as row 1 in your table.
+
+At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment using the same sequential numbers you used in the table:
+
+<!-- QUALIFYING_BICYCLE_DESTINATIONS: {"destinations": [{"address":"FULL_STREET_ADDRESS_OR_INTERSECTION, CITY, STATE","label":"1","name":"Place Name"},{"address":"FULL_STREET_ADDRESS, CITY, STATE","label":"2","name":"Place Name"},...]} -->
+
+Rules:
+- Include every destination you listed as qualifying in the table — all must appear in the comment
+- "label" must exactly match the row number assigned in your table (row 1 → label "1", row 2 → label "2")
+- "address" must be a geocodable full street address or intersection — NOT a place name alone
+- "name" is the human-readable place name shown in the table
+- The pipeline re-measures every distance via Google Maps bicycling mode along the actual bicycle network and filters at the credit threshold — any destination you include that exceeds the limit will be excluded from the map but will remain in your table
+- Valid JSON only — no trailing commas, no single quotes
+- If no destinations qualify, append: <!-- QUALIFYING_BICYCLE_DESTINATIONS: {"destinations": []} -->
+` : "";
+
   const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
   const uploadedDocsInstruction = pdfUploads.length > 0 ? `
 
@@ -1188,6 +1212,7 @@ If a document contains data that conflicts with owner-entered project data, defe
     basePrompt,
     uploadedDocsInstruction,
     transitMapInstruction,
+    bicycleMapInstruction,
     ...(additionalInstructions
       ? [`\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`]
       : []),
@@ -1246,9 +1271,10 @@ If a document contains data that conflicts with owner-entered project data, defe
 
   // ── Step 15.7: Resolve map destinations ──────────────────────────────────────
   // Priority order:
-  //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred
-  //   2. Structured comment from Claude's Part 1 output (transit fallback)
-  //   3. Haiku extraction from Part 1 HTML (non-transit credits)
+  //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred (transit only)
+  //   2. Structured transit comment from Claude's Part 1 output (transit fallback)
+  //   2a. Structured bicycle destinations comment from Claude's Part 1 output (bicycle credits)
+  //   3. Haiku extraction from Part 1 HTML (other credits, or structured comment missing/malformed)
   //   4. creditData.claudeRetrieves fallback
   let locationsForMap: Array<{ address: string; label: string }> = [];
   if (requiredMapType && project.address) {
@@ -1298,7 +1324,39 @@ If a document contains data that conflicts with owner-entered project data, defe
       }
     }
 
-    // Path 3: Haiku extraction (non-transit credits, or transit comment missing/malformed)
+    // Path 2a: Parse structured bicycle destinations comment
+    const bicycleComment = part1Html.match(/<!--\s*QUALIFYING_BICYCLE_DESTINATIONS:\s*(\{[\s\S]*?\})\s*-->/);
+    if (bicycleComment && locationsForMap.length === 0) {
+      try {
+        const parsed = JSON.parse(bicycleComment[1]) as {
+          destinations?: Array<{ address: string; label: string; name?: string }>;
+        };
+        const rawDests = (parsed.destinations ?? [])
+          .filter((d) => d && typeof d.address === "string" && d.address.trim().length > 0)
+          .slice(0, 12)
+          .map((d) => ({ address: d.address.trim(), label: d.label ?? "" }));
+
+        console.log(`    Parsed ${rawDests.length} bicycle destination(s) from structured comment`);
+
+        if (rawDests.length > 0) {
+          console.log(`    Re-measuring bicycling distances via Google Maps...`);
+          const routes = await measureBicyclingDistances(project.address!, rawDests);
+          for (const route of routes) {
+            const actualMi = route.distanceMiles;
+            const qualifies = actualMi <= 3.0;
+            console.log(`      Dest ${route.destination.label}: ${actualMi.toFixed(2)} mi along bicycle network — ${qualifies ? "INCLUDED" : "EXCLUDED (>3 mi)"}`);
+            if (qualifies) {
+              locationsForMap.push(route.destination);
+            }
+          }
+          console.log(`    ${locationsForMap.length} of ${rawDests.length} destination(s) confirmed within 3-mile bicycle network`);
+        }
+      } catch (err) {
+        console.warn(`  Step 15.7: Bicycle destinations comment parse/measure failed: ${(err as Error).message} — falling back to Haiku`);
+      }
+    }
+
+    // Path 3: Haiku extraction (non-transit/non-bicycle credits, or structured comment missing/malformed)
     if (locationsForMap.length === 0) {
       try {
         const plainText = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
