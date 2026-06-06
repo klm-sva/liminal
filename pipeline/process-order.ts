@@ -1158,24 +1158,12 @@ Rules:
   const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
 
 ${"═".repeat(60)}
-BICYCLE FACILITIES MAP — DESTINATION DATA REQUIRED
+BICYCLE FACILITIES MAP — DESTINATION TABLE FORMAT
 ${"═".repeat(60)}
 
 This credit requires a map showing bicycle routes from the project to every qualifying diverse use.
 
-Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table.
-
-At the very end of your Part 1 output, after all other content, append this exact block with one JSON object per qualifying destination:
-
-<script type="application/json" id="bicycle-destinations">
-[{"label":"1","address":"FULL STREET ADDRESS, CITY, STATE"},{"label":"2","address":"FULL STREET ADDRESS, CITY, STATE"}]
-</script>
-
-Rules:
-- One entry per qualifying destination — every row in your table must appear here
-- "label" matches the row number in your table exactly ("1", "2", "3", …)
-- "address" is a full geocodable street address (e.g. "123 Main St, Miami, FL 33101") — not a place name alone
-- Valid JSON only — no trailing commas
+Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table. The table must include an "Address" column with a full street address for each destination (e.g. "123 Main St, Gainesville, FL 32601" — not a place name alone).
 ` : "";
 
   const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
@@ -1268,15 +1256,16 @@ If a document contains data that conflicts with owner-entered project data, defe
     console.log(`    No form link — skipping Part 1, running single-pass`);
   }
 
-  // ── Step 15.7: Resolve map destinations ──────────────────────────────────────
-  // Priority order:
+  // ── Step 15.7: Resolve map destinations (non-bicycle credits only) ───────────
+  // Bicycle-facilities destinations live in Part 2 (Supporting Documentation Section A-2).
+  // That HTML does not exist yet. Steps 15.7b / 15.8b run after Part 2 is generated.
+  // Priority order (non-bicycle):
   //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred (transit only)
   //   2. Structured transit comment from Claude's Part 1 output (transit fallback)
-  //   2a. Direct HTML table parse from Part 1 output (bicycle credits) — row number + address column
-  //   3. Haiku extraction from Part 1 HTML (other credits, or table parse yielded nothing)
+  //   3. Haiku extraction from Part 1 HTML (other credits, or structured comment missing)
   //   4. creditData.claudeRetrieves fallback
   let locationsForMap: Array<{ address: string; label: string }> = [];
-  if (requiredMapType && project.address) {
+  if (requiredMapType && project.address && requiredMapType !== "bicycle-facilities") {
 
     // Path 1: GTFS pre-fetch succeeded — use exact GPS coordinates directly, skip all extraction
     if (gtfsLocationsForMap.length > 0) {
@@ -1323,55 +1312,17 @@ If a document contains data that conflicts with owner-entered project data, defe
       }
     }
 
-    // Path 2a: Parse bicycle destinations from the <script id="bicycle-destinations"> block
-    if (requiredMapType === "bicycle-facilities" && locationsForMap.length === 0) {
-      const scriptMatch = part1Html.match(/<script[^>]+id="bicycle-destinations"[^>]*>([\s\S]*?)<\/script>/i);
-      if (scriptMatch) {
-        try {
-          const parsed = JSON.parse(scriptMatch[1].trim()) as Array<{ label?: string; address?: string }>;
-          const dests = parsed
-            .filter((d) => d && typeof d.address === "string" && d.address.trim().length > 0)
-            .map((d, i) => ({ label: d.label?.trim() ?? String(i + 1), address: d.address!.trim() }));
-          if (dests.length > 0) {
-            locationsForMap = dests;
-            console.log(`    ${locationsForMap.length} bicycle destination(s) from script block → passing all to map`);
-          }
-        } catch (err) {
-          console.warn(`    bicycle-destinations script block found but JSON parse failed: ${(err as Error).message} — falling through to Haiku`);
-        }
-      } else {
-        console.warn(`    No bicycle-destinations script block found in Part 1 — falling through to Haiku`);
-      }
-    }
 
-    // Path 3: Haiku extraction (non-transit/non-bicycle credits, or structured comment missing/malformed)
+    // Path 3: Haiku extraction (non-transit credits, or structured comment missing/malformed)
     if (locationsForMap.length === 0) {
       try {
-        const isBicycle  = requiredMapType === "bicycle-facilities";
-        const maxDestinations = isBicycle ? 12 : 2;
-        // Bicycle: use raw HTML so table structure is preserved; no character slice so the
-        // qualifying destinations table (often near the end of Part 1) isn't cut off.
-        // Other credits: strip tags and slice — the locations are usually near the top.
-        const extractInput = isBicycle
-          ? part1Html
-          : part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
+        const plainText  = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
         const locExtract = await (client.messages.create as any)({
           model:      "claude-haiku-4-5-20251001",
-          max_tokens: isBicycle ? 2048 : 512,
+          max_tokens: 512,
           messages:   [{
             role:    "user",
-            content: isBicycle
-              ? `The project is located at: ${project.address}
-
-Extract up to 12 qualifying diverse-use destinations from the HTML table below. These are destinations listed as qualifying in the bicycle facilities compliance table (numbered rows with use name, address, and distance).
-
-For each numbered table row return an object with "address" (the full street address from the address column) and "label" (the row number, as a string).
-
-Return ONLY a valid JSON array of objects like: [{"address":"123 Main St, City, FL","label":"1"},{"address":"456 Oak Ave, City, FL","label":"2"}]
-If none found return [].
-
-${extractInput}`
-              : `The project is located at: ${project.address}
+            content: `The project is located at: ${project.address}
 
 Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
 1. They are documented as qualifying for points in this credit — meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
@@ -1379,24 +1330,17 @@ Extract up to 2 specific named locations (street addresses, transit stops, stati
 
 Return ONLY a valid JSON array of strings. If none found return [].
 
-${extractInput}`,
+${plainText}`,
           }],
         });
         const locText   = locExtract.content[0]?.text ?? "[]";
         const jsonMatch = locText.match(/\[[\s\S]*?\]/);
         if (jsonMatch) {
           const raw: unknown[] = JSON.parse(jsonMatch[0]);
-          if (isBicycle) {
-            locationsForMap = (raw as Array<{ address?: string; label?: string }>)
-              .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0)
-              .slice(0, maxDestinations)
-              .map((l, i) => ({ address: l.address!.trim(), label: l.label ?? String(i + 1) }));
-          } else {
-            locationsForMap = (raw as unknown[])
-              .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-              .slice(0, maxDestinations)
-              .map((addr, i) => ({ address: addr, label: String(i + 1) }));
-          }
+          locationsForMap = (raw as unknown[])
+            .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
+            .slice(0, 2)
+            .map((addr, i) => ({ address: addr, label: String(i + 1) }));
         }
         console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
       } catch (err) {
@@ -1415,9 +1359,10 @@ ${extractInput}`,
   }
 
   // ── Step 15.8: Generate map before Part 2 so it can be embedded in output ──
+  // Bicycle-facilities map is generated after Part 2 in Step 15.8b (destinations are in Part 2 HTML).
   let mapBuffer: Buffer | null = null;
   let mapBase64: string | null = null;
-  if (requiredMapType && project.address && locationsForMap.length > 0) {
+  if (requiredMapType && requiredMapType !== "bicycle-facilities" && project.address && locationsForMap.length > 0) {
     console.log(`  Step 15.8: Generating ${requiredMapType} map (${locationsForMap.length} destination(s))...`);
     try {
       const mapResult = await generateMap({
@@ -1431,13 +1376,15 @@ ${extractInput}`,
     } catch (e) {
       console.warn(`  Step 15.8: Map generation failed: ${(e as Error).message} — continuing without map`);
     }
-  } else if (requiredMapType) {
+  } else if (requiredMapType && requiredMapType !== "bicycle-facilities") {
     console.log(`  Step 15.8: Map required but no destinations found — skipping`);
-  } else {
+  } else if (!requiredMapType) {
     console.log(`  Step 15.8: No map required`);
   }
 
-  // Build optional map blocks to include in Part 2 prompt
+  // Build optional map blocks to include in Part 2 prompt.
+  // Bicycle-facilities: no map image yet (generated after Part 2); pass a text-only placeholder instruction.
+  // All other map types: map is already generated; pass image + placement instruction.
   const mapContentBlocks: any[] = mapBase64 ? [
     {
       type: "text",
@@ -1446,6 +1393,11 @@ ${extractInput}`,
     {
       type:   "image",
       source: { type: "base64", media_type: "image/png", data: mapBase64 },
+    },
+  ] : requiredMapType === "bicycle-facilities" ? [
+    {
+      type: "text",
+      text: "A bicycle network map will be generated and inserted into this document after Section A-2 is complete. In Section A-2, immediately after the closing </table> tag of the qualifying diverse-use destinations table, place this exact placeholder on its own line:\n<img data-map-insert='1'>\nDo not place it anywhere else. The system will replace it with the actual map image.",
     },
   ] : [];
 
@@ -1483,6 +1435,72 @@ ${extractInput}`,
     fullHtml = fullHtml.slice(0, bodyCloseIdx) + "\n" + part2Html + "\n</body></html>";
   } else {
     fullHtml += "\n" + part2Html;
+  }
+
+  // ── Step 15.7b: Extract bicycle destinations from Part 2 HTML ────────────────
+  // The qualifying destinations table (Section A-2) is generated in Part 2.
+  // Extract row number + address from the table header + rows directly.
+  if (requiredMapType === "bicycle-facilities" && project.address) {
+    console.log(`  Step 15.7b: Extracting bicycle destinations from Part 2 HTML...`);
+    const tableDests: Array<{ address: string; label: string }> = [];
+    const seenLabels = new Set<string>();
+
+    // Find Address column index from the thead
+    let addressColIdx = 2; // default: known structure has # | Name | Address | Category | Type | Route
+    const theadMatch = part2Html.match(/<thead[^>]*>([\s\S]*?)<\/thead>/i);
+    if (theadMatch) {
+      const headers: string[] = [];
+      for (const m of theadMatch[1].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)) {
+        headers.push(m[1].replace(/<[^>]+>/g, "").trim().toLowerCase());
+      }
+      const idx = headers.findIndex((h) => h.includes("address"));
+      if (idx >= 0) addressColIdx = idx;
+    }
+    console.log(`    Address column index: ${addressColIdx}`);
+
+    for (const rowMatch of part2Html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+      const cells: string[] = [];
+      for (const m of rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)) {
+        cells.push(m[1].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim());
+      }
+      if (cells.length <= addressColIdx) continue;
+      const label = cells[0].trim();
+      if (!/^\d{1,2}$/.test(label) || seenLabels.has(label)) continue;
+      const n = parseInt(label, 10);
+      if (n < 1 || n > 20) continue;
+      const address = cells[addressColIdx]?.trim();
+      if (address && address.length > 3) {
+        seenLabels.add(label);
+        tableDests.push({ label, address });
+      }
+    }
+    tableDests.sort((a, b) => parseInt(a.label) - parseInt(b.label));
+
+    if (tableDests.length > 0) {
+      locationsForMap = tableDests;
+      console.log(`    ${locationsForMap.length} destination(s) extracted from Part 2 table`);
+      locationsForMap.forEach((d) => console.log(`      ${d.label}: ${d.address}`));
+    } else {
+      console.warn(`    No destinations found in Part 2 table — bicycle map will be skipped`);
+    }
+  }
+
+  // ── Step 15.8b: Generate bicycle map and inject into stitched HTML ────────────
+  if (requiredMapType === "bicycle-facilities" && project.address && locationsForMap.length > 0) {
+    console.log(`  Step 15.8b: Generating bicycle-facilities map (${locationsForMap.length} destination(s))...`);
+    try {
+      const mapResult = await generateMap({
+        originAddress: project.address,
+        destinations:  locationsForMap,
+        mapType:       "bicycle-facilities",
+      });
+      mapBuffer = mapResult.pngBuffer;
+      console.log(`  Step 15.8b: ✓ Bicycle map generated — ${mapBuffer.length} bytes`);
+    } catch (e) {
+      console.warn(`  Step 15.8b: Bicycle map generation failed: ${(e as Error).message} — continuing without map`);
+    }
+  } else if (requiredMapType === "bicycle-facilities") {
+    console.log(`  Step 15.8b: No bicycle destinations found — map skipped`);
   }
 
   // Replace map placeholder with actual image + GTFS annotation (legend + distances table)
