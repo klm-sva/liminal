@@ -1155,8 +1155,38 @@ Rules:
 - If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
 ` : "";
 
+  const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
+  const uploadedDocsInstruction = pdfUploads.length > 0 ? `
+
+${"═".repeat(60)}
+CUSTOMER-UPLOADED DOCUMENTS — READ BEFORE WRITING OUTPUT
+${"═".repeat(60)}
+
+${pdfUploads.length} document file(s) are attached as PDFs:
+${pdfUploads.map((u, i) => `  ${i + 1}. ${u.filename}`).join("\n")}
+
+Read every page of every attached document before generating any output. These are the project team's proprietary documents — drawings, specifications, reports, and other materials that cannot come from any public source.
+
+Extract all evidence relevant to this credit's compliance requirements. Specifically look for:
+- Architectural/floor plan drawings: space dimensions, room labels, occupant counts, accessible routes, bicycle storage, stair locations
+- Site plans: site boundaries, impervious area, open space, exterior features, parking layout
+- Mechanical/HVAC drawings: system type, equipment schedules, refrigerant type, ventilation rates, energy systems
+- Plumbing drawings: fixture types and counts, water reuse systems, irrigation connections
+- Civil/structural drawings: grading, drainage, stormwater features, structural systems
+- Specifications: product data, material certifications (EPD, FSC, low-emitting), recycled content, commissioning scope
+- Reports/models: energy model outputs, commissioning reports, acoustic reports, geotechnical data
+
+Use what you find in these documents to:
+1. Populate form fields with real project values instead of placeholders
+2. Confirm or contradict compliance determinations — if a drawing shows something that affects credit eligibility, use it
+3. Fill gaps in the project data that cannot be retrieved from public sources
+4. Reduce [OWNER TO CONFIRM] items — if the answer is in an uploaded document, use it and do not ask the owner
+
+If a document contains data that conflicts with owner-entered project data, defer to the owner-entered data (the customer has reviewed and confirmed it). Use documents to fill gaps, not to override confirmed owner decisions.` : "";
+
   const systemPrompt = [
     basePrompt,
+    uploadedDocsInstruction,
     transitMapInstruction,
     ...(additionalInstructions
       ? [`\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`]

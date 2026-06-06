@@ -179,7 +179,7 @@ WHAT DRIVES THE OUTPUT — READ FIRST
 ═══════════════════════════════════
 
 1. Read the automation analysis spreadsheet row for this credit and identify:
-   - Column 1: Documents the project team provided (attached)
+   - Column 1: Documents the project team provided (attached as PDFs — read every one before writing output)
    - Column 2: Items retrieved automatically without customer involvement
    - Column 3: Platform reference files — requirements PDF, form link, calculator
    - Column 4: EXACT list of outputs to produce — generate every item, nothing else
