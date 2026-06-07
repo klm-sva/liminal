@@ -1136,40 +1136,18 @@ export async function processOrder(
 
   const basePrompt = CREDIT_SUBMISSION_PROMPT.replace(/\{\{PROGRAM_DISPLAY_NAME\}\}/g, programDisplayName);
 
-  // When GTFS pre-fetch succeeded the pipeline already has verified stop coordinates —
-  // no structured comment needed. When GTFS failed, fall back to the structured comment
-  // so Step 15.7 can attempt to extract locations from Claude's output.
-  const transitMapInstruction = requiredMapType === "transit-stops" && gtfsDataBlock === "" ? `
+  const mapInstruction = requiredMapType ? `
 
 ${"═".repeat(60)}
-TRANSIT MAP — REQUIRED STRUCTURED OUTPUT — NO EXCEPTIONS
+MAP DELIVERABLE — REQUIRED PLACEHOLDER
 ${"═".repeat(60)}
 
-This credit requires a walking-distance map to qualifying transit stops. The map is generated programmatically from stop addresses — it cannot be generated without them.
+This credit requires a map. The map is generated programmatically from the addresses in your output and injected into the document after the Supporting Documentation section is complete.
 
-At the very end of your Part 1 output, after all other content, you MUST append this exact HTML comment:
+In the relevant section, immediately after the closing </table> tag of the primary qualifying locations table, place this exact placeholder on its own line:
+<img data-map-insert='1'>
 
-<!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": [{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},{"address":"STOP_STREET_ADDRESS_OR_LAT_LNG","label":"Stop Name"},...]} -->
-
-Rules:
-- "threshold_miles": the maximum walking distance (in miles) that qualifies for this credit — set this from the credit requirements, not a guess
-- "stops": every stop confirmed as qualifying — only stops with verified Google Maps walking distances within threshold_miles. Do NOT include stops whose distance you estimated or could not verify via web search
-- The "address" field must be a geocodable street address or intersection (e.g. "Main St & 2nd Ave, Chicago, IL") or lat,lng string — NOT a stop name alone
-- The "label" field is the human-readable stop name or route shown on the map
-- Valid JSON only — no trailing commas, no single quotes
-- The pipeline re-measures all distances via Google Maps and filters against threshold_miles — stops you include that are beyond the threshold will be excluded from the map
-- If no stops qualify, append: <!-- QUALIFYING_TRANSIT_STOPS: {"threshold_miles": 0.25, "stops": []} -->
-` : "";
-
-  const bicycleMapInstruction = requiredMapType === "bicycle-facilities" ? `
-
-${"═".repeat(60)}
-BICYCLE FACILITIES MAP — DESTINATION TABLE FORMAT
-${"═".repeat(60)}
-
-This credit requires a map showing bicycle routes from the project to every qualifying diverse use.
-
-Number every qualifying destination sequentially starting at 1 in your table (row 1, row 2, row 3, …). The map will display matching numbered pins — pin 1 corresponds to row 1 in your table. The table must include an "Address" column with a full street address for each destination (e.g. "123 Main St, Gainesville, FL 32601" — not a place name alone).
+Do not place it anywhere else. The system replaces it with the actual map image. Every qualifying location row in the table must include a full street address column so the map can be generated.
 ` : "";
 
   const pdfUploads = uploadBuffers.filter((u) => u.mimeType === "application/pdf");
@@ -1204,8 +1182,7 @@ If a document contains data that conflicts with owner-entered project data, defe
   const systemPrompt = [
     basePrompt,
     uploadedDocsInstruction,
-    transitMapInstruction,
-    bicycleMapInstruction,
+    mapInstruction,
     ...(additionalInstructions
       ? [`\n\n${"═".repeat(60)}\nQA REVIEW INSTRUCTIONS — INCORPORATE THESE CHANGES:\n${"═".repeat(60)}\n${additionalInstructions}`]
       : []),
@@ -1262,159 +1239,17 @@ If a document contains data that conflicts with owner-entered project data, defe
     console.log(`    No form link — skipping Part 1, running single-pass`);
   }
 
-  // ── Step 15.7: Resolve map destinations (non-bicycle credits only) ───────────
-  // Bicycle-facilities destinations live in Part 2 (Supporting Documentation Section A-2).
-  // That HTML does not exist yet. Steps 15.7b / 15.8b run after Part 2 is generated.
-  // Priority order (non-bicycle):
-  //   1. GTFS pre-fetch (Step 13.5) — exact GPS coordinates, Google Maps verified ← preferred (transit only)
-  //   2. Structured transit comment from Claude's Part 1 output (transit fallback)
-  //   3. Haiku extraction from Part 1 HTML (other credits, or structured comment missing)
-  //   4. creditData.claudeRetrieves fallback
+  // All map extraction and generation happens after Part 2 (Steps 15.7b / 15.8b).
+  // Destinations live in the Supporting Documentation section, not Part 1.
   let locationsForMap: Array<{ address: string; label: string }> = [];
-  if (requiredMapType && project.address && requiredMapType !== "bicycle-facilities") {
-
-    // Path 1: GTFS pre-fetch succeeded — use exact GPS coordinates directly, skip all extraction
-    if (gtfsLocationsForMap.length > 0) {
-      locationsForMap = gtfsLocationsForMap;
-      console.log(`  Step 15.7: Using ${locationsForMap.length} GTFS-verified stop coordinate(s) — skipping extraction`);
-    }
-
-    if (locationsForMap.length === 0) {
-    console.log(`  Step 15.7: Extracting locations from Part 1 output...`);
-
-    // Path 2: Parse structured transit stop comment (transit fallback when GTFS unavailable)
-    const transitComment = part1Html.match(/<!--\s*QUALIFYING_TRANSIT_STOPS:\s*(\{[\s\S]*?\})\s*-->/);
-    if (transitComment) {
-      try {
-        const parsed = JSON.parse(transitComment[1]) as {
-          threshold_miles?: number;
-          stops?: Array<{ address: string; label: string }>;
-        };
-        const thresholdMiles = typeof parsed.threshold_miles === "number" ? parsed.threshold_miles : 0.5;
-        const rawStops = (parsed.stops ?? [])
-          .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 0)
-          .slice(0, 8)
-          .map((l, i) => ({ address: l.address.trim(), label: l.label ?? String(i + 1) }));
-
-        console.log(`    Parsed ${rawStops.length} transit stop(s) from structured comment (threshold: ${thresholdMiles} mi)`);
-
-        if (rawStops.length > 0) {
-          // Re-measure actual walking distances via Google Maps — filters out stops
-          // Claude incorrectly included due to estimated (vs. real) distances
-          console.log(`    Re-measuring walking distances via Google Maps...`);
-          const routes = await measureWalkingDistances(project.address!, rawStops);
-          for (const route of routes) {
-            const actualMi = route.distanceMiles;
-            const qualifies = actualMi <= thresholdMiles;
-            console.log(`      ${route.destination.label}: ${actualMi.toFixed(2)} mi (threshold ${thresholdMiles} mi) — ${qualifies ? "INCLUDED" : "EXCLUDED"}`);
-            if (qualifies) {
-              locationsForMap.push(route.destination);
-            }
-          }
-          console.log(`    ${locationsForMap.length} of ${rawStops.length} stop(s) confirmed within threshold`);
-        }
-      } catch (err) {
-        console.warn(`  Step 15.7: Transit stop comment parse/measure failed: ${(err as Error).message} — falling back to Haiku`);
-      }
-    }
-
-
-    // Path 3: Haiku extraction (non-transit credits, or structured comment missing/malformed)
-    if (locationsForMap.length === 0) {
-      try {
-        const plainText  = part1Html.replace(/<[^>]+>/g, " ").slice(0, 15000);
-        const locExtract = await (client.messages.create as any)({
-          model:      "claude-haiku-4-5-20251001",
-          max_tokens: 512,
-          messages:   [{
-            role:    "user",
-            content: `The project is located at: ${project.address}
-
-Extract up to 2 specific named locations (street addresses, transit stops, stations, intersections, named facilities) from the text below that meet BOTH of the following conditions:
-1. They are documented as qualifying for points in this credit — meaning they appear in a compliance table, point calculation, or qualifying items list, not merely mentioned as context or examples.
-2. They are in the same city or immediate surrounding area as the project — not in other cities, regions, or states.
-
-Return ONLY a valid JSON array of strings. If none found return [].
-
-${plainText}`,
-          }],
-        });
-        const locText   = locExtract.content[0]?.text ?? "[]";
-        const jsonMatch = locText.match(/\[[\s\S]*?\]/);
-        if (jsonMatch) {
-          const raw: unknown[] = JSON.parse(jsonMatch[0]);
-          locationsForMap = (raw as unknown[])
-            .filter((l): l is string => typeof l === "string" && l.trim().length > 0)
-            .slice(0, 2)
-            .map((addr, i) => ({ address: addr, label: String(i + 1) }));
-        }
-        console.log(`    Extracted ${locationsForMap.length} location(s) via Haiku`);
-      } catch (err) {
-        console.warn(`  Step 15.7: Haiku extraction failed: ${(err as Error).message} — using claudeRetrieves fallback`);
-      }
-    }
-
-    // Path 4: claudeRetrieves fallback
-    if (locationsForMap.length === 0) {
-      locationsForMap = creditData.claudeRetrieves
-        .slice(0, 2)
-        .map((r, i) => ({ address: r, label: String(i + 1) }));
-      console.log(`    Using ${locationsForMap.length} claudeRetrieves item(s) as map destinations`);
-    }
-    } // end: locationsForMap.length === 0 (GTFS bypass)
-  }
-
-  // ── Step 15.8: Generate map before Part 2 so it can be embedded in output ──
-  // Bicycle-facilities map is generated after Part 2 in Step 15.8b (destinations are in Part 2 HTML).
   let mapBuffer: Buffer | null = null;
-  let mapBase64: string | null = null;
-  if (requiredMapType && requiredMapType !== "bicycle-facilities" && project.address && locationsForMap.length > 0) {
-    console.log(`  Step 15.8: Generating ${requiredMapType} map (${locationsForMap.length} destination(s))...`);
-    try {
-      const mapResult = await generateMap({
-        originAddress: project.address,
-        destinations:  locationsForMap,
-        mapType:       requiredMapType,
-      });
-      mapBuffer = mapResult.pngBuffer;
-      mapBase64 = mapBuffer.toString("base64");
-      console.log(`  Step 15.8: ✓ Map generated — ${mapBuffer.length} bytes`);
-    } catch (e) {
-      console.warn(`  Step 15.8: Map generation failed: ${(e as Error).message} — continuing without map`);
-    }
-  } else if (requiredMapType && requiredMapType !== "bicycle-facilities") {
-    console.log(`  Step 15.8: Map required but no destinations found — skipping`);
-  } else if (!requiredMapType) {
-    console.log(`  Step 15.8: No map required`);
-  }
 
-  // Build optional map blocks to include in Part 2 prompt.
-  // Bicycle-facilities: no map image yet (generated after Part 2); pass a text-only placeholder instruction.
-  // All other map types: map is already generated; pass image + placement instruction.
-  const mapContentBlocks: any[] = mapBase64 ? [
-    {
-      type: "text",
-      text: "A walking-distance map has been generated for this project (image below). In Part 2, place exactly one <img data-map-insert='1'> element at the most relevant location (walking distances section, transit access section, or site context section). The system will replace this placeholder with the actual map image.",
-    },
-    {
-      type:   "image",
-      source: { type: "base64", media_type: "image/png", data: mapBase64 },
-    },
-  ] : requiredMapType === "bicycle-facilities" ? [
-    {
-      type: "text",
-      text: "A bicycle network map will be generated and inserted into this document after Section A-2 is complete. In Section A-2, immediately after the closing </table> tag of the qualifying diverse-use destinations table, place this exact placeholder on its own line:\n<img data-map-insert='1'>\nDo not place it anywhere else. The system will replace it with the actual map image.",
-    },
-  ] : [];
+  // All maps are generated after Part 2 (Step 15.8b). Pass only the status block.
+  const mapContentBlocks: any[] = [];
 
-  // MAP_STATUS: computed here where mapBuffer is in scope (after Step 15.8).
-  // Non-bicycle: we know if the map was generated. Bicycle: generated after Part 2, mark PENDING.
+  // MAP_STATUS: always PENDING here — map is generated after Part 2 in Step 15.8b.
   const mapStatusBlock = requiredMapType
-    ? requiredMapType === "bicycle-facilities"
-      ? "MAP_STATUS: PENDING — A bicycle facilities map will be generated and inserted into this document after the destinations table. In the checklist, list the map as ✓ PROVIDED."
-      : mapBuffer
-        ? `MAP_STATUS: GENERATED — A ${requiredMapType} map has been generated and is embedded in this document. In the checklist, list the map as ✓ PROVIDED.`
-        : `MAP_STATUS: NOT GENERATED — Map generation failed or was skipped. In the checklist, do NOT mark any map as provided. Mark it as ⚠ NOT INCLUDED — map could not be generated for this run.`
+    ? "MAP_STATUS: PENDING — A map will be generated and inserted at the <img data-map-insert='1'> placeholder after this section is complete. In the checklist, list the map as ✓ PROVIDED."
     : "";
 
   const part2Response = await (client.messages.create as any)({
@@ -1454,12 +1289,18 @@ ${plainText}`,
     fullHtml += "\n" + part2Html;
   }
 
-  // ── Step 15.7b: Extract bicycle destinations from Part 2 via Haiku ──────────
-  // Haiku reads the plain-text version of Part 2 and pulls every destination
-  // address from the qualifying diverse-use table — same mechanism as Step 15.7
-  // but pointed at Part 2 (where the table lives) with no cap on count.
-  if (requiredMapType === "bicycle-facilities" && project.address) {
-    console.log(`  Step 15.7b: Extracting bicycle destinations from Part 2 via Haiku...`);
+  // ── Step 15.7b: Extract map destinations from Part 2 via Haiku ───────────────
+  // Haiku reads the plain-text version of Part 2 and pulls every qualifying location
+  // address from the relevant table — works for all map types.
+  // GTFS fast path: transit credits that completed a GTFS lookup already have verified
+  // stop coordinates — use them directly instead of re-extracting from Part 2.
+  if (requiredMapType && project.address && gtfsLocationsForMap.length > 0) {
+    locationsForMap = gtfsLocationsForMap;
+    console.log(`  Step 15.7b: Using ${locationsForMap.length} GTFS-verified stop(s) — skipping Haiku extraction`);
+  }
+
+  if (requiredMapType && project.address && locationsForMap.length === 0) {
+    console.log(`  Step 15.7b: Extracting ${requiredMapType} locations from Part 2 via Haiku...`);
     try {
       const plainText = part2Html
         .replace(/<[^>]+>/g, " ")
@@ -1471,15 +1312,20 @@ ${plainText}`,
         max_tokens: 1024,
         messages:   [{
           role:    "user",
-          content: `Extract ALL qualifying destination entries from the numbered destinations table in the text below.
+          content: `The project is at: ${project.address}
+Map type: ${requiredMapType}
+
+Extract ALL qualifying location entries that have a full street address from the text below. These are locations listed in a compliance table as qualifying for this credit (transit stops, bicycle destinations, amenities, etc.).
+
 Return ONLY a valid JSON array of objects:
 [{"label":"1","address":"full street address"},{"label":"2","address":"full street address"},...]
 
 Rules:
-- Include every numbered row
-- Use the full street address exactly as it appears
-- label is the row number as a string
-- Return [] if no table is found
+- Include every qualifying location that has a real street address
+- Use the full street address exactly as it appears (number, street, city, state)
+- label is the row number or name as a string
+- Do NOT include entries that have only a place name with no street address
+- Return [] if no qualifying addresses found
 
 ${plainText}`,
         }],
@@ -1489,37 +1335,37 @@ ${plainText}`,
       if (jsonMatch) {
         const raw = JSON.parse(jsonMatch[0]) as Array<{ label: string; address: string }>;
         const extracted = raw
-          .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 3)
+          .filter((l) => l && typeof l.address === "string" && l.address.trim().length > 5)
           .map((l) => ({ address: l.address.trim(), label: String(l.label ?? "") }));
         if (extracted.length > 0) {
           locationsForMap = extracted;
-          console.log(`    ${locationsForMap.length} destination(s) extracted from Part 2`);
+          console.log(`    ${locationsForMap.length} location(s) extracted from Part 2`);
           locationsForMap.forEach((d) => console.log(`      ${d.label}: ${d.address}`));
         } else {
-          console.warn(`    Haiku returned no destinations — bicycle map will be skipped`);
+          console.warn(`    Haiku returned no locations — map will be skipped`);
         }
       }
     } catch (err) {
-      console.warn(`  Step 15.7b: Haiku extraction failed: ${(err as Error).message} — bicycle map skipped`);
+      console.warn(`  Step 15.7b: Haiku extraction failed: ${(err as Error).message} — map skipped`);
     }
   }
 
-  // ── Step 15.8b: Generate bicycle map and inject into stitched HTML ────────────
-  if (requiredMapType === "bicycle-facilities" && project.address && locationsForMap.length > 0) {
-    console.log(`  Step 15.8b: Generating bicycle-facilities map (${locationsForMap.length} destination(s))...`);
+  // ── Step 15.8b: Generate map and inject into stitched HTML ───────────────────
+  if (requiredMapType && project.address && locationsForMap.length > 0) {
+    console.log(`  Step 15.8b: Generating ${requiredMapType} map (${locationsForMap.length} destination(s))...`);
     try {
       const mapResult = await generateMap({
         originAddress: project.address,
         destinations:  locationsForMap,
-        mapType:       "bicycle-facilities",
+        mapType:       requiredMapType,
       });
       mapBuffer = mapResult.pngBuffer;
-      console.log(`  Step 15.8b: ✓ Bicycle map generated — ${mapBuffer.length} bytes`);
+      console.log(`  Step 15.8b: ✓ Map generated — ${mapBuffer.length} bytes`);
     } catch (e) {
-      console.warn(`  Step 15.8b: Bicycle map generation failed: ${(e as Error).message} — continuing without map`);
+      console.warn(`  Step 15.8b: Map generation failed: ${(e as Error).message} — continuing without map`);
     }
-  } else if (requiredMapType === "bicycle-facilities") {
-    console.log(`  Step 15.8b: No bicycle destinations found — map skipped`);
+  } else if (requiredMapType) {
+    console.log(`  Step 15.8b: No locations found — map skipped`);
   }
 
   // Replace map placeholder with actual image + GTFS annotation (legend + distances table)
