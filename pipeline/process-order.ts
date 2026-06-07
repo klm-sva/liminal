@@ -1117,25 +1117,12 @@ export async function processOrder(
     "Generate PART 1 — THE ONLINE FORM SECTION for this credit as instructed.",
   ].join("\n");
 
-  // MAP_STATUS tells Claude exactly what happened with map generation so the
-  // checklist reflects reality. Non-bicycle maps are generated before Part 2,
-  // so we know the result. Bicycle maps are generated after Part 2 — we pass
-  // PENDING and expect success; if it fails the map placeholder is simply absent.
-  const mapStatusBlock = requiredMapType
-    ? requiredMapType === "bicycle-facilities"
-      ? "MAP_STATUS: PENDING — A bicycle facilities map will be generated and inserted into this document after the destinations table. In the checklist, list the map as ✓ PROVIDED."
-      : mapBuffer
-        ? `MAP_STATUS: GENERATED — A ${requiredMapType} map has been generated and is embedded in this document. In the checklist, list the map as ✓ PROVIDED.`
-        : `MAP_STATUS: NOT GENERATED — Map generation failed or was skipped. In the checklist, do NOT mark any map as provided. Mark it as ⚠ NOT INCLUDED — map could not be generated for this run.`
-    : "";
-
   const userPromptPart2 = [
     creditDataBlock,
     "",
     projectDataBlock,
     ...(gtfsDataBlock ? ["", gtfsDataBlock] : []),
     ...(compliancePathBlock ? ["", compliancePathBlock] : []),
-    ...(mapStatusBlock ? ["", mapStatusBlock] : []),
     "",
     "Generate the Supporting Project Documentation section (Section A: Retrieved Data, Section B: Generated Outputs) and the Complete Submission Checklist for this credit as instructed. Both are required. Do not omit either.",
   ].join("\n");
@@ -1420,6 +1407,16 @@ ${plainText}`,
     },
   ] : [];
 
+  // MAP_STATUS: computed here where mapBuffer is in scope (after Step 15.8).
+  // Non-bicycle: we know if the map was generated. Bicycle: generated after Part 2, mark PENDING.
+  const mapStatusBlock = requiredMapType
+    ? requiredMapType === "bicycle-facilities"
+      ? "MAP_STATUS: PENDING — A bicycle facilities map will be generated and inserted into this document after the destinations table. In the checklist, list the map as ✓ PROVIDED."
+      : mapBuffer
+        ? `MAP_STATUS: GENERATED — A ${requiredMapType} map has been generated and is embedded in this document. In the checklist, list the map as ✓ PROVIDED.`
+        : `MAP_STATUS: NOT GENERATED — Map generation failed or was skipped. In the checklist, do NOT mark any map as provided. Mark it as ⚠ NOT INCLUDED — map could not be generated for this run.`
+    : "";
+
   const part2Response = await (client.messages.create as any)({
     model:       "claude-sonnet-4-6",
     max_tokens:  64000,
@@ -1432,6 +1429,7 @@ ${plainText}`,
         ...refBlock,
         ...(hasForm && part1Html ? [{ type: "text", text: `PART 1 OUTPUT (completed — do not regenerate):\n${part1Html}` }] : []),
         ...mapContentBlocks,
+        ...(mapStatusBlock ? [{ type: "text", text: mapStatusBlock }] : []),
         reqDocBlock,
         ...appendixDocBlocks,
         ...uploadDocBlocks,
