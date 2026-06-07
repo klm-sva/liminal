@@ -345,9 +345,18 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
   // Routing is attempted in parallel for polyline overlays only; a failed route
   // never removes a destination from the map.
   if (isBicycle) {
-    // 1. Geocode origin
-    const originCoord = await geocodeForMap(request.originAddress);
-    if (!originCoord) throw new Error(`Could not geocode project address: ${request.originAddress}`);
+    // 1. Geocode origin — try full address, then without zip, then derive from destinations
+    let originCoord = await geocodeForMap(request.originAddress);
+    if (!originCoord) {
+      const noZip = request.originAddress.replace(/,?\s*\d{5}(-\d{4})?$/, "").trim();
+      if (noZip !== request.originAddress) {
+        console.warn(`  [map] Origin geocode failed — retrying without zip: "${noZip}"`);
+        originCoord = await geocodeForMap(noZip);
+      }
+    }
+    if (!originCoord) {
+      console.warn(`  [map] Origin geocode still failed — will derive center from destinations`);
+    }
 
     // 2. Geocode every destination — highly reliable, independent of routing
     const geocodedDests: GeocodedDestination[] = [];
@@ -374,7 +383,14 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
     }
     console.log(`  ${routes.length}/${request.destinations.length} route polyline(s) from Directions API`);
 
-    // 4. Bounding box from geocoded destination coords + origin + any route points
+    // 4. Bounding box from geocoded destination coords + origin (if available) + any route points
+    // If origin couldn't be geocoded, derive it from the centroid of destinations
+    if (!originCoord) {
+      const avgLat = geocodedDests.reduce((s, g) => s + g.coord.lat, 0) / geocodedDests.length;
+      const avgLng = geocodedDests.reduce((s, g) => s + g.coord.lng, 0) / geocodedDests.length;
+      originCoord = { lat: avgLat, lng: avgLng };
+      console.warn(`  [map] Using destination centroid as origin: ${avgLat.toFixed(4)}, ${avgLng.toFixed(4)}`);
+    }
     const allPoints: Array<{ lat: number; lng: number }> = [
       originCoord,
       ...geocodedDests.map((g) => g.coord),

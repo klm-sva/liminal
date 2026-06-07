@@ -2265,8 +2265,17 @@ async function generateMap(request) {
   console.log(`[map-generation] ${request.mapType} \u2014 ${request.destinations.length} destination(s)`);
   const isBicycle = request.mapType === "bicycle-facilities";
   if (isBicycle) {
-    const originCoord = await geocodeForMap(request.originAddress);
-    if (!originCoord) throw new Error(`Could not geocode project address: ${request.originAddress}`);
+    let originCoord = await geocodeForMap(request.originAddress);
+    if (!originCoord) {
+      const noZip = request.originAddress.replace(/,?\s*\d{5}(-\d{4})?$/, "").trim();
+      if (noZip !== request.originAddress) {
+        console.warn(`  [map] Origin geocode failed \u2014 retrying without zip: "${noZip}"`);
+        originCoord = await geocodeForMap(noZip);
+      }
+    }
+    if (!originCoord) {
+      console.warn(`  [map] Origin geocode still failed \u2014 will derive center from destinations`);
+    }
     const geocodedDests = [];
     for (const dest of request.destinations) {
       const coord = await geocodeForMap(dest.address);
@@ -2288,6 +2297,12 @@ async function generateMap(request) {
       if (route) routes2.push(route);
     }
     console.log(`  ${routes2.length}/${request.destinations.length} route polyline(s) from Directions API`);
+    if (!originCoord) {
+      const avgLat = geocodedDests.reduce((s, g) => s + g.coord.lat, 0) / geocodedDests.length;
+      const avgLng = geocodedDests.reduce((s, g) => s + g.coord.lng, 0) / geocodedDests.length;
+      originCoord = { lat: avgLat, lng: avgLng };
+      console.warn(`  [map] Using destination centroid as origin: ${avgLat.toFixed(4)}, ${avgLng.toFixed(4)}`);
+    }
     const allPoints2 = [
       originCoord,
       ...geocodedDests.map((g) => g.coord),
