@@ -3489,6 +3489,8 @@ If you find yourself writing any of these \u2014 stop immediately and delete wha
 
 Your output begins with the first field of the form or the first word of the first section heading. Nothing before that. Nothing after the last deliverable item. No preamble. No summary. No narration. Ever.
 
+Section headings must never be prefixed with "Part 1", "Part 2", "Part 3", or any numbered part label. Use the content name directly \u2014 "Supporting Project Documentation", "Complete Submission Checklist", etc.
+
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
 You are a building certification expert and certification documentation specialist.
@@ -3692,8 +3694,10 @@ List every item from Column 2 (Supporting Data). For each item:
 
 Also list every deliverable from Column 4:
   - Item name
-  - Badge: \u2713 PROVIDED
+  - Badge: \u2713 PROVIDED (or \u26A0 NOT INCLUDED if the item was not generated \u2014 see MAP_STATUS below for maps)
   - Reference: "See [Section Name] in this document"
+
+For any map deliverable in Column 4: use the MAP_STATUS value provided in the prompt to determine the badge. If MAP_STATUS is GENERATED or PENDING, use \u2713 PROVIDED. If MAP_STATUS is NOT GENERATED, use \u26A0 NOT INCLUDED and do not reference a section. If no MAP_STATUS was provided, do not list a map in the checklist at all.
 
 GROUP B \u2014 REQUIRED FROM PROJECT TEAM
 List every item from Column 1 (Project Team Must Upload). Every item. None may be omitted.
@@ -4914,14 +4918,16 @@ async function processOrder(orderId, runId, additionalInstructions) {
     "",
     "Generate PART 1 \u2014 THE ONLINE FORM SECTION for this credit as instructed."
   ].join("\n");
+  const mapStatusBlock = requiredMapType ? requiredMapType === "bicycle-facilities" ? "MAP_STATUS: PENDING \u2014 A bicycle facilities map will be generated and inserted into this document after the destinations table. In the checklist, list the map as \u2713 PROVIDED." : mapBuffer ? `MAP_STATUS: GENERATED \u2014 A ${requiredMapType} map has been generated and is embedded in this document. In the checklist, list the map as \u2713 PROVIDED.` : `MAP_STATUS: NOT GENERATED \u2014 Map generation failed or was skipped. In the checklist, do NOT mark any map as provided. Mark it as \u26A0 NOT INCLUDED \u2014 map could not be generated for this run.` : "";
   const userPromptPart2 = [
     creditDataBlock,
     "",
     projectDataBlock,
     ...gtfsDataBlock ? ["", gtfsDataBlock] : [],
     ...compliancePathBlock ? ["", compliancePathBlock] : [],
+    ...mapStatusBlock ? ["", mapStatusBlock] : [],
     "",
-    "Generate PART 2 \u2014 SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 \u2014 COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either."
+    "Generate the Supporting Project Documentation section (Section A: Retrieved Data, Section B: Generated Outputs) and the Complete Submission Checklist for this credit as instructed. Both are required. Do not omit either."
   ].join("\n");
   const PROGRAM_DISPLAY_NAMES = {
     leed_bdc_v41: "LEED v4.1 BD+C",

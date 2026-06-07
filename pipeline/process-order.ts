@@ -1117,14 +1117,27 @@ export async function processOrder(
     "Generate PART 1 — THE ONLINE FORM SECTION for this credit as instructed.",
   ].join("\n");
 
+  // MAP_STATUS tells Claude exactly what happened with map generation so the
+  // checklist reflects reality. Non-bicycle maps are generated before Part 2,
+  // so we know the result. Bicycle maps are generated after Part 2 — we pass
+  // PENDING and expect success; if it fails the map placeholder is simply absent.
+  const mapStatusBlock = requiredMapType
+    ? requiredMapType === "bicycle-facilities"
+      ? "MAP_STATUS: PENDING — A bicycle facilities map will be generated and inserted into this document after the destinations table. In the checklist, list the map as ✓ PROVIDED."
+      : mapBuffer
+        ? `MAP_STATUS: GENERATED — A ${requiredMapType} map has been generated and is embedded in this document. In the checklist, list the map as ✓ PROVIDED.`
+        : `MAP_STATUS: NOT GENERATED — Map generation failed or was skipped. In the checklist, do NOT mark any map as provided. Mark it as ⚠ NOT INCLUDED — map could not be generated for this run.`
+    : "";
+
   const userPromptPart2 = [
     creditDataBlock,
     "",
     projectDataBlock,
     ...(gtfsDataBlock ? ["", gtfsDataBlock] : []),
     ...(compliancePathBlock ? ["", compliancePathBlock] : []),
+    ...(mapStatusBlock ? ["", mapStatusBlock] : []),
     "",
-    "Generate PART 2 — SUPPORTING PROJECT DOCUMENTATION (Section A: Retrieved Data, Section B: Generated Outputs) AND PART 3 — COMPLETE SUBMISSION CHECKLIST for this credit as instructed. Both are required. Do not omit either.",
+    "Generate the Supporting Project Documentation section (Section A: Retrieved Data, Section B: Generated Outputs) and the Complete Submission Checklist for this credit as instructed. Both are required. Do not omit either.",
   ].join("\n");
 
   const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
