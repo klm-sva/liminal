@@ -341,61 +341,26 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
   const isBicycle = request.mapType === "bicycle-facilities";
 
   // ── Bicycle-facilities path ──────────────────────────────────────────────────
-  // Marker placement is driven by the Geocoding API, not the Directions API.
-  // Routing is attempted in parallel for polyline overlays only; a failed route
-  // never removes a destination from the map.
+  // Same approach as transit: Directions API for routing + marker coordinates.
+  // Try bicycling mode first, fall back to walking. No Geocoding API needed.
   if (isBicycle) {
-    // 1. Geocode origin — try full address, then without zip, then derive from destinations
-    let originCoord = await geocodeForMap(request.originAddress);
-    if (!originCoord) {
-      const noZip = request.originAddress.replace(/,?\s*\d{5}(-\d{4})?$/, "").trim();
-      if (noZip !== request.originAddress) {
-        console.warn(`  [map] Origin geocode failed — retrying without zip: "${noZip}"`);
-        originCoord = await geocodeForMap(noZip);
-      }
-    }
-    if (!originCoord) {
-      console.warn(`  [map] Origin geocode still failed — will derive center from destinations`);
-    }
-
-    // 2. Geocode every destination — highly reliable, independent of routing
-    const geocodedDests: GeocodedDestination[] = [];
-    for (const dest of request.destinations) {
-      const coord = await geocodeForMap(dest.address);
-      if (coord) {
-        geocodedDests.push({ dest, coord });
-      } else {
-        console.warn(`  ⚠ Could not geocode destination ${dest.label}: ${dest.address}`);
-      }
-    }
-    if (geocodedDests.length === 0) throw new Error(`No destinations could be geocoded`);
-    console.log(`  Geocoded ${geocodedDests.length}/${request.destinations.length} destination(s)`);
-
-    // 3. Attempt Directions API for polylines (best-effort, bicycling → walking fallback)
     const routes: WalkingRoute[] = [];
     for (const dest of request.destinations) {
       let route = await getRoute(request.originAddress, dest, "bicycling");
       if (!route) {
         route = await getRoute(request.originAddress, dest, "walking");
-        if (route) console.log(`    ↳ ${dest.label}: bicycling route unavailable — using walking route for polyline`);
+        if (route) console.log(`    ↳ ${dest.label}: bicycling unavailable — using walking route`);
       }
       if (route) routes.push(route);
+      else console.warn(`  ⚠ No route for destination ${dest.label}: ${dest.address}`);
     }
-    console.log(`  ${routes.length}/${request.destinations.length} route polyline(s) from Directions API`);
+    if (routes.length === 0) throw new Error(`No routes returned from Directions API for any destination`);
+    console.log(`  ${routes.length}/${request.destinations.length} destination(s) routed`);
 
-    // 4. Bounding box from geocoded destination coords + origin (if available) + any route points
-    // If origin couldn't be geocoded, derive it from the centroid of destinations
-    if (!originCoord) {
-      const avgLat = geocodedDests.reduce((s, g) => s + g.coord.lat, 0) / geocodedDests.length;
-      const avgLng = geocodedDests.reduce((s, g) => s + g.coord.lng, 0) / geocodedDests.length;
-      originCoord = { lat: avgLat, lng: avgLng };
-      console.warn(`  [map] Using destination centroid as origin: ${avgLat.toFixed(4)}, ${avgLng.toFixed(4)}`);
-    }
-    const allPoints: Array<{ lat: number; lng: number }> = [
-      originCoord,
-      ...geocodedDests.map((g) => g.coord),
-      ...routes.flatMap((r) => r.polylinePoints),
-    ];
+    const allPoints = routes.flatMap((r) => r.polylinePoints);
+    allPoints.push(routes[0].originLatLng);
+    routes.forEach((r) => allPoints.push(r.destLatLng));
+
     const lats   = allPoints.map((p) => p.lat);
     const lngs   = allPoints.map((p) => p.lng);
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
@@ -408,18 +373,10 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
       { lat: maxLat + latPad, lng: minLng - lngPad },
       { lat: maxLat + latPad, lng: maxLng + lngPad },
     ];
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
-    console.log(`  Center: ${centerLat.toFixed(4)}, ${centerLng.toFixed(4)}`);
 
-    // 5. Fetch map — markers from geocoding, polylines from routing
-    console.log(`  Fetching bicycle map: ${geocodedDests.length} marker(s), ${routes.length} polyline(s)...`);
-    const mapImage = await fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes, visibleCorners, WIDTH, HEIGHT);
-
-    // 6. Citation overlay
+    const mapImage = await fetchMapWithRoutes(routes, visibleCorners, WIDTH, HEIGHT);
     const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const citationText = `Source: Google Maps — Bicycling distances along bicycle network routes.\n${today}`;
-    const pngBuffer = await addCitationOverlay(mapImage, citationText, WIDTH, HEIGHT);
+    const pngBuffer = await addCitationOverlay(mapImage, `Source: Google Maps — Bicycle network routes.\n${today}`, WIDTH, HEIGHT);
 
     if (request.outputPath) {
       const { mkdirSync, writeFileSync } = await import("fs");
@@ -428,9 +385,7 @@ export async function generateMap(request: MapRequest): Promise<MapResult> {
       console.log(`  ✓ Map saved: ${request.outputPath}`);
     }
 
-    console.log(`  ✓ Bicycle map generated (${Math.round(pngBuffer.length / 1024)} KB PNG, ${geocodedDests.length} pin(s))`);
-    geocodedDests.forEach(({ dest }) => console.log(`    • Pin ${dest.label}: ${dest.address}`));
-
+    console.log(`  ✓ Bicycle map generated (${Math.round(pngBuffer.length / 1024)} KB PNG, ${routes.length} pin(s))`);
     return { pngBuffer, routes, mapType: request.mapType };
   }
 

@@ -2162,55 +2162,6 @@ async function measureWalkingDistances(originAddress, destinations) {
   }
   return routes;
 }
-async function geocodeForMap(address) {
-  const key = MAPS_API_KEY();
-  try {
-    const res = await axiosGetWithRetry(
-      "https://maps.googleapis.com/maps/api/geocode/json",
-      { params: { address, key } },
-      1e4,
-      `Geocode: ${address.slice(0, 60)}`
-    );
-    const data2 = res.data;
-    if (data2.status === "OK" && data2.results?.[0]?.geometry?.location) {
-      const { lat, lng } = data2.results[0].geometry.location;
-      return { lat, lng };
-    }
-    console.warn(`  [geocode] No result for "${address}" \u2014 ${data2.status}`);
-    return null;
-  } catch (err) {
-    console.warn(`  [geocode] Failed: ${err.message}`);
-    return null;
-  }
-}
-async function fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes, visibleCorners, imgWidth, imgHeight) {
-  const key = MAPS_API_KEY();
-  const scale2 = 2;
-  const base = "https://maps.googleapis.com/maps/api/staticmap";
-  const params = [
-    `size=${imgWidth / scale2}x${imgHeight / scale2}`,
-    `scale=${scale2}`,
-    `maptype=roadmap`,
-    `style=feature:poi|visibility:off`,
-    `style=feature:transit|element:labels|visibility:off`,
-    `key=${key}`
-  ];
-  for (const pt of visibleCorners) {
-    params.push(`visible=${pt.lat},${pt.lng}`);
-  }
-  params.push(`markers=color:0x2b4044|size:mid|label:S|${originCoord.lat},${originCoord.lng}`);
-  for (const { dest, coord } of geocodedDests) {
-    const n = parseInt(dest.label, 10);
-    const pinChar = !isNaN(n) && n >= 10 ? String.fromCharCode(65 + n - 10) : dest.label.slice(0, 1);
-    params.push(`markers=color:0x327cb9|size:mid|label:${pinChar}|${coord.lat},${coord.lng}`);
-  }
-  for (const route of routes) {
-    params.push(`path=color:0x327cb9CC|weight:4|enc:${encodeURIComponent(route.encodedPolyline)}`);
-  }
-  const url = `${base}?${params.join("&")}`;
-  const res = await axiosGetWithRetry(url, { responseType: "arraybuffer" }, 1e4, "Static Maps API");
-  return Buffer.from(res.data);
-}
 async function fetchMapWithRoutes(routes, visibleCorners, imgWidth, imgHeight) {
   const key = MAPS_API_KEY();
   const scale2 = 2;
@@ -2265,49 +2216,21 @@ async function generateMap(request) {
   console.log(`[map-generation] ${request.mapType} \u2014 ${request.destinations.length} destination(s)`);
   const isBicycle = request.mapType === "bicycle-facilities";
   if (isBicycle) {
-    let originCoord = await geocodeForMap(request.originAddress);
-    if (!originCoord) {
-      const noZip = request.originAddress.replace(/,?\s*\d{5}(-\d{4})?$/, "").trim();
-      if (noZip !== request.originAddress) {
-        console.warn(`  [map] Origin geocode failed \u2014 retrying without zip: "${noZip}"`);
-        originCoord = await geocodeForMap(noZip);
-      }
-    }
-    if (!originCoord) {
-      console.warn(`  [map] Origin geocode still failed \u2014 will derive center from destinations`);
-    }
-    const geocodedDests = [];
-    for (const dest of request.destinations) {
-      const coord = await geocodeForMap(dest.address);
-      if (coord) {
-        geocodedDests.push({ dest, coord });
-      } else {
-        console.warn(`  \u26A0 Could not geocode destination ${dest.label}: ${dest.address}`);
-      }
-    }
-    if (geocodedDests.length === 0) throw new Error(`No destinations could be geocoded`);
-    console.log(`  Geocoded ${geocodedDests.length}/${request.destinations.length} destination(s)`);
     const routes2 = [];
     for (const dest of request.destinations) {
       let route = await getRoute(request.originAddress, dest, "bicycling");
       if (!route) {
         route = await getRoute(request.originAddress, dest, "walking");
-        if (route) console.log(`    \u21B3 ${dest.label}: bicycling route unavailable \u2014 using walking route for polyline`);
+        if (route) console.log(`    \u21B3 ${dest.label}: bicycling unavailable \u2014 using walking route`);
       }
       if (route) routes2.push(route);
+      else console.warn(`  \u26A0 No route for destination ${dest.label}: ${dest.address}`);
     }
-    console.log(`  ${routes2.length}/${request.destinations.length} route polyline(s) from Directions API`);
-    if (!originCoord) {
-      const avgLat = geocodedDests.reduce((s, g) => s + g.coord.lat, 0) / geocodedDests.length;
-      const avgLng = geocodedDests.reduce((s, g) => s + g.coord.lng, 0) / geocodedDests.length;
-      originCoord = { lat: avgLat, lng: avgLng };
-      console.warn(`  [map] Using destination centroid as origin: ${avgLat.toFixed(4)}, ${avgLng.toFixed(4)}`);
-    }
-    const allPoints2 = [
-      originCoord,
-      ...geocodedDests.map((g) => g.coord),
-      ...routes2.flatMap((r) => r.polylinePoints)
-    ];
+    if (routes2.length === 0) throw new Error(`No routes returned from Directions API for any destination`);
+    console.log(`  ${routes2.length}/${request.destinations.length} destination(s) routed`);
+    const allPoints2 = routes2.flatMap((r) => r.polylinePoints);
+    allPoints2.push(routes2[0].originLatLng);
+    routes2.forEach((r) => allPoints2.push(r.destLatLng));
     const lats2 = allPoints2.map((p) => p.lat);
     const lngs2 = allPoints2.map((p) => p.lng);
     const minLat2 = Math.min(...lats2), maxLat2 = Math.max(...lats2);
@@ -2320,23 +2243,17 @@ async function generateMap(request) {
       { lat: maxLat2 + latPad2, lng: minLng2 - lngPad2 },
       { lat: maxLat2 + latPad2, lng: maxLng2 + lngPad2 }
     ];
-    const centerLat2 = (minLat2 + maxLat2) / 2;
-    const centerLng2 = (minLng2 + maxLng2) / 2;
-    console.log(`  Center: ${centerLat2.toFixed(4)}, ${centerLng2.toFixed(4)}`);
-    console.log(`  Fetching bicycle map: ${geocodedDests.length} marker(s), ${routes2.length} polyline(s)...`);
-    const mapImage2 = await fetchMapWithGeocodedMarkers(geocodedDests, originCoord, routes2, visibleCorners2, WIDTH, HEIGHT);
+    const mapImage2 = await fetchMapWithRoutes(routes2, visibleCorners2, WIDTH, HEIGHT);
     const today2 = (/* @__PURE__ */ new Date()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-    const citationText2 = `Source: Google Maps \u2014 Bicycling distances along bicycle network routes.
-${today2}`;
-    const pngBuffer2 = await addCitationOverlay(mapImage2, citationText2, WIDTH, HEIGHT);
+    const pngBuffer2 = await addCitationOverlay(mapImage2, `Source: Google Maps \u2014 Bicycle network routes.
+${today2}`, WIDTH, HEIGHT);
     if (request.outputPath) {
       const { mkdirSync: mkdirSync2, writeFileSync: writeFileSync5 } = await import("fs");
       mkdirSync2(path5.dirname(request.outputPath), { recursive: true });
       writeFileSync5(request.outputPath, pngBuffer2);
       console.log(`  \u2713 Map saved: ${request.outputPath}`);
     }
-    console.log(`  \u2713 Bicycle map generated (${Math.round(pngBuffer2.length / 1024)} KB PNG, ${geocodedDests.length} pin(s))`);
-    geocodedDests.forEach(({ dest }) => console.log(`    \u2022 Pin ${dest.label}: ${dest.address}`));
+    console.log(`  \u2713 Bicycle map generated (${Math.round(pngBuffer2.length / 1024)} KB PNG, ${routes2.length} pin(s))`);
     return { pngBuffer: pngBuffer2, routes: routes2, mapType: request.mapType };
   }
   const routes = [];
