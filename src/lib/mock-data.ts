@@ -225,7 +225,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     credit_name: "High-Priority Site and Equitable Development",
     points_available: 2,
     automation_type: "full",
-    price: 7900,
+    price: 10900,
     deliverable_description: "Credit narrative (editable output) and pre-filled sample online form confirming high-priority site designation and/or equitable development commitments.",
     required_customer_documents: [
       { text: "Vicinity map showing project location" },
@@ -1474,8 +1474,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Pre-test documentation package: radon zone confirmation with EPA map excerpt; pollutant threshold compliance checklist (PM2.5, TVOCs, CO, NO2, formaldehyde, ozone) from WELL v2 tables; ventilation design narrative referencing mechanical plans; ongoing air parameter monitoring report template for Part 5.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans, equipment schedules, AHU layouts)" },
-      { text: "Full project manual (sequence of operations, construction IAQ specifications)" },
+      { text: "Mechanical plans (equipment schedules, AHU layouts, outdoor air intake locations)" },
+      { text: "Specifications: sequence of operations, construction IAQ specifications" },
     ],
     partial_notes:
       "On-site air quality testing must be performed by a WELL Performance Testing Agent after occupancy. This order produces the complete pre-test documentation package.",
@@ -1495,8 +1495,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Drafted smoke-free interior policy meeting WELL v2 A02 Part 1; annotated site plan confirming required setback distances from entries, operable windows, and air intakes; photograph submission checklist confirming signage quantity and location requirements.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural site plan showing building entries, operable windows, property boundary)" },
-      { text: "Full project manual (no-smoking policy specification and operations schedule)" },
+      { text: "Architectural site plan (building entries, operable windows, air intakes, property boundary)" },
+      { text: "Specifications: no-smoking policy specification and operations schedule" },
       { text: "On-site photographs of no-smoking signage at entrances, operable windows, and ground-level air intakes (at least 10% of signs, max 5)" },
     ],
     partial_notes: null,
@@ -1516,8 +1516,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Ventilation rate compliance table by space type referencing ASHRAE 62.1; annotated mechanical plan with outdoor air rates per zone; outdoor PM2.5 annual average report from EPA AQS for naturally ventilated paths.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans, AHU layouts, ductwork, outdoor air intake locations)" },
-      { text: "Full project manual (sequence of operations, outdoor air calculations per ASHRAE 62.1)" },
+      { text: "Mechanical plans (AHU layouts, ductwork, outdoor air intake locations)" },
+      { text: "Specifications: sequence of operations, outdoor air calculations per ASHRAE 62.1" },
       { text: "LOA–Engineer signed by mechanical engineer of record" },
     ],
     partial_notes: null,
@@ -1537,7 +1537,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Construction IAQ management plan compliance checklist confirming SMACNA alignment; specification section review confirming ductwork protection and flush-out/testing requirements.",
     required_customer_documents: [
-      { text: "Full project manual (Division 01 construction IAQ management spec; SMACNA IAQ plan; ductwork protection specifications)" },
+      { text: "Specifications: Division 01 construction IAQ management spec, SMACNA IAQ plan, ductwork protection specifications" },
       { text: "LOA–Contractor signed by general contractor" },
     ],
     partial_notes: null,
@@ -1558,7 +1558,7 @@ export const MOCK_CREDITS: MockCredit[] = [
       "Pre-test documentation package: enhanced pollutant threshold table (PM, speciated VOCs, formaldehyde, CO, NO2) from WELL v2 A05; testing plan narrative identifying spaces and sampling locations.",
     required_customer_documents: [
       { text: "On-site air quality test results from WELL Performance Testing Agent for enhanced VOC species, formaldehyde, and additional pollutants (Parts 1–3)" },
-      { text: "Full project manual (filtration or air treatment specifications, if used as mitigation)" },
+      { text: "Specifications: filtration or air treatment specifications (if used as mitigation)" },
     ],
     partial_notes:
       "On-site air quality testing for enhanced pollutant species must be performed by a WELL Performance Testing Agent. This order produces the pre-test documentation package.",
@@ -1578,8 +1578,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Enhanced outdoor air rate calculation table showing percentage increase above ASHRAE 62.1 minimums by zone; annotated mechanical plan; demand-controlled ventilation setpoint documentation (Option 2); CO2 sensor coverage map.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans showing outdoor air rates, CO2 sensor locations, AHU schedules)" },
-      { text: "Full project manual (sequence of operations, enhanced outdoor air rate calculations)" },
+      { text: "Mechanical plans (outdoor air rates, CO2 sensor locations, AHU schedules)" },
+      { text: "Specifications: sequence of operations, enhanced outdoor air rate calculations" },
       { text: "LOA–Engineer" },
     ],
     partial_notes: null,
@@ -1599,8 +1599,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Operable window area calculation by regularly occupied space; annotated floor plan identifying operable window locations; photograph submission checklist confirming quantity and distribution.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural floor plans showing operable window locations)" },
-      { text: "Full project manual (window specifications with operable area calculations)" },
+      { text: "Architectural floor plans (operable window locations)" },
+      { text: "Specifications: window specifications with operable area calculations" },
       { text: "On-site photographs of windows in open position with mechanism visible (at least 10% of windows, max 5)" },
       { text: "LOA–Designer signed by architect" },
     ],
@@ -1621,7 +1621,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Sensor location compliance map (placement within required distances from floors, doors, windows, HVAC); sensor specification verification table (parameters and accuracy vs A08 thresholds); display density calculation; ongoing maintenance report template.",
     required_customer_documents: [
-      { text: "Full drawing set (floor plans showing air quality sensor and display locations)" },
+      { text: "Architectural floor plans (air quality sensor and display locations)" },
       { text: "LOA–Engineer" },
       { text: "On-site photographs of installed sensors with measurement tape confirming placement (at least 10% of sensors, max 5)" },
       { text: "Ongoing maintenance report for sensor calibration and replacement", condition: "Required for ongoing monitoring verification" },
@@ -1644,8 +1644,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Entryway compliance checklist (walk-off system length, vestibule configuration per WELL v2 A09); annotated floor plan; commissioning report summary confirming envelope commissioning scope for Part 2.",
     required_customer_documents: [
-      { text: "Full drawing set (floor plans and entryway details — walk-off systems, vestibules, dimensions)" },
-      { text: "Full project manual (entryway material specifications, air curtain specifications)" },
+      { text: "Architectural floor plans and entryway details (walk-off systems, vestibules, dimensions)" },
+      { text: "Specifications: entryway material specifications, air curtain specifications" },
       { text: "On-site photographs of entryway systems with measurement tape (at least one per entrance, max 5)" },
       { text: "LOA–Designer" },
       { text: "Maintenance policy for entryway cleaning" },
@@ -1667,8 +1667,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Combustion equipment inventory (type, fuel, location, compliance status); annotated mechanical plan; idling ban signage compliance checklist confirming placement at all required locations.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical equipment schedule listing all combustion appliances)" },
-      { text: "Full project manual (all-electric or low-emission specifications)" },
+      { text: "Mechanical equipment schedule (all combustion appliances)" },
+      { text: "Specifications: all-electric or low-emission specifications" },
       { text: "On-site photographs of no-idling signage (at least one per area, max 5)" },
       { text: "LOA–Owner (appliance/engine exhaust ban) and LOA–Engineer (low-emission sources)" },
     ],
@@ -1689,8 +1689,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Filtration compliance table by space type (MERV required vs specified, filter model); UVGI system specification verification; annotated mechanical plan; ongoing maintenance report template with filter change intervals.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans — filtration locations, UVGI locations, AHU schedule)" },
-      { text: "Full project manual (MERV filter specifications, UVGI system specifications)" },
+      { text: "Mechanical plans (filtration locations, UVGI locations, AHU schedule)" },
+      { text: "Specifications: MERV filter spec sheets, UVGI system specifications" },
       { text: "On-site photographs of installed filters and UV devices (at least one per type, max 5)" },
       { text: "LOA–Engineer" },
       { text: "Ongoing maintenance report", condition: "Required for ongoing verification" },
@@ -1712,8 +1712,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Filtration compliance table by space and AHU (MERV required vs specified); annotated mechanical plan; ongoing maintenance report template with filter replacement intervals.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans — filter locations, AHU schedule)" },
-      { text: "Full project manual (MERV filter specifications)" },
+      { text: "Mechanical plans (filter locations, AHU schedule)" },
+      { text: "Specifications: MERV filter spec sheets" },
       { text: "On-site photographs of installed filters (at least one per filter type, max 5)" },
       { text: "LOA–Engineer" },
       { text: "Ongoing maintenance report", condition: "Required for ongoing verification" },
@@ -1735,8 +1735,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1 (100% OA): annotated mechanical drawing confirming 100% outdoor air system. Option 2: device specification verification table and ongoing maintenance report template. Part 2 beta: annotated mechanical drawing with clean airflow rates and IRMM policy template.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans — 100% OA system or UVGI/carbon filter locations, AHU schedule)" },
-      { text: "Full project manual (100% OA specifications or purification device specifications)" },
+      { text: "Mechanical plans (100% OA system or UVGI/carbon filter locations, AHU schedule)" },
+      { text: "Specifications: 100% OA specifications or purification device specifications" },
       { text: "On-site photographs of devices (at least one per HVAC device type; 10% of standalone units, max 5)" },
       { text: "LOA–Engineer" },
       { text: "Ongoing maintenance report (Option 2)", condition: "Required if using air purification devices" },
@@ -1758,8 +1758,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "UV system specification verification table (lamp intensity, coverage, AHU and FCU count); annotated mechanical plan; ongoing maintenance report template with inspection and lamp replacement schedule.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans — UV lamp locations in AHUs and FCUs)" },
-      { text: "Full project manual (UV system specifications)" },
+      { text: "Mechanical plans (UV lamp locations in AHUs and FCUs)" },
+      { text: "Specifications: UV system specifications" },
       { text: "On-site photographs of UV lamps, cooling coils, and drain pans (at least 10% of AHUs and 10% of FCUs, combined max 5)" },
       { text: "LOA–Engineer" },
       { text: "Ongoing maintenance report", condition: "Required for ongoing verification" },
@@ -1782,7 +1782,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Pre-test documentation package: W01 water quality indicator threshold table from WELL v2 standard; plumbing system review narrative; monitoring plan identifying sampling locations.",
     required_customer_documents: [
-      { text: "Full drawing set (plumbing riser diagram, water service entry plan)" },
+      { text: "Plumbing drawings (riser diagram, water service entry plan)" },
       { text: "Water quality test results from WELL Performance Testing Agent", condition: "Provided after on-site testing" },
     ],
     partial_notes:
@@ -1803,7 +1803,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Pre-test documentation package: W02 chemical contaminant threshold table; pipe material schedule review. Option 1: municipal water quality report summary with contaminant comparison against WELL v2 thresholds (auto-retrieved).",
     required_customer_documents: [
-      { text: "Full drawing set (plumbing drawings, pipe material schedule)" },
+      { text: "Plumbing drawings (pipe material schedule)" },
       { text: "Water quality test results from WELL Performance Testing Agent (Parts 1 and 2 Option 2)", condition: "Required if not using municipal report path" },
     ],
     partial_notes:
@@ -1824,7 +1824,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Legionella management plan compliance checklist against ASHRAE 188 and WELL v2 W03; plumbing system risk assessment narrative; ongoing drinking water quality monitoring data report template; ongoing maintenance report template.",
     required_customer_documents: [
-      { text: "Full drawing set (plumbing drawings, mechanical equipment schedule — cooling towers, water features)" },
+      { text: "Plumbing drawings and mechanical equipment schedule (cooling towers, water features)" },
       { text: "Legionella Water Management Plan (professional document)" },
       { text: "Ongoing maintenance report for Legionella plan implementation", condition: "Required for ongoing verification" },
     ],
@@ -1870,7 +1870,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     required_customer_documents: [
       { text: "Water quality pre-test results (project-commissioned laboratory test)" },
       { text: "Ongoing water quality monitoring data reports", condition: "Required for ongoing verification" },
-      { text: "Full project manual (water treatment equipment specifications, if applicable)" },
+      { text: "Specifications: water treatment equipment specifications (if applicable)" },
     ],
     partial_notes:
       "Pre-test results must be from a project-commissioned laboratory (not required to be a WELL PTA). We review results for compliance and draft the water transparency policy.",
@@ -1890,7 +1890,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Drinking water dispenser coverage compliance table (number of dispensers, distances from regularly occupied spaces); annotated floor plan; dispenser maintenance policy meeting W06 requirements.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing drinking water dispenser locations, fixture schedule)" },
+      { text: "Architectural floor plans (drinking water dispenser locations, fixture schedule)" },
       { text: "Dispenser maintenance policy" },
     ],
     partial_notes: null,
@@ -1910,7 +1910,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: envelope moisture protection professional narrative from drawing set review. Part 2: interior moisture management professional narrative. Part 3: drafted mold and moisture management policy; ongoing maintenance report template for inspection schedule.",
     required_customer_documents: [
-      { text: "Full drawing set (building envelope drawings, wall and roof assembly details)" },
+      { text: "Building envelope drawings (wall and roof assembly details)" },
       { text: "On-site photographs of shut-off mechanisms and backflow prevention (at least one per fixture type, max 5)" },
       { text: "LOA–Engineer" },
       { text: "Mold and moisture management policy" },
@@ -1933,7 +1933,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Bathroom compliance matrix by restroom type (women's, single-user, family, commercial kitchen) mapping each required amenity against WELL v2 W08 Parts 1–4; photograph submission checklist; drafted handwashing supplies and signage policy.",
     required_customer_documents: [
-      { text: "Full drawing set (floor plans showing restroom layouts, plumbing fixture schedule)" },
+      { text: "Architectural floor plans (restroom layouts, plumbing fixture schedule)" },
       { text: "On-site photographs of bathroom amenities — trash receptacles, menstrual product dispensers, bag hooks, accessible stalls, infant changing tables, signage, hands-free fixtures, sink dimensions (at least 10% of bathrooms, max 5)" },
       { text: "LOA–Designer" },
       { text: "Handwashing supplies policy" },
@@ -2097,7 +2097,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Eating space area calculation and compliance confirmation vs WELL v2 N08; annotated floor plan identifying dedicated eating space; drafted daily meal break policy.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings identifying dedicated eating space location and area)" },
+      { text: "Architectural floor plans (dedicated eating space location and area)" },
       { text: "Meal break policy" },
     ],
     partial_notes: null,
@@ -2179,7 +2179,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Gardening space area calculation and compliance confirmation vs WELL v2 N12; annotated map or plan identifying food production space.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural or landscape maps showing gardening or food production space location and area)" },
+      { text: "Architectural or landscape plans (gardening or food production space location and area)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2198,7 +2198,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: annotated map showing local food retailers within required distance (auto-retrieved). Options 2/3: drafted local food access programming or transportation policy.",
     required_customer_documents: [
-      { text: "Full drawing set (maps showing local food access within required distance — Option 1)", condition: "Only if using Option 1 (proximity path)" },
+      { text: "Site or area map (local food retailers within required distance — Option 1)", condition: "Only if using Option 1 (proximity path)" },
       { text: "Local food access programming or transportation policy (Options 2 or 3)", condition: "Only if using Options 2 or 3" },
     ],
     partial_notes: null,
@@ -2238,7 +2238,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: daylight simulation compliance summary (sDA results by space). Options 2/3: annotated architectural drawings confirming compliance path; glazing VT verification table.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural floor plans, building elevations, glazing schedule with VT values, reflected ceiling plan)" },
+      { text: "Architectural floor plans, building elevations, glazing schedule (VT values), and reflected ceiling plan" },
       { text: "Daylight simulation modeling report", condition: "Required only if using Option 1 (simulation path)" },
     ],
     partial_notes:
@@ -2259,7 +2259,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Pre-test documentation package: illuminance calculation table by space and task type; annotated lighting plan; architectural drawings annotated with tasks per room; fixture schedule with photometric data; design specifications meeting L02 requirements.",
     required_customer_documents: [
-      { text: "Full drawing set (electrical lighting plans, fixture schedule with illuminance, reflected ceiling plan, architectural drawings with tasks per room)" },
+      { text: "Electrical lighting plans, fixture schedule (with illuminance values), reflected ceiling plan, and architectural drawings with tasks identified per room" },
       { text: "Illuminance performance test results from WELL Performance Testing Agent", condition: "Provided after on-site testing" },
     ],
     partial_notes:
@@ -2301,8 +2301,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: UGR compliance table by fixture (UGR required vs specified); product spec sheet compilation. Option 2: glare modeling report summary confirming compliance.",
     required_customer_documents: [
-      { text: "Full drawing set (electrical lighting plans, reflected ceiling plan)" },
-      { text: "Full project manual (fixture specifications including UGR values, or glare modeling report for Option 2)" },
+      { text: "Electrical lighting plans and reflected ceiling plan" },
+      { text: "Specifications: fixture spec sheets with UGR values (Option 1), or glare modeling report (Option 2)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2321,7 +2321,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: window-to-wall ratio calculation; VT compliance verification; annotated floor plan and elevations with glazing specifications. Part 2: photograph submission checklist for shading system.",
     required_customer_documents: [
-      { text: "Full drawing set (floor plans with glazing dimensions, building elevations, glazing specifications with VT values)" },
+      { text: "Architectural floor plans (glazing dimensions), building elevations, and glazing specifications (VT values)" },
       { text: "On-site photographs of shading system engaged and control mechanism (at least 10% of windows, max 5)" },
       { text: "Shading operations schedule (Part 2)", condition: "Required only if pursuing Part 2" },
     ],
@@ -2379,8 +2379,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: lighting zone compliance map (annotated drawings with zone boundaries) and professional narrative on lighting control system. Part 2: supplemental lighting product spec review; drafted supplemental lighting availability policy.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing lighting zones and control locations)" },
-      { text: "Full project manual (supplemental lighting product specifications — Part 2)", condition: "Required only if pursuing Part 2" },
+      { text: "Architectural floor plans (lighting zones and control locations)" },
+      { text: "Specifications: supplemental lighting product specifications (Part 2)", condition: "Required only if pursuing Part 2" },
       { text: "Supplemental lighting availability policy (Part 2)", condition: "Required only if pursuing Part 2" },
     ],
     partial_notes: null,
@@ -2442,7 +2442,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: stair design compliance verification from architectural drawings. Part 2: photograph submission checklist for motivational stair signage. Part 3: stair visibility compliance verification from architectural drawings.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing stairwell dimensions, design features, prominence, signage locations)" },
+      { text: "Architectural drawings (stairwell dimensions, design features, prominence, signage locations)" },
       { text: "On-site photographs of point-of-decision signage (at least one per required location, max 5)" },
       { text: "LOA–Owner (for signage)" },
     ],
@@ -2463,7 +2463,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: cycling network map and Bike Score for project address; bicycle parking compliance count table; annotated floor plan; photograph submission checklist. Part 2: shower and locker facility compliance table from architectural drawings.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing bicycle storage, shower, locker, and changing facility locations and counts)" },
+      { text: "Architectural floor plans (bicycle storage, shower, locker, and changing facility locations and counts)" },
       { text: "On-site photographs of bicycle parking and maintenance tools (at least one short-term and one long-term solution)" },
       { text: "LOA–Designer" },
     ],
@@ -2480,11 +2480,11 @@ export const MOCK_CREDITS: MockCredit[] = [
     credit_name: "Active Commute Support",
     points_available: 1,
     automation_type: "full",
-    price: 5900,
+    price: 10900,
     deliverable_description:
       "Part 1: Walk Score for project address; annotated map showing pedestrian-friendly streets within required radius; architectural drawings confirming pedestrian-friendly entry features. Part 2: Transit Score; annotated map showing transit stops within required distance.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing pedestrian-friendly entry features — benches, lighting, weather protection)" },
+      { text: "Architectural drawings (pedestrian-friendly entry features — benches, lighting, weather protection)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2524,7 +2524,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     required_customer_documents: [
       { text: "On-site photographs of active and sit-stand workstations in raised and lowered positions (at least 10% of active workstations, max 5)" },
       { text: "LOA–Owner" },
-      { text: "Full project manual (active workstation specifications)" },
+      { text: "Specifications: active workstation spec sheets" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2543,7 +2543,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: activity space area calculation and compliance from architectural drawings. Option 2: off-site access policy. Part 2: annotated map confirming outdoor physical activity space within required distance.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing on-site fitness or activity space and area — Option 1)", condition: "Only if using Option 1 (on-site space)" },
+      { text: "Architectural floor plans (on-site fitness or activity space location and area — Option 1)", condition: "Only if using Option 1 (on-site space)" },
       { text: "Off-site physical activity access policy (Option 2)", condition: "Only if using Option 2" },
       { text: "Outdoor physical activity space map (Part 2)", condition: "Only if pursuing Part 2" },
     ],
@@ -2626,8 +2626,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Pre-test documentation package: HVAC zone map; T01 Technical Document (Shareable) — design report covering PMV targets, clo/met assumptions, air speed, excluded areas, and outdoor air temperature source; thermostat coverage verification; 1-month monitoring plan template.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans with HVAC zones, thermostat locations)" },
-      { text: "Full project manual (sequence of operations, ASHRAE 55 compliance documentation)" },
+      { text: "Mechanical plans (HVAC zones, thermostat locations)" },
+      { text: "Specifications: sequence of operations, ASHRAE 55 compliance documentation" },
       { text: "Thermal performance test results from WELL Performance Testing Agent", condition: "Provided after on-site testing" },
     ],
     partial_notes:
@@ -2668,7 +2668,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Thermostat zone compliance verification from mechanical drawings; annotated mechanical plan showing thermostat locations and zone boundaries.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical drawings showing thermostat locations and HVAC zone boundaries)" },
+      { text: "Mechanical drawings (thermostat locations and HVAC zone boundaries)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2709,7 +2709,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Radiant system compliance verification from mechanical drawings; annotated mechanical plan confirming radiant heating and/or cooling system layout.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical drawings showing radiant heating and/or cooling system layout)" },
+      { text: "Mechanical drawings (radiant heating and/or cooling system layout)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2748,8 +2748,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Humidity control compliance verification; annotated mechanical plan; setpoint documentation. Option 2: humidity modeling report summary.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical plans — humidity control systems)" },
-      { text: "Full project manual (humidity control specifications, sequence of operations)" },
+      { text: "Mechanical plans (humidity control systems)" },
+      { text: "Specifications: humidity control specifications, sequence of operations" },
       { text: "Humidity performance test results from WELL Performance Testing Agent (Option 1)", condition: "Required if using performance testing path" },
       { text: "Humidity modeling report (Option 2)", condition: "Required if using modeling path" },
     ],
@@ -2791,7 +2791,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: annotated site map confirming shading coverage. Option 2: temperature modeling report summary. Part 2: wind modeling report summary.",
     required_customer_documents: [
-      { text: "Full drawing set (site plans showing outdoor shading structures — Option 1)", condition: "Only if using Option 1 (shading structure path)" },
+      { text: "Site plans (outdoor shading structures — Option 1)", condition: "Only if using Option 1 (shading structure path)" },
       { text: "Outdoor temperature or wind modeling report (Options 2 or Part 2)", condition: "Required for modeling paths" },
     ],
     partial_notes: "Beta feature — Beta Feature Feedback Form is required for all parts at IWBI submission.",
@@ -2812,7 +2812,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: acoustic zone compliance map (annotated architectural drawings with zone designations and category labels per WELL v2 S01). Part 2: professional narrative describing acoustic design plan and zone strategy.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings with acoustic zone designations and boundaries)" },
+      { text: "Architectural drawings (acoustic zone designations and boundaries)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2851,8 +2851,8 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: STC compliance table by wall, floor, and ceiling assembly (required vs specified); annotated partition plan. Part 2: pre-test documentation with NIC or speech privacy threshold table.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings with partition layout, wall/floor/ceiling assembly types)" },
-      { text: "Full project manual (assembly specifications with STC ratings)" },
+      { text: "Architectural drawings (partition layout, wall/floor/ceiling assembly types)" },
+      { text: "Specifications: wall, floor, and ceiling assembly specs with STC ratings" },
       { text: "Acoustic performance test results from WELL Performance Testing Agent (Part 2)", condition: "Required only if pursuing Part 2 performance verification" },
     ],
     partial_notes: null,
@@ -2892,7 +2892,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Sound-absorbing material compliance table (NRC required vs specified by product, cited from manufacturer data sheets); annotated reflected ceiling plan.",
     required_customer_documents: [
-      { text: "Full project manual (design specification for sound-reducing surfaces — ceiling tiles, acoustic panels with NRC ratings)" },
+      { text: "Specifications: ceiling tile and acoustic panel spec sheets with NRC ratings" },
     ],
     partial_notes: null,
     has_form: false,
@@ -2912,7 +2912,7 @@ export const MOCK_CREDITS: MockCredit[] = [
       "Part 1: commissioning report compliance summary; annotated floor plan showing masking coverage. Part 2: speech reduction compliance narrative.",
     required_customer_documents: [
       { text: "Sound masking commissioning report from acoustic consultant (Part 1)" },
-      { text: "Full project manual (sound masking system specifications)" },
+      { text: "Specifications: sound masking system specifications" },
     ],
     partial_notes:
       "The commissioning report must be prepared by a qualified acoustic consultant. We review it for WELL v2 compliance and produce supporting documentation.",
@@ -2932,7 +2932,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: flooring NISR compliance table (required vs specified, from manufacturer data); annotated floor plan. Part 2: field impact noise testing report review summary.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings or modeling report showing flooring types)" },
+      { text: "Architectural floor plans or finish schedule (flooring types by space)" },
       { text: "Flooring specifications with NISR ratings" },
       { text: "Field impact noise testing report (Part 2)", condition: "Required only if pursuing Part 2 performance verification" },
     ],
@@ -2993,7 +2993,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Material restriction compliance table by substance (asbestos, mercury, lead) — product category, specification sheet citation, applicable law or WELL v2 threshold; annotated spec review.",
     required_customer_documents: [
-      { text: "Full project manual (product spec sheets for each distinct applicable product — up to 20 for asbestos, 10 for mercury/lead; or narrative identifying applicable laws)" },
+      { text: "Product spec sheets for each applicable product (up to 20 for asbestos, 10 for mercury/lead); or narrative identifying applicable laws" },
       { text: "LOA–Contractor (asbestos, lead paints/electronics); LOA–Designer (mercury); LOA–Engineer (lead — drinking water pipes)" },
     ],
     partial_notes: null,
@@ -3075,7 +3075,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: furnishing and electronics compliance table (product, specification sheet, substance compliance confirmation). Part 2: architectural product compliance table.",
     required_customer_documents: [
-      { text: "Full project manual (product spec sheets — up to 10 furniture/millwork/fixtures; up to 10 electrical/electronic products)" },
+      { text: "Product spec sheets — up to 10 furniture/millwork/fixtures; up to 10 electrical/electronic products" },
       { text: "LOA–Designer (furniture/millwork); LOA–Contractor (electrical/electronic and architectural products)" },
     ],
     partial_notes: null,
@@ -3114,7 +3114,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1 (disclosed ingredients): product compliance table for up to 25 products — HPD disclosure level auto-retrieved from HPD database by product and manufacturer. Part 2 (enhanced): 15-product compliance table. Part 3 (third-party verified): 15-product compliance table with certification type.",
     required_customer_documents: [
-      { text: "Full project manual (product spec sheets — up to 25 distinct products per part)" },
+      { text: "Product spec sheets — up to 25 distinct products per part" },
       { text: "LOA–Contractor" },
     ],
     partial_notes: null,
@@ -3134,7 +3134,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1: material optimization compliance table for 25 products — EPD/HPD/responsible sourcing evidence auto-retrieved from EC3/HPD/FSC by product and manufacturer. Option 2: drafted future purchase policy and ongoing data report template. Part 2: optimized product compliance table.",
     required_customer_documents: [
-      { text: "Full project manual (product spec sheets — up to 25 distinct products — Option 1)", condition: "Only if using Option 1 (existing products path)" },
+      { text: "Product spec sheets — up to 25 distinct products (Option 1)", condition: "Only if using Option 1 (existing products path)" },
       { text: "Future purchase policy and ongoing data report (Option 2)", condition: "Only if using Option 2 (future purchase commitment path)" },
     ],
     partial_notes: null,
@@ -3233,7 +3233,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Cleaning equipment compliance table; HEPA filtration verification confirming equipment meets WELL v2 X12 requirements.",
     required_customer_documents: [
-      { text: "Full project manual (cleaning equipment specifications)" },
+      { text: "Specifications: cleaning equipment spec sheets" },
     ],
     partial_notes: null,
     has_form: false,
@@ -3252,7 +3252,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: living wage compliance table (manufacturer accreditation or public statement auto-verified from ETI database and manufacturer websites by company name). Part 2: raw material certification compliance table. Part 3: ETI membership compliance table.",
     required_customer_documents: [
-      { text: "Full project manual (product spec sheets with manufacturer names)" },
+      { text: "Product spec sheets (with manufacturer names)" },
       { text: "Manufacturer accreditation proof or public living wage statement" },
       { text: "Raw material certification documents (FSC, organic, fair trade)", condition: "Only if pursuing Part 2" },
       { text: "ETI membership documentation", condition: "Only if pursuing Part 3" },
@@ -3368,7 +3368,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     required_customer_documents: [
       { text: "Healthy working hours policy" },
       { text: "Nap policy" },
-      { text: "Full drawing set (architectural drawings showing nap space location and area)", condition: "Required only if pursuing Part 2" },
+      { text: "Architectural floor plans (nap space location and area)", condition: "Required only if pursuing Part 2" },
     ],
     partial_notes: null,
     has_form: false,
@@ -3387,7 +3387,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Restorative space area calculation and compliance from architectural drawings; annotated floor plan; drafted workday break policy.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing restorative space location and area)" },
+      { text: "Architectural floor plans (restorative space location and area)" },
       { text: "Workday break policy" },
     ],
     partial_notes: null,
@@ -3426,7 +3426,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Part 1: indoor nature compliance verification from architectural drawings; annotated floor plan. Part 2: outdoor nature space compliance from architectural drawings; professional narrative on outdoor nature access strategy.",
     required_customer_documents: [
-      { text: "Full drawing set (architectural drawings showing indoor nature elements and outdoor nature access space)" },
+      { text: "Architectural drawings (indoor nature elements and outdoor nature access space)" },
     ],
     partial_notes: null,
     has_form: false,
@@ -3634,7 +3634,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     required_customer_documents: [
       { text: "Breastfeeding support policy (workplace)" },
       { text: "Travel breastfeeding policy" },
-      { text: "Full drawing set (architectural drawings showing lactation room — Part 2)", condition: "Required only if pursuing Part 2" },
+      { text: "Architectural floor plans (lactation room location and dimensions — Part 2)", condition: "Required only if pursuing Part 2" },
     ],
     partial_notes: null,
     has_form: false,
@@ -3675,7 +3675,7 @@ export const MOCK_CREDITS: MockCredit[] = [
       "Part 1: drafted community engagement policy. Part 2 Option 1: public space compliance from architectural drawings and professional narrative. Option 2: community event space professional narrative.",
     required_customer_documents: [
       { text: "Community engagement policy" },
-      { text: "Full drawing set (architectural drawings for public space — Option 1, Part 2)", condition: "Required only if using Option 1 for Part 2" },
+      { text: "Architectural drawings (public space location and area — Option 1, Part 2)", condition: "Required only if using Option 1 for Part 2" },
       { text: "Professional narrative for community event space (Option 2, Part 2)", condition: "Required only if using Option 2 for Part 2" },
     ],
     partial_notes: null,
@@ -4196,7 +4196,7 @@ export const MOCK_CREDITS: MockCredit[] = [
     deliverable_description:
       "Option 1 (Regular Airflow): annotated mechanical drawing or test report confirming eACH compliance; eACH calculation worksheet (ventilation + CADR-rated filtration + UVGI contributions per ASHRAE 241 Appendix SA1). Option 2 (IRMM): same plus drafted Infection Risk Management Mode policy.",
     required_customer_documents: [
-      { text: "Full drawing set (mechanical drawing or test report demonstrating clean airflow rates — eACH calculation per ASHRAE 241 Appendix SA1)" },
+      { text: "Mechanical drawings or test report (clean airflow rates — eACH calculation per ASHRAE 241 Appendix SA1)" },
       { text: "Operations schedule (IRMM policy — Option 2)", condition: "Required only if pursuing Option 2 (Infection Risk Management Mode)" },
     ],
     partial_notes: "Beta feature — Beta Feature Feedback Form is required at IWBI submission.",
