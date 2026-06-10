@@ -1,5 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-import { createServiceClient }  from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { createServiceClient } from "@/lib/supabase/server";
+import { verifyQaToken }       from "@/lib/qa-token";
 import ReviewForm               from "./_review-form";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +15,19 @@ export default async function AdminReviewPage({
   const { orderId } = await params;
   const { token }   = await searchParams;
 
-  const supabase = await createServiceClient();
-
-  // Auth check — only reviews@liminalsva.com
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.email !== "reviews@liminalsva.com") {
-    redirect("/login");
+  // Auth: valid signed token is required — no session needed
+  if (!verifyQaToken(orderId, token ?? "")) {
+    return (
+      <div style={{ fontFamily: "sans-serif", display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", margin: 0, background: "#f9f9f9" }}>
+        <div style={{ background: "#fff", borderRadius: 8, padding: "40px 48px", boxShadow: "0 2px 12px rgba(0,0,0,.08)", maxWidth: 480, textAlign: "center" }}>
+          <h1 style={{ color: "#c0392b", marginBottom: 12 }}>Invalid Link</h1>
+          <p style={{ color: "#555", lineHeight: 1.6 }}>This review link is invalid or has expired. Please use the link from the QA email.</p>
+        </div>
+      </div>
+    );
   }
+
+  const supabase = await createServiceClient();
 
   const { data: order, error } = await supabase
     .from("orders")
