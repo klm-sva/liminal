@@ -32,16 +32,20 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify the customer owns this order
+  // Verify the customer owns this order and it has been delivered
   const { data: order } = await supabase
     .from("orders")
-    .select("id")
+    .select("id, delivered_at")
     .eq("id", orderId)
     .eq("customer_id", user.id)
     .single();
 
   if (!order) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!order.delivered_at) {
+    return NextResponse.json({ error: "Output not yet available" }, { status: 403 });
   }
 
   const serviceClient = await createServiceClient();

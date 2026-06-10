@@ -24,7 +24,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   const [orderRes, runRes] = await Promise.all([
     supabase
       .from("orders")
-      .select("id, credits(credit_code, credit_name, program, has_calculator, has_form)")
+      .select("id, delivered_at, credits(credit_code, credit_name, program, has_calculator, has_form)")
       .eq("id", orderId)
       .single(),
     supabase
@@ -40,9 +40,12 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   if (!orderRes.data) notFound();
   const order = orderRes.data;
 
-  type OrderWithCredit = { id: string; credits?: { credit_code: string; credit_name: string; program: string; has_calculator: boolean; has_form: boolean } | null };
-  const credit = (order as unknown as OrderWithCredit)?.credits;
+  type OrderWithCredit = { id: string; delivered_at: string | null; credits?: { credit_code: string; credit_name: string; program: string; has_calculator: boolean; has_form: boolean } | null };
+  const typedOrder = order as unknown as OrderWithCredit;
+  const credit = typedOrder?.credits;
   if (!credit) notFound();
+
+  const isDelivered = !!typedOrder.delivered_at;
 
   const htmlPath     = runRes.data?.output_html_path ?? null;
   const editablePath = htmlPath ? htmlPath.replace("submission.html", "submission-editable.html") : null;
@@ -76,7 +79,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
         {/* Email preview label */}
         <div className="inline-flex items-center gap-1.5 bg-certify-sand/20 border border-certify-sand/40 rounded-full px-3 py-1 text-xs font-semibold text-certify-dark-grey mb-6">
           <Mail size={11} />
-          Email preview — this is what we sent to your inbox
+          {isDelivered ? "Email preview — this is what we sent to your inbox" : "Output under review"}
         </div>
 
         {/* Email frame */}
@@ -107,7 +110,11 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
 
             {/* File download rows */}
             <div className="space-y-2 mb-4">
-              {!htmlPath ? (
+              {!isDelivered ? (
+                <p className="text-xs text-certify-cool-grey py-2">
+                  Your output is being reviewed by our team. You&apos;ll receive an email with your download links when it&apos;s ready.
+                </p>
+              ) : !htmlPath ? (
                 <p className="text-xs text-certify-cool-grey py-2">
                   Your output files will be emailed to you when ready.
                 </p>
