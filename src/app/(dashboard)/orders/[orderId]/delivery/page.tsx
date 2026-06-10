@@ -208,7 +208,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
 
             <ul className="text-xs text-certify-dark-grey leading-relaxed mb-3 list-disc list-inside space-y-1">
               <li>Open in browser to review</li>
-              <li>Drag into Google Drive, then Open With &rarr; Google Docs to edit and print</li>
+              <li>Open with Word or Excel to edit and print</li>
             </ul>
             <p className="text-xs text-certify-dark-grey leading-relaxed mb-4">
               If any additional items are needed for your certification submittal they will be itemized. This might be items that were not included in the provided information or items that only project teams can provide (meeting minutes, photographs, etc.).

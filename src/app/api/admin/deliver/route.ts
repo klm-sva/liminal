@@ -97,7 +97,7 @@ export async function GET(request: Request) {
 
         await supabase
           .from("orders")
-          .update({ delivered_at: new Date().toISOString() })
+          .update({ delivered_at: new Date().toISOString(), status: "delivered" })
           .eq("id", order.id);
 
         results.push({ orderId: order.id, action: "delivered" });
