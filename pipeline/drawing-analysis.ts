@@ -178,6 +178,11 @@ export async function analyzeDrawings(
     if (updateErr) throw new Error(`projects update failed: ${updateErr.message}`);
     console.log(`  ✓ updated projects table`);
 
+    // Delete source drawings — extraction is complete, no further use
+    const { error: deleteErr } = await supabase.storage.from("customer-uploads").remove(drawingPaths);
+    if (deleteErr) console.warn(`  [WARN] Failed to delete drawing files: ${deleteErr.message}`);
+    else console.log(`  ✓ deleted ${drawingPaths.length} drawing file(s) from storage`);
+
     // 6. Audit log
     await logAuditEvent({
       eventType:  "drawing_analysis_complete",

@@ -1560,13 +1560,12 @@ ${plainText}`,
   );
   if (step18OrderErr) throw new Error(`Step 18: Failed to mark order complete: ${step18OrderErr.message}`);
 
-  // Schedule cleanup for attempt folder (48h delay, never outputs/)
+  // Delete customer uploads immediately — no further use after processing
   const attemptFilePaths = uploads.map((u) => u.storagePath);
   if (attemptFilePaths.length > 0) {
-    await supabase.from("cleanup_queue").insert({
-      order_id:   orderId,
-      file_paths: attemptFilePaths,
-    });
+    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET).remove(attemptFilePaths);
+    if (deleteUploadsErr) console.warn(`  [WARN] Failed to delete customer uploads: ${deleteUploadsErr.message}`);
+    else console.log(`  ✓ deleted ${attemptFilePaths.length} customer upload(s) from storage`);
   }
 
   // ── Step 18.5: Send QA review email ─────────────────────────────────────

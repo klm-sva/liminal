@@ -20,7 +20,7 @@ const SUPABASE_URL         = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET               = "customer-uploads";
 
-const PROTECTED_SEGMENTS = ["/outputs/", "/drawings/", "project-profile.json"];
+const PROTECTED_SEGMENTS = ["/outputs/", "project-profile.json"];
 
 function isProtectedPath(p: string): boolean {
   return PROTECTED_SEGMENTS.some((seg) => p.includes(seg));
