@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { ProgramType } from "@/types/database";
 
 const GAP_ANALYSIS_CONFIG: Record<ProgramType, { href: string; description: string }> = {
@@ -40,7 +40,7 @@ export default async function ChooseCreditPage({
   const program   = (programParam ?? "leed_bdc_v41") as ProgramType;
   const categories = CATEGORIES[program] ?? CATEGORIES.leed_bdc_v41;
 
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
   let query = supabase
     .from("credits")
     .select("id, credit_code, credit_name, category, program, points_available, price")

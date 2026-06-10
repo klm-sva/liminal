@@ -4,7 +4,7 @@ import { Plus, FolderOpen, ShoppingBag } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ProgramChip from "@/components/dashboard/ProgramChip";
 import { ORDER_STATUS_CONFIG } from "@/lib/constants";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/types/database";
 
 export const metadata: Metadata = { title: "My Dashboard" };
@@ -17,9 +17,8 @@ export default async function DashboardPage({
   const { demo } = await searchParams;
 
   // Get authenticated user
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   // demo=empty forces the empty state
   const forceEmpty = demo === "empty";

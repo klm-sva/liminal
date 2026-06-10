@@ -1,5 +1,5 @@
 import { notFound }             from "next/navigation";
-import { createServiceClient }  from "@/lib/supabase/server";
+import { createClient }  from "@/lib/supabase/server";
 import UploadClient             from "./_upload-client";
 import AutoSubmit               from "./_auto-submit";
 
@@ -22,7 +22,7 @@ export default async function UploadPage({
   const { type }    = await searchParams;
   const isGapAnalysis = type === "gap-analysis";
 
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
   const { data: order } = await supabase
     .from("orders")
     .select("id, project_id, credit_id, status, credits(credit_code, credit_name, required_customer_documents)")

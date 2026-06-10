@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import GapAnalysisOutputClient from "../../gap-analysis/output/_output-client";
 
 export const metadata: Metadata = { title: "WELL HSR Gap Analysis Report" };
 
 export default async function WellHsrGapAnalysisOutputPage() {
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   let htmlContent: string | null = null;
 

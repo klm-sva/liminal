@@ -3,15 +3,14 @@ import Link from "next/link";
 import { ArrowRight, Plus } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { ProgramType } from "@/types/database";
 
 export const metadata: Metadata = { title: "Select Project" };
 
 export default async function SelectProjectPage() {
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: projects } = user
     ? await supabase

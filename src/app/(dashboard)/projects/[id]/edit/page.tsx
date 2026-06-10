@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import EditProjectClient from "./_edit-client";
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: project } = await (supabase as any)

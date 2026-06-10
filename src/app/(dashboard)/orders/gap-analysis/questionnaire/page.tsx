@@ -1,4 +1,4 @@
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import GapAnalysisQuestionnaireClient from "./_questionnaire-client";
 
 export default async function GapAnalysisQuestionnairePage({
@@ -10,10 +10,9 @@ export default async function GapAnalysisQuestionnairePage({
 
   let project = null;
   if (project_id) {
-    const authClient = await createClient();
-    const { data: { user } } = await authClient.auth.getUser();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const supabase = await createServiceClient();
       const { data } = await supabase
         .from("projects")
         .select("id, name, address, building_type, gross_sqft, stories, total_parking, certification_target, flagged_fields, customer_id")

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CheckCircle2, ArrowRight, Info } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 import ProgramChip from "@/components/dashboard/ProgramChip";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Credit Details" };
 
@@ -20,7 +20,7 @@ export default async function CreditDetailPage({
   const { creditId }  = await params;
   const { project_id } = await searchParams;
 
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
   const { data: credit } = await supabase
     .from("credits")
     .select("*")

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, FileText } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Documents Needed" };
 
@@ -18,7 +18,7 @@ export default async function DocumentsNeededPage({
 
   if (!credit_id) notFound();
 
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
   const { data: credit } = await supabase
     .from("credits")
     .select("id, credit_code, credit_name, required_customer_documents")

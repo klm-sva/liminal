@@ -1,6 +1,6 @@
 import type { Metadata }                    from "next";
 import { notFound, redirect }                from "next/navigation";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import GapAnalysisOutputClient               from "./_output-client";
 import type { Json }                         from "@/types/database";
 
@@ -35,11 +35,9 @@ export default async function GapAnalysisOutputPage({
 }) {
   const { orderId } = await params;
 
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-
-  const supabase = await createServiceClient();
 
   const { data: order } = await supabase
     .from("orders")

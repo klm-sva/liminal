@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link                   from "next/link";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function OrderPage({
   params,
@@ -13,8 +13,7 @@ export default async function OrderPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const serviceClient = await createServiceClient();
-  const { data: order } = await serviceClient
+  const { data: order } = await supabase
     .from("orders")
     .select("id, customer_id, status, project_id, credits(credit_name, credit_code)")
     .eq("id", orderId)
@@ -31,7 +30,7 @@ export default async function OrderPage({
   const shortId = orderId.slice(-6).toUpperCase();
 
   // Fetch latest run error message for failed states
-  const { data: latestRun } = await serviceClient
+  const { data: latestRun } = await supabase
     .from("runs")
     .select("error_message")
     .eq("order_id", orderId)
@@ -41,7 +40,7 @@ export default async function OrderPage({
   const runError = latestRun?.error_message as string | null ?? null;
 
   if (status === "documents_requested") {
-    const { data: run } = await serviceClient
+    const { data: run } = await supabase
       .from("runs")
       .select("review_issues")
       .eq("order_id", orderId)

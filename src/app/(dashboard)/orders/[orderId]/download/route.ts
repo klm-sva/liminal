@@ -1,6 +1,5 @@
 import { NextResponse }        from "next/server";
 import { createClient }        from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
 
 const OUTPUTS_BUCKET = "order-outputs";
 
@@ -48,8 +47,7 @@ export async function GET(
     return NextResponse.json({ error: "Output not yet available" }, { status: 403 });
   }
 
-  const serviceClient = await createServiceClient();
-  const { data: fileData, error: downloadError } = await serviceClient.storage
+  const { data: fileData, error: downloadError } = await supabase.storage
     .from(OUTPUTS_BUCKET)
     .download(path);
 

@@ -2,16 +2,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Download, FileText, FileSpreadsheet, ClipboardList, CheckCircle2, Mail, AlertTriangle } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function DeliveryPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
 
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: ownedOrder } = await authClient
+  const { data: ownedOrder } = await supabase
     .from("orders")
     .select("id")
     .eq("id", orderId)
@@ -19,8 +19,6 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
     .single();
 
   if (!ownedOrder) redirect("/dashboard");
-
-  const supabase = await createServiceClient();
   const [orderRes, runRes] = await Promise.all([
     supabase
       .from("orders")

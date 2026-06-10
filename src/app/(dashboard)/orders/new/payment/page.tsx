@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import PaymentClient from "./_payment-client";
 
 export default async function PaymentPage({
@@ -21,7 +21,7 @@ export default async function PaymentPage({
   };
 
   if (credit_id) {
-    const supabase = await createServiceClient();
+    const supabase = await createClient();
     const { data: credit } = await supabase
       .from("credits")
       .select("id, credit_name, credit_code, category, price")

@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowRight } from "lucide-react";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Project Created" };
 
 export default async function ProjectCreatedPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, name, flagged_fields, auto_extracted")

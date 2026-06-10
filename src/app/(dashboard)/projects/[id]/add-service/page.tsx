@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import AddServiceClient from "./_add-service-client";
 import type { ProgramType } from "@/types/database";
 
@@ -8,9 +8,8 @@ const ALL_PROGRAMS: ProgramType[] = ["leed_bdc_v41", "well_v2", "well_hsr"];
 export default async function AddServicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: project } = await supabase
     .from("projects")

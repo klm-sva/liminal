@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Plus, Edit, MessageSquare, ArrowRight } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus, ProgramType } from "@/types/database";
 import ProjectClient from "./_project-client";
 
@@ -42,9 +42,8 @@ export default async function ProjectPage({
 }) {
   const { id } = await params;
 
-  const authClient = await createClient();
-  const { data: { user } } = await authClient.auth.getUser();
-  const supabase = await createServiceClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: project } = await supabase
     .from("projects")
