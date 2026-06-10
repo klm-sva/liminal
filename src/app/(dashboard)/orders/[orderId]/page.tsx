@@ -15,13 +15,13 @@ export default async function OrderPage({
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, customer_id, status, project_id, credits(credit_name, credit_code)")
+    .select("id, customer_id, status, delivered_at, project_id, credits(credit_name, credit_code)")
     .eq("id", orderId)
     .single();
 
   if (!order) notFound();
 
-  type OrderRow = typeof order & { customer_id: string; project_id: string | null; credits?: { credit_name: string; credit_code: string } | null };
+  type OrderRow = typeof order & { customer_id: string; delivered_at: string | null; project_id: string | null; credits?: { credit_name: string; credit_code: string } | null };
   const typed = order as unknown as OrderRow;
 
   if (typed.customer_id !== user.id) redirect("/dashboard");
@@ -91,6 +91,20 @@ export default async function OrderPage({
           <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
           <p className="text-sm text-certify-cool-grey">
             We are working on your submission. You will receive an email when it is ready — typically within a few minutes.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "complete" && !typed.delivered_at) {
+    return (
+      <div className="min-h-screen bg-certify-white">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <h1 className="font-serif text-3xl text-certify-deep mb-2">Processing your order</h1>
+          <p className="text-sm text-certify-cool-grey mb-6">Order #{shortId}</p>
+          <p className="text-sm text-certify-cool-grey">
+            We are working on your submission. You will receive an email when it is ready.
           </p>
         </div>
       </div>

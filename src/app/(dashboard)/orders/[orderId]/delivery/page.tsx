@@ -43,7 +43,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
   const credit = typedOrder?.credits;
   if (!credit) notFound();
 
-  const isDelivered = !!typedOrder.delivered_at;
+  if (!typedOrder.delivered_at) redirect(`/orders/${orderId}`);
 
   const htmlPath     = runRes.data?.output_html_path ?? null;
   const editablePath = htmlPath ? htmlPath.replace("submission.html", "submission-editable.html") : null;
@@ -77,7 +77,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
         {/* Email preview label */}
         <div className="inline-flex items-center gap-1.5 bg-certify-sand/20 border border-certify-sand/40 rounded-full px-3 py-1 text-xs font-semibold text-certify-dark-grey mb-6">
           <Mail size={11} />
-          {isDelivered ? "Email preview — this is what we sent to your inbox" : "Output under review"}
+          Email preview — this is what we sent to your inbox
         </div>
 
         {/* Email frame */}
@@ -108,11 +108,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ order
 
             {/* File download rows */}
             <div className="space-y-2 mb-4">
-              {!isDelivered ? (
-                <p className="text-xs text-certify-cool-grey py-2">
-                  Your output is being reviewed by our team. You&apos;ll receive an email with your download links when it&apos;s ready.
-                </p>
-              ) : !htmlPath ? (
+              {!htmlPath ? (
                 <p className="text-xs text-certify-cool-grey py-2">
                   Your output files will be emailed to you when ready.
                 </p>
