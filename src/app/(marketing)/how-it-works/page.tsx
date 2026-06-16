@@ -30,8 +30,8 @@ const STEPS = [
   },
   {
     n: "5",
-    title: "Review",
-    body: "Review outputs and use them for certification submittal (edit drafts if needed, transfer credit form information, submit calculators, etc.). You also have the option of running the analysis a second time (you receive two runs per order).",
+    title: "Review, Transfer, Submit",
+    body: "Review the outputs, transfer them to the online forms (if applicable) or generate documents and submit. A checklist of everything you need is provided to help guide the submittal process (or we can do that step for you).",
   },
   {
     n: "6",
