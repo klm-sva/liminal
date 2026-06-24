@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { DM_Serif_Display, DM_Sans } from "next/font/google";
 import "./globals.css";
 import DevNavLoader from "@/components/dev/DevNavLoader";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const dmSerifDisplay = DM_Serif_Display({
   weight: ["400"],
@@ -75,6 +77,8 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === "development" && <DevNavLoader />}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
