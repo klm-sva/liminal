@@ -1212,7 +1212,7 @@ If a document contains data that conflicts with owner-entered project data, defe
 
   if (hasForm) {
     const part1Response = await (client.messages.create as any)({
-      model:       "claude-sonnet-5",
+      model:       "claude-sonnet-4-6",
       max_tokens:  64000,
       temperature: 0,
       system:      systemPrompt,
@@ -1253,7 +1253,7 @@ If a document contains data that conflicts with owner-entered project data, defe
     : "";
 
   const part2Response = await (client.messages.create as any)({
-    model:       "claude-sonnet-5",
+    model:       "claude-sonnet-4-6",
     max_tokens:  64000,
     temperature: 0,
     system:      systemPrompt,

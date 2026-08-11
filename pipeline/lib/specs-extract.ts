@@ -95,7 +95,7 @@ async function extractChunk(
 ): Promise<{ products: SpecProduct[]; summary: string }> {
 
   const response = await client.messages.create({
-    model:       "claude-sonnet-5",
+    model:       "claude-sonnet-4-6",
     max_tokens:  8000,
     temperature: 0,
     messages:    [{ role: "user", content }],

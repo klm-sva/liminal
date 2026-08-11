@@ -163,7 +163,7 @@ async function streamCall(
   let ticks = 0;
 
   const stream = client.messages.stream({
-    model:       "claude-sonnet-5",
+    model:       "claude-sonnet-4-6",
     max_tokens:  maxTokens,
     temperature: 0,
     system:      systemPrompt,

@@ -36,7 +36,7 @@ if (fs.existsSync(envPath)) {
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const CONFIG = {
-  model:      "claude-sonnet-5",
+  model:      "claude-sonnet-4-6",
   maxTokens:  64000,
   creditSlug: "lt-access-to-quality-transit",
   formLinksXlsx: path.resolve(__dirname, "../pipeline") + "/credits/lt-access-to-quality-transit/form-links.txt",

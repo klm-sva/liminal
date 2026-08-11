@@ -84,7 +84,7 @@ export async function reviewDrawings(
   });
 
   const response = await client.messages.create({
-    model:      "claude-sonnet-5",
+    model:      "claude-sonnet-4-6",
     max_tokens: 512,
     system:     DRAWING_REVIEW_PROMPT,
     messages:   [{ role: "user", content: contentBlocks }],

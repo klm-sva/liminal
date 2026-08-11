@@ -150,7 +150,7 @@ Rules:
 
   // Use streaming — required for large max_tokens responses (SDK enforces this above ~10 min)
   const stream = client.messages.stream({
-    model:       "claude-sonnet-5",
+    model:       "claude-sonnet-4-6",
     max_tokens:  16000,
     temperature: 0,
     messages:    [{ role: "user", content: prompt }],

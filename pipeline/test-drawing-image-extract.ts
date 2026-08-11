@@ -191,7 +191,7 @@ async function extractViaDocument(
   const pdfB64 = fs.readFileSync(pdfPath).toString("base64");
 
   const response = await client.messages.create({
-    model:      "claude-sonnet-5",
+    model:      "claude-sonnet-4-6",
     max_tokens: 4096,
     temperature: 0,
     messages: [{
@@ -240,7 +240,7 @@ async function extractViaImages(
   ];
 
   const response = await client.messages.create({
-    model:      "claude-sonnet-5",
+    model:      "claude-sonnet-4-6",
     max_tokens: 4096,
     temperature: 0,
     messages: [{ role: "user", content }],
@@ -286,7 +286,7 @@ async function extractViaTiles(
   ];
 
   const response = await client.messages.create({
-    model:       "claude-sonnet-5",
+    model:       "claude-sonnet-4-6",
     max_tokens:  4096,
     temperature: 0,
     messages:    [{ role: "user", content }],
