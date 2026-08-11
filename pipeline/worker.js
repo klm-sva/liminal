@@ -2019,6 +2019,9 @@ ${stderr.trim()}`);
     const { error: updateErr } = await supabase.from("projects").update(updatePayload).eq("id", projectId);
     if (updateErr) throw new Error(`projects update failed: ${updateErr.message}`);
     console.log(`  \u2713 updated projects table`);
+    const { error: deleteErr } = await supabase.storage.from("customer-uploads").remove(drawingPaths);
+    if (deleteErr) console.warn(`  [WARN] Failed to delete drawing files: ${deleteErr.message}`);
+    else console.log(`  \u2713 deleted ${drawingPaths.length} drawing file(s) from storage`);
     await logAuditEvent({
       eventType: "drawing_analysis_complete",
       entityType: "project",
@@ -5272,9 +5275,9 @@ ${plainText}`
   if (step18OrderErr) throw new Error(`Step 18: Failed to mark order complete: ${step18OrderErr.message}`);
   const attemptFilePaths = uploads.map((u) => u.storagePath);
   if (attemptFilePaths.length > 0) {
-    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET).remove(attemptFilePaths);
+    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET4).remove(attemptFilePaths);
     if (deleteUploadsErr) console.warn(`  [WARN] Failed to delete customer uploads: ${deleteUploadsErr.message}`);
-    else console.log(`  ✓ deleted ${attemptFilePaths.length} customer upload(s) from storage`);
+    else console.log(`  \u2713 deleted ${attemptFilePaths.length} customer upload(s) from storage`);
   }
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";
