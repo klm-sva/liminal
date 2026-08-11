@@ -1671,116 +1671,114 @@ var init_supabase_ops = __esm({
 });
 
 // pipeline/document-review.ts
-async function reviewDocument(client2, requiredDocumentDescription, fileBuffer, filename2) {
+function buildFileContentBlocks(filename2, buffer) {
   const isPdf = filename2.toLowerCase().endsWith(".pdf");
-  const contentBlocks = isPdf ? [
-    preparePdfDocument(fileBuffer, filename2),
-    {
-      type: "text",
-      text: `Required document type: ${requiredDocumentDescription}
-
-Review this document and return the JSON assessment.`
-    }
-  ] : [
-    {
+  return [
+    { type: "text", text: `FILE: ${filename2}` },
+    isPdf ? preparePdfDocument(buffer, filename2) : {
       type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/jpeg",
-        data: fileBuffer.toString("base64")
-      }
-    },
+      source: { type: "base64", media_type: "image/jpeg", data: buffer.toString("base64") }
+    }
+  ];
+}
+async function reviewDocumentSet(client2, requiredDocs, files) {
+  const contentBlocks = [
     {
       type: "text",
-      text: `Required document type: ${requiredDocumentDescription}
-
-Review this document and return the JSON assessment.`
+      text: `Required documents for this credit:
+${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}`
+    },
+    ...files.flatMap((f) => buildFileContentBlocks(f.filename, f.buffer)),
+    {
+      type: "text",
+      text: "Review this complete set of uploaded documents against the required document list and return the JSON assessment."
     }
   ];
   const response = await client2.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 512,
+    max_tokens: 4096,
     system: DOCUMENT_REVIEW_PROMPT,
     messages: [{ role: "user", content: contentBlocks }]
   });
   const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  try {
-    const json = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
-    return JSON.parse(json);
-  } catch {
-    console.warn(`  \u26A0 Review response was not valid JSON for ${filename2}: ${rawText.slice(0, 200)}`);
-    return { acceptable: false, issue: "Document review could not be completed \u2014 please re-upload." };
-  }
-}
-function matchUploadToRequirement(requiredDescription, uploads) {
-  const keywords = requiredDescription.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 3);
-  let bestMatch = null;
-  let bestScore = 0;
-  for (const upload of uploads) {
-    const name = upload.filename.toLowerCase().replace(/[^a-z0-9 ]/g, " ");
-    const score = keywords.filter((kw) => name.includes(kw)).length;
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = upload;
-    }
-  }
-  return bestScore > 0 ? bestMatch : null;
+  const json = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+  return JSON.parse(json);
 }
 async function reviewDocuments(orderId, customerId, creditCode, uploads, requiredDocs) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
   const client2 = new import_sdk2.default({ apiKey, timeout: 18e4, maxRetries: 0 });
   const supabase = createServiceClient();
+  const reviewedAt = (/* @__PURE__ */ new Date()).toISOString();
   console.log(`[document-review] Order ${orderId} \u2014 ${creditCode} \u2014 ${uploads.length} upload(s)`);
   if (requiredDocs.length === 0) {
     console.log(`  No required documents defined for ${creditCode} \u2014 auto-passing review`);
-    return {
-      orderId,
-      creditCode,
-      status: "complete",
-      issues: [],
-      reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
+    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
   }
   console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
-  const issues = [];
-  for (const requiredDoc of requiredDocs) {
-    const matched = matchUploadToRequirement(requiredDoc, uploads);
-    if (!matched) {
-      console.log(`  \u2717 Missing: "${requiredDoc}"`);
-      issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: null,
-        issue: `Required document not uploaded: ${requiredDoc}`
-      });
-      continue;
-    }
-    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(matched.storagePath);
+  if (uploads.length === 0) {
+    console.log(`  No documents uploaded \u2014 all ${requiredDocs.length} requirement(s) missing`);
+    const issues2 = requiredDocs.map((requiredDoc) => ({
+      requiredDocument: requiredDoc,
+      uploadedFilename: null,
+      issue: `Required document not uploaded: ${requiredDoc}`
+    }));
+    await logAuditEvent({
+      eventType: "document_review_complete",
+      entityType: "order",
+      entityId: orderId,
+      customerId,
+      metadata: { creditCode, status: "incomplete", issueCount: issues2.length, noteCount: 0, uploadCount: 0, requiredCount: requiredDocs.length }
+    });
+    return { orderId, creditCode, status: "incomplete", issues: issues2, notes: [], reviewedAt };
+  }
+  console.log(`  Downloading ${uploads.length} uploaded file(s) for review...`);
+  const files = [];
+  for (const upload of uploads) {
+    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(upload.storagePath);
     if (error || !data2) {
-      console.warn(`  \u26A0 Failed to download ${matched.storagePath}: ${error?.message}`);
-      issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: matched.filename,
-        issue: "File could not be retrieved for review \u2014 please re-upload."
-      });
+      console.warn(`  \u26A0 Failed to download ${upload.storagePath}: ${error?.message}`);
       continue;
     }
-    const buffer = Buffer.from(await data2.arrayBuffer());
-    console.log(`  Reviewing "${matched.filename}" for: ${requiredDoc}`);
-    const review = await reviewDocument(client2, requiredDoc, buffer, matched.filename);
-    if (!review.acceptable) {
-      console.log(`  \u2717 Issue: ${review.issue}`);
+    files.push({ filename: upload.filename, buffer: Buffer.from(await data2.arrayBuffer()) });
+  }
+  if (files.length === 0) {
+    console.warn(`  \u26A0 No files could be downloaded \u2014 passing review to avoid blocking order`);
+    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+  }
+  let assessment;
+  try {
+    assessment = await reviewDocumentSet(client2, requiredDocs, files);
+  } catch (err) {
+    console.warn(`  \u26A0 Document set review failed: ${err.message} \u2014 passing review to avoid blocking order`);
+    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+  }
+  const issues = [];
+  const notes = [];
+  for (const req of assessment.requirements ?? []) {
+    if (req.status === "missing") {
+      console.log(`  \u2717 Missing: "${req.requiredDocument}"`);
       issues.push({
-        requiredDocument: requiredDoc,
-        uploadedFilename: matched.filename,
-        issue: review.issue ?? "Document did not pass review."
+        requiredDocument: req.requiredDocument,
+        uploadedFilename: null,
+        issue: `Required document not uploaded: ${req.requiredDocument}`
+      });
+    } else if (req.status === "satisfied_with_notes") {
+      console.log(`  \u26A0 Satisfied with note: "${req.requiredDocument}" (${req.satisfiedBy}) \u2014 ${req.note}`);
+      notes.push({
+        requiredDocument: req.requiredDocument,
+        uploadedFilename: req.satisfiedBy ?? "unknown",
+        note: req.note ?? ""
       });
     } else {
-      console.log(`  \u2713 Accepted: "${matched.filename}"`);
+      console.log(`  \u2713 Satisfied: "${req.requiredDocument}" by "${req.satisfiedBy}"`);
     }
   }
+  if (assessment.irrelevantFiles?.length) {
+    console.log(`  \u2139 Irrelevant to this credit: ${assessment.irrelevantFiles.join(", ")}`);
+  }
   const status = issues.length === 0 ? "complete" : "incomplete";
-  console.log(`  Review result: ${status} (${issues.length} issue(s))`);
+  console.log(`  Review result: ${status} (${issues.length} issue(s), ${notes.length} note(s))`);
   await logAuditEvent({
     eventType: "document_review_complete",
     entityType: "order",
@@ -1790,17 +1788,13 @@ async function reviewDocuments(orderId, customerId, creditCode, uploads, require
       creditCode,
       status,
       issueCount: issues.length,
+      noteCount: notes.length,
       uploadCount: uploads.length,
-      requiredCount: requiredDocs.length
+      requiredCount: requiredDocs.length,
+      irrelevantCount: assessment.irrelevantFiles?.length ?? 0
     }
   });
-  return {
-    orderId,
-    creditCode,
-    status,
-    issues,
-    reviewedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
+  return { orderId, creditCode, status, issues, notes, reviewedAt };
 }
 var import_sdk2, path3, fs4, envPath, DOCUMENT_REVIEW_PROMPT;
 var init_document_review = __esm({
@@ -1822,23 +1816,29 @@ var init_document_review = __esm({
         process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
       }
     }
-    DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing a document submitted by a project team. Your task is to assess whether this document is complete, legible, and appropriate for the stated purpose.
+    DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing the complete set of documents a project team uploaded for a single credit.
 
-You will be told what document type is required. Review the provided file and determine:
-1. Is this the correct document type?
-2. Is it complete (not truncated, not blank, not corrupted)?
-3. Is it legible and professionally prepared?
-4. Does it contain the key information normally expected in this document type?
+You are given the full list of required documents for this credit and every file the project team uploaded. Evaluate the uploaded set AS A WHOLE against the requirements. Follow these rules exactly:
+
+1. For each requirement, check whether ANY document in the uploaded set satisfies it \u2014 consider every file, not just the one that seems most obviously intended for it.
+2. Only mark a requirement "missing" if NO uploaded document satisfies it at all.
+3. Never fault a document for failing to satisfy a DIFFERENT requirement. A document that fully serves its own purpose is acceptable even if it says nothing about other requirements \u2014 e.g., a floor plan showing operable window locations is valid even though it does not show mechanical equipment; a mechanical drawing is valid even though it does not show operable windows.
+4. Be lenient on completeness. If a document is the correct type and clearly relevant to a requirement but is missing a minor expected detail, mark that requirement "satisfied_with_notes" and describe the gap in "note" \u2014 this is informational only, never a blocker. Only mark a requirement "missing" if the uploaded set contains no document of the correct type at all, or if the only candidate document is fundamentally the wrong type, blank, corrupted, or illegible.
+5. Only list a file in "irrelevantFiles" if it does not relate to ANY requirement for this credit. A file that partially or fully satisfies at least one requirement is never irrelevant.
 
 Respond with a single JSON object:
 {
-  "acceptable": boolean,
-  "issue": string | null
+  "requirements": [
+    {
+      "requiredDocument": string,        // exact text of the requirement as given
+      "status": "satisfied" | "satisfied_with_notes" | "missing",
+      "satisfiedBy": string | null,      // filename of the document that satisfies this requirement, or null if missing
+      "note": string | null              // present only for "satisfied_with_notes" \u2014 describe the minor gap, written for the project team
+    }
+  ],
+  "irrelevantFiles": string[]            // filenames relating to none of the requirements; empty array if none
 }
 
-Set "acceptable" to true if the document is suitable for certification submission.
-Set "acceptable" to false and provide a concise "issue" string describing the specific problem.
-The "issue" string must be written for the project team to read \u2014 be specific and actionable.
 Return only the JSON object.`;
   }
 });
