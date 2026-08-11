@@ -141,7 +141,7 @@ async function runExtraction(
 ): Promise<Omit<DocumentProfile, "extracted_at" | "source_file" | "token_usage">> {
 
   const response = await client.messages.create({
-    model:       "claude-sonnet-4-6",
+    model:       "claude-sonnet-5",
     max_tokens:  4000,
     temperature: 0,
     messages:    [{ role: "user", content: [...content, { type: "text", text: EXTRACTION_PROMPT }] }],

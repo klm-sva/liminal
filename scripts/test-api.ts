@@ -25,7 +25,7 @@ const client = new Anthropic({ apiKey });
 async function main() {
   console.log("Sending test message to Anthropic...\n");
   const message = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 64,
     messages: [{ role: "user", content: "Say hello in 5 words or less." }],
   });

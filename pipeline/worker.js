@@ -272,7 +272,7 @@ async function _extract(client2, pdfBuffer2, filename2, extractionPrompt, render
     ];
   }
   const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 8e3,
     temperature: 0,
     messages: [{ role: "user", content }]
@@ -1409,7 +1409,7 @@ ${result.text.slice(0, 8e3)}
   ;
   console.log(`  Step 7: Calling Claude...`);
   const message = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 32e3,
     messages: [
       {
@@ -1698,7 +1698,7 @@ Review this document and return the JSON assessment.`
     }
   ];
   const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 512,
     system: DOCUMENT_REVIEW_PROMPT,
     messages: [{ role: "user", content: contentBlocks }]
@@ -1874,7 +1874,7 @@ async function reviewDrawings(customerId, projectId, drawingPaths) {
     text: "Review these drawing files and return the JSON assessment."
   });
   const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 512,
     system: DRAWING_REVIEW_PROMPT,
     messages: [{ role: "user", content: contentBlocks }]
@@ -2019,6 +2019,9 @@ ${stderr.trim()}`);
     const { error: updateErr } = await supabase.from("projects").update(updatePayload).eq("id", projectId);
     if (updateErr) throw new Error(`projects update failed: ${updateErr.message}`);
     console.log(`  \u2713 updated projects table`);
+    const { error: deleteErr } = await supabase.storage.from("customer-uploads").remove(drawingPaths);
+    if (deleteErr) console.warn(`  [WARN] Failed to delete drawing files: ${deleteErr.message}`);
+    else console.log(`  \u2713 deleted ${drawingPaths.length} drawing file(s) from storage`);
     await logAuditEvent({
       eventType: "drawing_analysis_complete",
       entityType: "project",
@@ -2774,7 +2777,7 @@ Rules:
 - Numbers without quotes; strings in quotes; null for truly unknown values.
 - The "value" key must never be omitted \u2014 use null if no value is available.`;
   const stream = client2.messages.stream({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 16e3,
     temperature: 0,
     messages: [{ role: "user", content: prompt }]
@@ -3044,7 +3047,7 @@ function convertToText(buffer, filename2) {
 }
 async function extractChunk(client2, content, usage2) {
   const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 8e3,
     temperature: 0,
     messages: [{ role: "user", content }]
@@ -3293,7 +3296,7 @@ function buildContentBlocks(buffer, filename2) {
 }
 async function runExtraction(client2, content, filename2, usage2) {
   const response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 4e3,
     temperature: 0,
     messages: [{ role: "user", content: [...content, { type: "text", text: EXTRACTION_PROMPT2 }] }]
@@ -4996,7 +4999,7 @@ ${additionalInstructions}`] : []
   let part1Html = "";
   if (hasForm) {
     const part1Response = await client2.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-5",
       max_tokens: 64e3,
       temperature: 0,
       system: systemPrompt,
@@ -5023,7 +5026,7 @@ ${additionalInstructions}`] : []
   const mapContentBlocks = [];
   const mapStatusBlock = requiredMapType ? "MAP_STATUS: PENDING \u2014 A map will be generated and inserted at the <img data-map-insert='1'> placeholder after this section is complete. In the checklist, list the map as \u2713 PROVIDED." : "";
   const part2Response = await client2.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-sonnet-5",
     max_tokens: 64e3,
     temperature: 0,
     system: systemPrompt,
@@ -5272,9 +5275,9 @@ ${plainText}`
   if (step18OrderErr) throw new Error(`Step 18: Failed to mark order complete: ${step18OrderErr.message}`);
   const attemptFilePaths = uploads.map((u) => u.storagePath);
   if (attemptFilePaths.length > 0) {
-    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET).remove(attemptFilePaths);
+    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET4).remove(attemptFilePaths);
     if (deleteUploadsErr) console.warn(`  [WARN] Failed to delete customer uploads: ${deleteUploadsErr.message}`);
-    else console.log(`  ✓ deleted ${attemptFilePaths.length} customer upload(s) from storage`);
+    else console.log(`  \u2713 deleted ${attemptFilePaths.length} customer upload(s) from storage`);
   }
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://liminalsva.com";

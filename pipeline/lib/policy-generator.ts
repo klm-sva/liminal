@@ -195,7 +195,7 @@ RULES:
    - Signature block: border-top 2px solid #2b4044, margin-top 40px, padding-top 16px`;
 
   const response = await client.messages.create({
-    model:       "claude-sonnet-4-6",
+    model:       "claude-sonnet-5",
     max_tokens:  8000,
     temperature: 0,
     messages:    [{ role: "user", content: prompt }],
@@ -267,7 +267,7 @@ RULES:
    - Signature block: border-top 2px solid #2b4044, margin-top 40px, padding-top 16px`;
 
   const response = await client.messages.create({
-    model:       "claude-sonnet-4-6",
+    model:       "claude-sonnet-5",
     max_tokens:  8000,
     temperature: 0,
     messages:    [{ role: "user", content: prompt }],
