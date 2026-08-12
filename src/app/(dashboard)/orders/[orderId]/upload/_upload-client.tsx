@@ -6,6 +6,7 @@ import { Upload, X, CheckCircle2, FileText, Info } from "lucide-react";
 import { generateReactHelpers } from "@uploadthing/react";
 import type { OurFileRouter } from "@/lib/uploadthing";
 import StepProgress from "@/components/ui/StepProgress";
+import { isPolicyRequirement } from "@/lib/policy-detection";
 
 const { useUploadThing } = generateReactHelpers<OurFileRouter>();
 
@@ -219,7 +220,14 @@ export default function UploadClient({ orderId, creditCode, creditName, required
               return (
                 <li key={i} className="flex items-start gap-2">
                   <CheckCircle2 size={13} className={`shrink-0 mt-0.5 ${uploaded ? "text-certify-sage" : "text-certify-cool-grey/30"}`} />
-                  <span className={`text-xs leading-relaxed ${uploaded ? "text-certify-teal" : "text-certify-cool-grey"}`}>{doc}</span>
+                  <div>
+                    <span className={`text-xs leading-relaxed ${uploaded ? "text-certify-teal" : "text-certify-cool-grey"}`}>{doc}</span>
+                    {isPolicyRequirement(doc) && (
+                      <p className="text-xs text-certify-cool-grey/80 leading-relaxed mt-0.5">
+                        If you have a current policy, upload it and we&apos;ll review it for compliance gaps. If you don&apos;t have one yet, we&apos;ll draft one for you.
+                      </p>
+                    )}
+                  </div>
                 </li>
               );
             })}

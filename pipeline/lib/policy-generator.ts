@@ -15,34 +15,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as fs   from "fs";
 import * as path from "path";
 import { makeEditable } from "./make-editable";
+import { POLICY_PATTERNS } from "../../src/lib/policy-detection";
 
 // ─── Policy detection ─────────────────────────────────────────────────────────
-
-const POLICY_PATTERNS: RegExp[] = [
-  /signed\s+\w+\s+policy/i,
-  /written\s+\w+\s+policy/i,
-  /\w+\s+policy\s+(letter|document|statement|commitment)/i,
-  /policy\s+(on|for|regarding)\s+/i,
-  /commitment\s+letter/i,
-  /signed\s+commitment/i,
-  /signed\s+statement/i,
-  /management\s+plan/i,
-  /operations\s+(and\s+maintenance\s+)?plan/i,
-  /maintenance\s+plan/i,
-  /transportation\s+demand\s+management/i,
-  /tdm\s+program/i,
-  /green\s+cleaning\s+policy/i,
-  /smoking\s+policy/i,
-  /tobacco\s+policy/i,
-  /lighting\s+policy/i,
-  /thermal\s+comfort\s+policy/i,
-  /indoor\s+air\s+quality\s+policy/i,
-  /acoustic\s+policy/i,
-  /wellness\s+policy/i,
-  /tenant\s+guide(lines?)?/i,
-  /lease\s+(agreement|language|addendum)/i,
-  /\bpolicy\b/i,
-];
+// POLICY_PATTERNS lives in src/lib/policy-detection.ts — shared with the
+// order upload UI so requirement-checklist copy and the actual generator
+// behavior can never drift out of sync.
 
 export interface PolicyRequirement {
   rawText:    string;
