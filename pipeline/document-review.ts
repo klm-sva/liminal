@@ -62,22 +62,39 @@ export interface DocumentReviewResult {
 
 const DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing the complete set of documents a project team uploaded for a single credit.
 
-You are given the full list of required documents for this credit and every file the project team uploaded. Evaluate the uploaded set AS A WHOLE against the requirements. Follow these rules exactly:
+You are given the credit this review is for, the full list of required documents, and every file the project team uploaded. Evaluate the uploaded set AS A WHOLE against the requirements. Follow these rules exactly:
 
-1. For each requirement, check whether ANY document in the uploaded set satisfies it — consider every file, not just the one that seems most obviously intended for it.
-2. Only mark a requirement "missing" if NO uploaded document satisfies it at all.
-3. Never fault a document for failing to satisfy a DIFFERENT requirement. A document that fully serves its own purpose is acceptable even if it says nothing about other requirements — e.g., a floor plan showing operable window locations is valid even though it does not show mechanical equipment; a mechanical drawing is valid even though it does not show operable windows.
-4. Be lenient on completeness. If a document is the correct type and clearly relevant to a requirement but is missing a minor expected detail, mark that requirement "satisfied_with_notes" and describe the gap in "note" — this is informational only, never a blocker. Only mark a requirement "missing" if the uploaded set contains no document of the correct type at all, or if the only candidate document is fundamentally the wrong type, blank, corrupted, or illegible.
-5. Only list a file in "irrelevantFiles" if it does not relate to ANY requirement for this credit. A file that partially or fully satisfies at least one requirement is never irrelevant.
+1. First, identify every uploaded file: what specific type of document it is (e.g. "mechanical drawing", "architectural floor plan", "window schedule", "product cut sheet") and what specific information in it is relevant to this credit.
+2. For each requirement, check whether ANY document in the uploaded set satisfies it — consider every file, not just the one that seems most obviously intended for it. State the specific information from that document that satisfies the requirement.
+3. Only mark a requirement "missing" if NO uploaded document satisfies it at all.
+4. Never fault a document for failing to satisfy a DIFFERENT requirement. A document that fully serves its own purpose is acceptable even if it says nothing about other requirements — e.g., a floor plan showing operable window locations is valid even though it does not show mechanical equipment; a mechanical drawing is valid even though it does not show operable windows.
+5. Be lenient on completeness. If a document is the correct type and clearly relevant to a requirement but is missing a minor expected detail, mark that requirement "satisfied_with_notes" — this is informational only, never a blocker. Only mark a requirement "missing" if the uploaded set contains no document of the correct type at all, or if the only candidate document is fundamentally the wrong type, blank, corrupted, or illegible.
+6. Only list a file in "irrelevantFiles" if it does not relate to ANY requirement for this credit. A file that partially or fully satisfies at least one requirement is never irrelevant.
+
+PRECISION RULE — APPLIES TO EVERY "note" AND "missingDetail" YOU WRITE:
+Name the exact, specific missing element — never a vague restatement of the requirement category. Compare:
+- BAD: "Strategy-specific documentation uploads" / "Mechanical drawing documentation incomplete"
+- GOOD: "Mechanical drawing is missing the outdoor air intake locations" / "Floor plan does not show which windows are operable — a window schedule or notation is needed"
+
+NEVER copy raw source-list phrasing into "note" or "missingDetail". Specifically, never let these fields start with or contain meta-instructional lead-ins like "For each selected strategy:", "For each applicable...:", "As applicable:", "If selected:", or similar template language — that phrasing describes how the requirement list was written, not what the project team is missing. Rewrite it into a concrete, specific description of the actual missing item, grounded in what this credit requires and in what the uploaded documents already show. "requiredDocument" is the only field allowed to hold the raw requirement text — it is for internal tracking and must never be shown to the project team directly.
 
 Respond with a single JSON object:
 {
+  "documents": [
+    {
+      "filename": string,
+      "documentType": string,          // specific type, e.g. "Mechanical drawing", "Architectural floor plan"
+      "relevantContent": string        // specific information in this file relevant to this credit
+    }
+  ],
   "requirements": [
     {
-      "requiredDocument": string,        // exact text of the requirement as given
+      "requiredDocument": string,        // exact text of the requirement as given — internal tracking only, never shown to the project team
       "status": "satisfied" | "satisfied_with_notes" | "missing",
       "satisfiedBy": string | null,      // filename of the document that satisfies this requirement, or null if missing
-      "note": string | null              // present only for "satisfied_with_notes" — describe the minor gap, written for the project team
+      "satisfiedDetail": string | null,  // specific information from that document that satisfies the requirement
+      "note": string | null,             // present only for "satisfied_with_notes" — precise, specific description of the minor gap
+      "missingDetail": string | null     // present only for "missing" — precise, specific, customer-facing description of exactly what is absent
     }
   ],
   "irrelevantFiles": string[]            // filenames relating to none of the requirements; empty array if none
@@ -86,13 +103,32 @@ Respond with a single JSON object:
 Return only the JSON object.`;
 
 interface DocumentSetAssessment {
+  documents: Array<{
+    filename: string;
+    documentType: string;
+    relevantContent: string;
+  }>;
   requirements: Array<{
     requiredDocument: string;
     status: "satisfied" | "satisfied_with_notes" | "missing";
     satisfiedBy: string | null;
+    satisfiedDetail: string | null;
     note: string | null;
+    missingDetail: string | null;
   }>;
   irrelevantFiles: string[];
+}
+
+// Defensive fallback only — the prompt instructs Claude to never write this
+// phrasing into customer-facing fields. Strips leading meta-instructional
+// clauses (e.g. "For each selected strategy:") from raw spreadsheet text in
+// case a fallback ever needs to fall back to the raw requirement string.
+function sanitizeTemplateLanguage(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/^for\s+[^:]{1,100}:\s*/i, "")
+    .replace(/^if\s+[^:]{1,100}:\s*/i, "")
+    .trim();
 }
 
 type ContentBlock = Anthropic.TextBlockParam | Anthropic.DocumentBlockParam | Anthropic.ImageBlockParam;
@@ -112,13 +148,16 @@ function buildFileContentBlocks(filename: string, buffer: Buffer): ContentBlock[
 
 async function reviewDocumentSet(
   client: Anthropic,
+  creditCode: string,
   requiredDocs: string[],
   files: Array<{ filename: string; buffer: Buffer }>
 ): Promise<DocumentSetAssessment> {
   const contentBlocks: ContentBlock[] = [
     {
       type: "text",
-      text: `Required documents for this credit:\n${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}`,
+      text: `Credit: ${creditCode}\n\nRequired documents for this credit:\n${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}${
+        files.length === 0 ? "\n\n(No files were uploaded by the project team.)" : ""
+      }`,
     },
     ...files.flatMap((f) => buildFileContentBlocks(f.filename, f.buffer)),
     {
@@ -129,7 +168,7 @@ async function reviewDocumentSet(
 
   const response = await client.messages.create({
     model:      "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 8000,
     system:     DOCUMENT_REVIEW_PROMPT,
     messages:   [{ role: "user", content: contentBlocks }],
   });
@@ -163,54 +202,48 @@ export async function reviewDocuments(
 
   console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
 
-  if (uploads.length === 0) {
-    console.log(`  No documents uploaded — all ${requiredDocs.length} requirement(s) missing`);
-    const issues: DocumentIssue[] = requiredDocs.map((requiredDoc) => ({
-      requiredDocument: requiredDoc,
-      uploadedFilename: null,
-      issue: `Required document not uploaded: ${requiredDoc}`,
-    }));
-
-    await logAuditEvent({
-      eventType:  "document_review_complete",
-      entityType: "order",
-      entityId:   orderId,
-      customerId,
-      metadata:   { creditCode, status: "incomplete", issueCount: issues.length, noteCount: 0, uploadCount: 0, requiredCount: requiredDocs.length },
-    });
-
-    return { orderId, creditCode, status: "incomplete", issues, notes: [], reviewedAt };
-  }
-
   // Download the complete uploaded set — every file is reviewed together,
-  // not matched one-to-one against a single requirement.
-  console.log(`  Downloading ${uploads.length} uploaded file(s) for review...`);
-  const files: Array<{ filename: string; buffer: Buffer }> = [];
-  for (const upload of uploads) {
-    const { data, error } = await supabase.storage
-      .from("customer-uploads")
-      .download(upload.storagePath);
+  // not matched one-to-one against a single requirement. If nothing was
+  // uploaded, we still call the model with an empty file set so every
+  // "missing" description is written specifically rather than echoing the
+  // raw requirement text back at the customer.
+  let files: Array<{ filename: string; buffer: Buffer }> = [];
+  if (uploads.length > 0) {
+    console.log(`  Downloading ${uploads.length} uploaded file(s) for review...`);
+    for (const upload of uploads) {
+      const { data, error } = await supabase.storage
+        .from("customer-uploads")
+        .download(upload.storagePath);
 
-    if (error || !data) {
-      console.warn(`  ⚠ Failed to download ${upload.storagePath}: ${error?.message}`);
-      continue;
+      if (error || !data) {
+        console.warn(`  ⚠ Failed to download ${upload.storagePath}: ${error?.message}`);
+        continue;
+      }
+
+      files.push({ filename: upload.filename, buffer: Buffer.from(await data.arrayBuffer()) });
     }
 
-    files.push({ filename: upload.filename, buffer: Buffer.from(await data.arrayBuffer()) });
-  }
-
-  if (files.length === 0) {
-    // All downloads failed — fail open so a storage error doesn't block the order
-    console.warn(`  ⚠ No files could be downloaded — passing review to avoid blocking order`);
-    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    if (files.length === 0) {
+      // All downloads failed — fail open so a storage error doesn't block the order
+      console.warn(`  ⚠ No files could be downloaded — passing review to avoid blocking order`);
+      return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    }
+  } else {
+    console.log(`  No documents uploaded — reviewing full requirement list against an empty set`);
   }
 
   let assessment: DocumentSetAssessment;
   try {
-    assessment = await reviewDocumentSet(client, requiredDocs, files);
+    assessment = await reviewDocumentSet(client, creditCode, requiredDocs, files);
   } catch (err) {
     console.warn(`  ⚠ Document set review failed: ${(err as Error).message} — passing review to avoid blocking order`);
     return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+  }
+
+  if (assessment.documents?.length) {
+    for (const doc of assessment.documents) {
+      console.log(`  📄 ${doc.filename} — ${doc.documentType}: ${doc.relevantContent}`);
+    }
   }
 
   const issues: DocumentIssue[] = [];
@@ -218,21 +251,23 @@ export async function reviewDocuments(
 
   for (const req of assessment.requirements ?? []) {
     if (req.status === "missing") {
-      console.log(`  ✗ Missing: "${req.requiredDocument}"`);
+      const detail = sanitizeTemplateLanguage(req.missingDetail) || sanitizeTemplateLanguage(req.requiredDocument);
+      console.log(`  ✗ Missing: ${detail}`);
       issues.push({
         requiredDocument: req.requiredDocument,
         uploadedFilename: null,
-        issue: `Required document not uploaded: ${req.requiredDocument}`,
+        issue: detail,
       });
     } else if (req.status === "satisfied_with_notes") {
-      console.log(`  ⚠ Satisfied with note: "${req.requiredDocument}" (${req.satisfiedBy}) — ${req.note}`);
+      const detail = sanitizeTemplateLanguage(req.note) || "Provided, but missing a minor expected detail.";
+      console.log(`  ⚠ Satisfied with note: "${req.requiredDocument}" (${req.satisfiedBy}) — ${detail}`);
       notes.push({
         requiredDocument: req.requiredDocument,
         uploadedFilename: req.satisfiedBy ?? "unknown",
-        note: req.note ?? "",
+        note: detail,
       });
     } else {
-      console.log(`  ✓ Satisfied: "${req.requiredDocument}" by "${req.satisfiedBy}"`);
+      console.log(`  ✓ Satisfied: "${req.requiredDocument}" by "${req.satisfiedBy}" — ${req.satisfiedDetail ?? ""}`);
     }
   }
 

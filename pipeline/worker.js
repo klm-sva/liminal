@@ -1671,6 +1671,10 @@ var init_supabase_ops = __esm({
 });
 
 // pipeline/document-review.ts
+function sanitizeTemplateLanguage(text) {
+  if (!text) return "";
+  return text.replace(/^for\s+[^:]{1,100}:\s*/i, "").replace(/^if\s+[^:]{1,100}:\s*/i, "").trim();
+}
 function buildFileContentBlocks(filename2, buffer) {
   const isPdf = filename2.toLowerCase().endsWith(".pdf");
   return [
@@ -1681,12 +1685,14 @@ function buildFileContentBlocks(filename2, buffer) {
     }
   ];
 }
-async function reviewDocumentSet(client2, requiredDocs, files) {
+async function reviewDocumentSet(client2, creditCode, requiredDocs, files) {
   const contentBlocks = [
     {
       type: "text",
-      text: `Required documents for this credit:
-${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}`
+      text: `Credit: ${creditCode}
+
+Required documents for this credit:
+${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}${files.length === 0 ? "\n\n(No files were uploaded by the project team.)" : ""}`
     },
     ...files.flatMap((f) => buildFileContentBlocks(f.filename, f.buffer)),
     {
@@ -1696,7 +1702,7 @@ ${requiredDocs.map((d, i) => `${i + 1}. ${d}`).join("\n")}`
   ];
   const response = await client2.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 4096,
+    max_tokens: 8e3,
     system: DOCUMENT_REVIEW_PROMPT,
     messages: [{ role: "user", content: contentBlocks }]
   });
@@ -1716,62 +1722,57 @@ async function reviewDocuments(orderId, customerId, creditCode, uploads, require
     return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
   }
   console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
-  if (uploads.length === 0) {
-    console.log(`  No documents uploaded \u2014 all ${requiredDocs.length} requirement(s) missing`);
-    const issues2 = requiredDocs.map((requiredDoc) => ({
-      requiredDocument: requiredDoc,
-      uploadedFilename: null,
-      issue: `Required document not uploaded: ${requiredDoc}`
-    }));
-    await logAuditEvent({
-      eventType: "document_review_complete",
-      entityType: "order",
-      entityId: orderId,
-      customerId,
-      metadata: { creditCode, status: "incomplete", issueCount: issues2.length, noteCount: 0, uploadCount: 0, requiredCount: requiredDocs.length }
-    });
-    return { orderId, creditCode, status: "incomplete", issues: issues2, notes: [], reviewedAt };
-  }
-  console.log(`  Downloading ${uploads.length} uploaded file(s) for review...`);
-  const files = [];
-  for (const upload of uploads) {
-    const { data: data2, error } = await supabase.storage.from("customer-uploads").download(upload.storagePath);
-    if (error || !data2) {
-      console.warn(`  \u26A0 Failed to download ${upload.storagePath}: ${error?.message}`);
-      continue;
+  let files = [];
+  if (uploads.length > 0) {
+    console.log(`  Downloading ${uploads.length} uploaded file(s) for review...`);
+    for (const upload of uploads) {
+      const { data: data2, error } = await supabase.storage.from("customer-uploads").download(upload.storagePath);
+      if (error || !data2) {
+        console.warn(`  \u26A0 Failed to download ${upload.storagePath}: ${error?.message}`);
+        continue;
+      }
+      files.push({ filename: upload.filename, buffer: Buffer.from(await data2.arrayBuffer()) });
     }
-    files.push({ filename: upload.filename, buffer: Buffer.from(await data2.arrayBuffer()) });
-  }
-  if (files.length === 0) {
-    console.warn(`  \u26A0 No files could be downloaded \u2014 passing review to avoid blocking order`);
-    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    if (files.length === 0) {
+      console.warn(`  \u26A0 No files could be downloaded \u2014 passing review to avoid blocking order`);
+      return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    }
+  } else {
+    console.log(`  No documents uploaded \u2014 reviewing full requirement list against an empty set`);
   }
   let assessment;
   try {
-    assessment = await reviewDocumentSet(client2, requiredDocs, files);
+    assessment = await reviewDocumentSet(client2, creditCode, requiredDocs, files);
   } catch (err) {
     console.warn(`  \u26A0 Document set review failed: ${err.message} \u2014 passing review to avoid blocking order`);
     return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+  }
+  if (assessment.documents?.length) {
+    for (const doc of assessment.documents) {
+      console.log(`  \u{1F4C4} ${doc.filename} \u2014 ${doc.documentType}: ${doc.relevantContent}`);
+    }
   }
   const issues = [];
   const notes = [];
   for (const req of assessment.requirements ?? []) {
     if (req.status === "missing") {
-      console.log(`  \u2717 Missing: "${req.requiredDocument}"`);
+      const detail = sanitizeTemplateLanguage(req.missingDetail) || sanitizeTemplateLanguage(req.requiredDocument);
+      console.log(`  \u2717 Missing: ${detail}`);
       issues.push({
         requiredDocument: req.requiredDocument,
         uploadedFilename: null,
-        issue: `Required document not uploaded: ${req.requiredDocument}`
+        issue: detail
       });
     } else if (req.status === "satisfied_with_notes") {
-      console.log(`  \u26A0 Satisfied with note: "${req.requiredDocument}" (${req.satisfiedBy}) \u2014 ${req.note}`);
+      const detail = sanitizeTemplateLanguage(req.note) || "Provided, but missing a minor expected detail.";
+      console.log(`  \u26A0 Satisfied with note: "${req.requiredDocument}" (${req.satisfiedBy}) \u2014 ${detail}`);
       notes.push({
         requiredDocument: req.requiredDocument,
         uploadedFilename: req.satisfiedBy ?? "unknown",
-        note: req.note ?? ""
+        note: detail
       });
     } else {
-      console.log(`  \u2713 Satisfied: "${req.requiredDocument}" by "${req.satisfiedBy}"`);
+      console.log(`  \u2713 Satisfied: "${req.requiredDocument}" by "${req.satisfiedBy}" \u2014 ${req.satisfiedDetail ?? ""}`);
     }
   }
   if (assessment.irrelevantFiles?.length) {
@@ -1818,22 +1819,39 @@ var init_document_review = __esm({
     }
     DOCUMENT_REVIEW_PROMPT = `You are a building certification specialist reviewing the complete set of documents a project team uploaded for a single credit.
 
-You are given the full list of required documents for this credit and every file the project team uploaded. Evaluate the uploaded set AS A WHOLE against the requirements. Follow these rules exactly:
+You are given the credit this review is for, the full list of required documents, and every file the project team uploaded. Evaluate the uploaded set AS A WHOLE against the requirements. Follow these rules exactly:
 
-1. For each requirement, check whether ANY document in the uploaded set satisfies it \u2014 consider every file, not just the one that seems most obviously intended for it.
-2. Only mark a requirement "missing" if NO uploaded document satisfies it at all.
-3. Never fault a document for failing to satisfy a DIFFERENT requirement. A document that fully serves its own purpose is acceptable even if it says nothing about other requirements \u2014 e.g., a floor plan showing operable window locations is valid even though it does not show mechanical equipment; a mechanical drawing is valid even though it does not show operable windows.
-4. Be lenient on completeness. If a document is the correct type and clearly relevant to a requirement but is missing a minor expected detail, mark that requirement "satisfied_with_notes" and describe the gap in "note" \u2014 this is informational only, never a blocker. Only mark a requirement "missing" if the uploaded set contains no document of the correct type at all, or if the only candidate document is fundamentally the wrong type, blank, corrupted, or illegible.
-5. Only list a file in "irrelevantFiles" if it does not relate to ANY requirement for this credit. A file that partially or fully satisfies at least one requirement is never irrelevant.
+1. First, identify every uploaded file: what specific type of document it is (e.g. "mechanical drawing", "architectural floor plan", "window schedule", "product cut sheet") and what specific information in it is relevant to this credit.
+2. For each requirement, check whether ANY document in the uploaded set satisfies it \u2014 consider every file, not just the one that seems most obviously intended for it. State the specific information from that document that satisfies the requirement.
+3. Only mark a requirement "missing" if NO uploaded document satisfies it at all.
+4. Never fault a document for failing to satisfy a DIFFERENT requirement. A document that fully serves its own purpose is acceptable even if it says nothing about other requirements \u2014 e.g., a floor plan showing operable window locations is valid even though it does not show mechanical equipment; a mechanical drawing is valid even though it does not show operable windows.
+5. Be lenient on completeness. If a document is the correct type and clearly relevant to a requirement but is missing a minor expected detail, mark that requirement "satisfied_with_notes" \u2014 this is informational only, never a blocker. Only mark a requirement "missing" if the uploaded set contains no document of the correct type at all, or if the only candidate document is fundamentally the wrong type, blank, corrupted, or illegible.
+6. Only list a file in "irrelevantFiles" if it does not relate to ANY requirement for this credit. A file that partially or fully satisfies at least one requirement is never irrelevant.
+
+PRECISION RULE \u2014 APPLIES TO EVERY "note" AND "missingDetail" YOU WRITE:
+Name the exact, specific missing element \u2014 never a vague restatement of the requirement category. Compare:
+- BAD: "Strategy-specific documentation uploads" / "Mechanical drawing documentation incomplete"
+- GOOD: "Mechanical drawing is missing the outdoor air intake locations" / "Floor plan does not show which windows are operable \u2014 a window schedule or notation is needed"
+
+NEVER copy raw source-list phrasing into "note" or "missingDetail". Specifically, never let these fields start with or contain meta-instructional lead-ins like "For each selected strategy:", "For each applicable...:", "As applicable:", "If selected:", or similar template language \u2014 that phrasing describes how the requirement list was written, not what the project team is missing. Rewrite it into a concrete, specific description of the actual missing item, grounded in what this credit requires and in what the uploaded documents already show. "requiredDocument" is the only field allowed to hold the raw requirement text \u2014 it is for internal tracking and must never be shown to the project team directly.
 
 Respond with a single JSON object:
 {
+  "documents": [
+    {
+      "filename": string,
+      "documentType": string,          // specific type, e.g. "Mechanical drawing", "Architectural floor plan"
+      "relevantContent": string        // specific information in this file relevant to this credit
+    }
+  ],
   "requirements": [
     {
-      "requiredDocument": string,        // exact text of the requirement as given
+      "requiredDocument": string,        // exact text of the requirement as given \u2014 internal tracking only, never shown to the project team
       "status": "satisfied" | "satisfied_with_notes" | "missing",
       "satisfiedBy": string | null,      // filename of the document that satisfies this requirement, or null if missing
-      "note": string | null              // present only for "satisfied_with_notes" \u2014 describe the minor gap, written for the project team
+      "satisfiedDetail": string | null,  // specific information from that document that satisfies the requirement
+      "note": string | null,             // present only for "satisfied_with_notes" \u2014 precise, specific description of the minor gap
+      "missingDetail": string | null     // present only for "missing" \u2014 precise, specific, customer-facing description of exactly what is absent
     }
   ],
   "irrelevantFiles": string[]            // filenames relating to none of the requirements; empty array if none
