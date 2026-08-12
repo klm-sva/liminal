@@ -5461,12 +5461,12 @@ app.post("/process", async (req, res) => {
   res.json({ status: "accepted" });
   const startedAt = Date.now();
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
+  const { createClient: createClient2 } = require("@supabase/supabase-js");
+  const supabase = createClient2(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
   try {
-    const { createClient: createClient2 } = require("@supabase/supabase-js");
-    const supabase = createClient2(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
     const { data: order } = await supabase.from("orders").select("credit_id").eq("id", orderId).single();
     let result;
     if (!order?.credit_id) {
@@ -5498,8 +5498,16 @@ app.post("/process", async (req, res) => {
     }
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1e3).toFixed(1);
-    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${err.message}`);
+    const message = err.message;
+    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${message}`);
     console.error(err.stack);
+    try {
+      await supabase.from("runs").update({ status: "failed", error_message: message, completed_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
+      await supabase.from("orders").update({ status: "failed" }).eq("id", orderId);
+      console.error(`[worker] marked run and order as failed orderId=${orderId} runId=${runId}`);
+    } catch (dbErr) {
+      console.error(`[worker] failed to persist failure status orderId=${orderId} runId=${runId}: ${dbErr.message}`);
+    }
   }
 });
 try {

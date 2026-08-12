@@ -93,13 +93,17 @@ app.post("/process", async (req: any, res: any) => {
   const startedAt = Date.now();
   console.log(`[worker] job started  orderId=${orderId} runId=${runId}`);
 
+  // Created outside the try block so the catch handler below can also use it
+  // to persist failure status — a run/order must never be left stuck at
+  // "processing" just because the pipeline threw partway through.
+  const { createClient } = require("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   try {
     // Route to gap analysis or credit pipeline based on order type
-    const { createClient } = require("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
     const { data: order } = await supabase
       .from("orders")
       .select("credit_id")
@@ -148,8 +152,26 @@ app.post("/process", async (req: any, res: any) => {
     }
   } catch (err) {
     const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
-    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${(err as Error).message}`);
+    const message = (err as Error).message;
+    console.error(`[worker] job failed   orderId=${orderId} runId=${runId} elapsed=${elapsed}s error=${message}`);
     console.error((err as Error).stack);
+
+    // A run/order left at "processing" forever is a customer-facing stuck
+    // order with no visibility. Always mark it failed so the customer sees
+    // a real status instead of an infinite spinner.
+    try {
+      await supabase
+        .from("runs")
+        .update({ status: "failed", error_message: message, completed_at: new Date().toISOString() })
+        .eq("id", runId);
+      await supabase
+        .from("orders")
+        .update({ status: "failed" })
+        .eq("id", orderId);
+      console.error(`[worker] marked run and order as failed orderId=${orderId} runId=${runId}`);
+    } catch (dbErr) {
+      console.error(`[worker] failed to persist failure status orderId=${orderId} runId=${runId}: ${(dbErr as Error).message}`);
+    }
   }
 });
 
