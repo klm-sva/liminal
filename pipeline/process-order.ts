@@ -37,7 +37,7 @@ import { createServiceClient } from "./lib/supabase";
 import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx-row";
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
-import { analyzeDrawings } from "./drawing-analysis";
+import { getOrAnalyzeDrawing, rebuildProjectProfile } from "./drawing-analysis";
 import { generateMap, measureWalkingDistances, type MapType, type WalkingRoute } from "./map-generation";
 import { findGtfsFeedUrls, getGtfsStopsNearProject, type GtfsStopResult } from "./lib/gtfs-transit";
 import { geocodeAddress } from "./lib/geocode";
@@ -340,6 +340,12 @@ function drawingsPath(customerId: string, projectId: string): string {
 async function dbCall<T>(query: PromiseLike<T>, label: string): Promise<T> {
   return withTimeout(Promise.resolve(query), 10000, `Supabase: ${label}`);
 }
+
+// ─── Drawing-type detection (Step 10) ──────────────────────────────────────────
+// Matches against the documentType label the document-review classification
+// already produces for each upload (e.g. "Mechanical drawing", "Architectural
+// floor plan", "Exhaust fan schedule") — reused here rather than re-classifying.
+const DRAWING_TYPE_PATTERN = /drawing|floor plan|site plan|plot plan|elevation|\bplan\b|schedule|detail/i;
 
 // ─── Map output detection ─────────────────────────────────────────────────────
 
@@ -680,26 +686,48 @@ export async function processOrder(
     console.log(`    ✓ ${upload.filename}`);
   }
 
-  // ── Step 10: Drawing analysis (if not yet done) ───────────────────────────
+  // ── Step 10: Drawing analysis — per order, cached project-wide ────────────
+  // Order uploads (not a separate project-level "drawing set" upload — that
+  // flow is effectively dead) are the only place real drawing content ever
+  // arrives. Each drawing-type upload is hashed; a hash already analyzed
+  // anywhere in this project (any order, any credit) is reused for free.
+  // Only genuinely new drawings pay the Python + vision analysis cost.
   console.log(`  Step 10: Checking drawing analysis status...`);
-  if (!project.auto_extracted) {
-    const { data: drawingFiles } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET).list(drawingsPath(order.customer_id, order.project_id!)),
-      "list drawings",
-    );
 
-    const drawingPaths = (drawingFiles ?? [])
-      .filter((f) => f.name?.endsWith(".pdf"))
-      .map((f) => `${drawingsPath(order.customer_id, order.project_id!)}/${f.name}`);
+  const drawingCandidates = uploadBuffers.filter((u) => {
+    if (path.extname(u.filename).toLowerCase() !== ".pdf") return false;
+    const classified = reviewResult?.documents?.find((d) => d.filename === u.filename);
+    return classified ? DRAWING_TYPE_PATTERN.test(classified.documentType) : false;
+  });
 
-    if (drawingPaths.length > 0) {
-      console.log(`    Running drawing analysis on ${drawingPaths.length} drawing(s)...`);
-      await analyzeDrawings(order.project_id!, order.customer_id, drawingPaths);
-    } else {
-      console.log(`    No drawings uploaded — skipping drawing analysis`);
+  if (drawingCandidates.length > 0) {
+    console.log(`    ${drawingCandidates.length} drawing-type upload(s) found — checking project cache...`);
+    let anyProcessed = false;
+
+    for (const file of drawingCandidates) {
+      try {
+        const { cached } = await getOrAnalyzeDrawing(order.customer_id, order.project_id!, {
+          filename: file.filename,
+          buffer:   file.buffer,
+        });
+        console.log(`    ${cached ? "✓ reused cached analysis for" : "✓ analyzed"} ${file.filename}`);
+        anyProcessed = true;
+      } catch (err) {
+        // Non-fatal — a drawing analysis failure must never block the order.
+        console.warn(`    ⚠ Drawing analysis failed for ${file.filename}: ${(err as Error).message}`);
+      }
+    }
+
+    if (anyProcessed) {
+      try {
+        const { fileCount } = await rebuildProjectProfile(order.customer_id, order.project_id!);
+        console.log(`    ✓ project profile rebuilt from ${fileCount} cached drawing(s)`);
+      } catch (err) {
+        console.warn(`    ⚠ Failed to rebuild project profile: ${(err as Error).message}`);
+      }
     }
   } else {
-    console.log(`    Drawing analysis already complete`);
+    console.log(`    No drawing-type uploads in this order — skipping drawing analysis`);
   }
 
   // ── Step 10.5: Specs pre-extraction ──────────────────────────────────────

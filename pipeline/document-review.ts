@@ -51,12 +51,19 @@ export interface DocumentNote {
   note: string;
 }
 
+export interface DocumentTypeInfo {
+  filename: string;
+  documentType: string;
+  relevantContent: string;
+}
+
 export interface DocumentReviewResult {
   orderId: string;
   creditCode: string;
   status: "complete" | "incomplete";
   issues: DocumentIssue[];          // blocking — empty when status === "complete"
   notes: DocumentNote[];            // non-blocking caveats on otherwise-satisfied requirements
+  documents: DocumentTypeInfo[];    // per-upload type classification, reused by drawing analysis
   reviewedAt: string;
 }
 
@@ -197,7 +204,7 @@ export async function reviewDocuments(
 
   if (requiredDocs.length === 0) {
     console.log(`  No required documents defined for ${creditCode} — auto-passing review`);
-    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    return { orderId, creditCode, status: "complete", issues: [], notes: [], documents: [], reviewedAt };
   }
 
   console.log(`  Required: ${requiredDocs.length} document(s) per automation analysis`);
@@ -226,7 +233,7 @@ export async function reviewDocuments(
     if (files.length === 0) {
       // All downloads failed — fail open so a storage error doesn't block the order
       console.warn(`  ⚠ No files could be downloaded — passing review to avoid blocking order`);
-      return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+      return { orderId, creditCode, status: "complete", issues: [], notes: [], documents: [], reviewedAt };
     }
   } else {
     console.log(`  No documents uploaded — reviewing full requirement list against an empty set`);
@@ -237,7 +244,7 @@ export async function reviewDocuments(
     assessment = await reviewDocumentSet(client, creditCode, requiredDocs, files);
   } catch (err) {
     console.warn(`  ⚠ Document set review failed: ${(err as Error).message} — passing review to avoid blocking order`);
-    return { orderId, creditCode, status: "complete", issues: [], notes: [], reviewedAt };
+    return { orderId, creditCode, status: "complete", issues: [], notes: [], documents: [], reviewedAt };
   }
 
   if (assessment.documents?.length) {
@@ -295,5 +302,11 @@ export async function reviewDocuments(
     },
   });
 
-  return { orderId, creditCode, status, issues, notes, reviewedAt };
+  const documents: DocumentTypeInfo[] = (assessment.documents ?? []).map((d) => ({
+    filename:        d.filename,
+    documentType:    d.documentType,
+    relevantContent: d.relevantContent,
+  }));
+
+  return { orderId, creditCode, status, issues, notes, documents, reviewedAt };
 }
