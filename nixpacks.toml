@@ -1,9 +1,11 @@
 # Railway's Nixpacks build auto-detects Node via package.json. It does not
 # include Python by default, but pipeline/lib/analyze_drawings.py (the
 # drawing-analysis worker step) shells out to python3 and needs it plus
-# pymupdf + anthropic. This adds Python to the setup phase alongside
-# whatever Nixpacks already provisions for Node — additive, doesn't
-# replace the existing install/build steps in railway.toml.
-
+# pymupdf + anthropic.
+#
+# IMPORTANT: declaring [phases.setup] here REPLACES Nixpacks' auto-detected
+# setup phase rather than merging with it — an earlier version of this file
+# only listed python311/pip and silently dropped Node, breaking `npm ci`
+# with exit 127. nodejs_20 must be listed explicitly alongside Python.
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip"]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
