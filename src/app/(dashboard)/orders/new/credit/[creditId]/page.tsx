@@ -23,7 +23,7 @@ export default async function CreditDetailPage({
   const supabase = await createClient();
   const { data: credit } = await supabase
     .from("credits")
-    .select("*")
+    .select("id, program, category, credit_code, credit_name, points_available, price, has_form, has_calculator, deliverable_description")
     .eq("id", creditId)
     .single();
 
