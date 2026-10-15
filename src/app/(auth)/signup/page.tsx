@@ -52,7 +52,7 @@ export default function SignupPage() {
         email,
         options: {
           data: { full_name: name, organization: org },
-          emailRedirectTo: `${appUrl}/auth/callback`,
+          emailRedirectTo: `${appUrl}/auth/callback?source=signup`,
         },
       });
       if (authError) throw authError;

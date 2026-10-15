@@ -197,7 +197,7 @@ OUTPUT STRUCTURE (for every credit)
 ═══════════════════════════════════════
 
 LEED Online Submittal Form Inputs
-The section header must be exactly "LEED Online Submittal Form Inputs" — do not append a form number, credit code, or any other identifier. Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or standard reference values for this credit type. For any field requiring owner decision: [OWNER TO CONFIRM: specific description of what is needed]. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
+The section header must be exactly "LEED Online Submittal Form Inputs" — do not append a form number, credit code, or any other identifier. Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or public data retrieved via web search. If a field cannot be populated from any of these sources, do not fill it with a generic or typical value — mark it [OWNER TO CONFIRM: specific description of what is needed]. An unanswered field is correct; a plausible-sounding guess is not. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
 
 Supporting Documentation
 

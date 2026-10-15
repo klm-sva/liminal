@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Metadata } from "next";
@@ -29,8 +29,11 @@ function LogoMark() {
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justConfirmed = searchParams.get("confirmed") === "1";
+  const linkFailed    = searchParams.get("error") === "auth_failed";
   const [email,   setEmail]   = useState("");
   const [loading, setLoading] = useState(false);
   const [sent,    setSent]    = useState(false);
@@ -116,6 +119,34 @@ export default function LoginPage() {
             >
               Enter your email and we&apos;ll send a magic link. No password needed.
             </p>
+
+            {justConfirmed && (
+              <div
+                className="mb-5 px-4 py-3 text-sm"
+                style={{
+                  borderRadius: "10px",
+                  background: "#e8f3fa",
+                  border: "1px solid rgba(56,143,166,0.25)",
+                  color: "#1c5e70",
+                }}
+              >
+                Thank you for confirming your email. This is the main login page. Each time you log in, just enter your email and a new magic link will be sent to your inbox.
+              </div>
+            )}
+
+            {linkFailed && !justConfirmed && (
+              <div
+                className="mb-5 px-4 py-3 text-sm"
+                style={{
+                  borderRadius: "10px",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  color: "#b91c1c",
+                }}
+              >
+                That link didn&apos;t work — it may have expired or already been used. Enter your email below to get a new one.
+              </div>
+            )}
 
             {error && (
               <div
@@ -249,5 +280,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -6,8 +6,9 @@ import { sendWelcomeEmail } from "@/lib/resend";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const code   = searchParams.get("code");
+  const next   = searchParams.get("next") ?? "/dashboard";
+  const source = searchParams.get("source");
 
   if (code) {
     const cookieStore = await cookies();
@@ -53,9 +54,15 @@ export async function GET(request: Request) {
         console.error("[auth/callback] Welcome email failed:", e);
       }
 
+      if (source === "signup") {
+        return NextResponse.redirect(new URL("/login?confirmed=1", origin));
+      }
       return NextResponse.redirect(new URL(next, origin));
     }
   }
 
+  if (source === "signup") {
+    return NextResponse.redirect(new URL("/login?confirmed=1", origin));
+  }
   return NextResponse.redirect(new URL("/login?error=auth_failed", origin));
 }
