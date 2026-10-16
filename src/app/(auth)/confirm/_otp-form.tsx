@@ -44,7 +44,7 @@ export default function OtpForm({ email }: { email: string }) {
         Link not working?
       </p>
       <p className="text-sm leading-relaxed mb-4" style={{ color: "#7a8f94" }}>
-        Enter the 6-digit code from the same email instead.
+        Enter the 8-digit code from the same email instead.
       </p>
 
       {error && (
