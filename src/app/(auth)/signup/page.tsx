@@ -66,7 +66,7 @@ export default function SignupPage() {
         },
       });
       if (authError) throw authError;
-      router.push(`/confirm?email=${encodeURIComponent(email)}`);
+      router.push(`/confirm?email=${encodeURIComponent(email)}&type=signup`);
     } catch (err) {
       setError((err as Error).message);
       turnstileRef.current?.reset();

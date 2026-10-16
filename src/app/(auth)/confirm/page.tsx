@@ -10,7 +10,7 @@ export default async function ConfirmPage({
   searchParams: Promise<{ email?: string; type?: string }>;
 }) {
   const { email, type } = await searchParams;
-  const isLogin = type === "login";
+  const otpType = type === "login" ? "email" : type === "signup" ? "signup" : null;
 
   return (
     <div
@@ -104,7 +104,7 @@ export default async function ConfirmPage({
             Click the link in the email to access your dashboard. Valid for 24 hours. Check your spam folder if you don&apos;t see it within a minute.
           </p>
 
-          {isLogin && email && <OtpForm email={email} />}
+          {otpType && email && <OtpForm email={email} type={otpType} />}
 
           {/* Primary CTA */}
           <Link

@@ -4,7 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function OtpForm({ email }: { email: string }) {
+export default function OtpForm({
+  email,
+  type,
+}: {
+  email: string;
+  type: "email" | "signup";
+}) {
   const router = useRouter();
   const [code,    setCode]    = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +26,7 @@ export default function OtpForm({ email }: { email: string }) {
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: code,
-        type:  "email",
+        type,
       });
       if (verifyError) throw verifyError;
       router.push("/dashboard");
