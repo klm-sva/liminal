@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import Turnstile, { type TurnstileHandle } from "@/components/auth/Turnstile";
 
 // ─── Shared logo mark ────────────────────────────────────────────────────────
 
@@ -39,11 +40,19 @@ export default function SignupPage() {
   const [org,     setOrg]     = useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (!captchaToken) {
+      setError("Please complete the verification check before continuing.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const supabase = createClient();
       if (!supabase) throw new Error("Auth service not configured — add Supabase credentials to .env.local");
@@ -53,12 +62,14 @@ export default function SignupPage() {
         options: {
           data: { full_name: name, organization: org },
           emailRedirectTo: `${appUrl}/auth/callback?source=signup`,
+          captchaToken,
         },
       });
       if (authError) throw authError;
       router.push(`/confirm?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError((err as Error).message);
+      turnstileRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -290,10 +301,13 @@ export default function SignupPage() {
                 </p>
               </div>
 
+              {/* Verification check */}
+              <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
+
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !captchaToken}
                 className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   borderRadius: "100px",
