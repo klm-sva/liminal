@@ -66,11 +66,11 @@ export default function OtpForm({ email }: { email: string }) {
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          maxLength={6}
+          maxLength={8}
           required
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          placeholder="123456"
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          placeholder="12345678"
           className="flex-1 outline-none transition-all text-center text-lg tracking-[0.3em] font-semibold"
           style={{
             borderRadius: "10px",
@@ -82,7 +82,7 @@ export default function OtpForm({ email }: { email: string }) {
         />
         <button
           type="submit"
-          disabled={loading || code.length !== 6}
+          disabled={loading || code.length !== 8}
           className="text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             borderRadius: "10px",
