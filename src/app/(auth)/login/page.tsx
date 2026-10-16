@@ -54,7 +54,7 @@ function LoginForm() {
         },
       });
       if (authError) throw authError;
-      router.push(`/confirm?email=${encodeURIComponent(email)}`);
+      router.push(`/confirm?email=${encodeURIComponent(email)}&type=login`);
     } catch (err) {
       setError((err as Error).message);
     } finally {

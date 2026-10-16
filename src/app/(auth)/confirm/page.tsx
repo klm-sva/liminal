@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import OtpForm from "./_otp-form";
 
 export const metadata: Metadata = { title: "Check Your Inbox — LIMINALsva" };
 
 export default async function ConfirmPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; type?: string }>;
 }) {
-  const { email } = await searchParams;
+  const { email, type } = await searchParams;
+  const isLogin = type === "login";
 
   return (
     <div
@@ -101,6 +103,8 @@ export default async function ConfirmPage({
           >
             Click the link in the email to access your dashboard. Valid for 24 hours. Check your spam folder if you don&apos;t see it within a minute.
           </p>
+
+          {isLogin && email && <OtpForm email={email} />}
 
           {/* Primary CTA */}
           <Link
