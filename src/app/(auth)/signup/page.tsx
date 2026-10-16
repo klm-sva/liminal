@@ -297,7 +297,7 @@ export default function SignupPage() {
                   <path d="M7 4.5h1v4.5H7zM7 10h1v1.5H7z" fill="#388fa6" />
                 </svg>
                 <p className="text-xs leading-relaxed" style={{ color: "#1c5e70" }}>
-                  We use magic links. No password to remember. After submitting, check your inbox for a secure login link valid for 24 hours.
+                  We use secure email codes. No password to remember. After submitting, check your inbox for a code valid for 24 hours.
                 </p>
               </div>
 
@@ -322,7 +322,7 @@ export default function SignupPage() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                 ) : (
-                  <>Send my magic link <ArrowRight size={15} /></>
+                  <>Send my code <ArrowRight size={15} /></>
                 )}
               </button>
             </form>

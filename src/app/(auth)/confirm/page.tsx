@@ -85,7 +85,7 @@ export default async function ConfirmPage({
           </h1>
 
           <p className="leading-relaxed mb-2 text-sm" style={{ color: "#7a8f94" }}>
-            We&apos;ve sent a magic link to
+            We&apos;ve sent a code to
           </p>
 
           {email && (
@@ -101,7 +101,7 @@ export default async function ConfirmPage({
             className="text-sm leading-relaxed mb-10"
             style={{ color: "#7a8f94", maxWidth: "300px", margin: "0 auto 40px" }}
           >
-            Click the link in the email to access your dashboard. Valid for 24 hours. Check your spam folder if you don&apos;t see it within a minute.
+            Enter the code below to access your dashboard. Valid for 24 hours. Check your spam folder if you don&apos;t see it within a minute.
           </p>
 
           {otpType && email && <OtpForm email={email} type={otpType} />}

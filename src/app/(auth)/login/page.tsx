@@ -117,7 +117,7 @@ function LoginForm() {
               className="text-sm leading-relaxed mb-8"
               style={{ color: "#7a8f94" }}
             >
-              Enter your email and we&apos;ll send a magic link. No password needed.
+              Enter your email and we&apos;ll send you a code to sign in. No password needed.
             </p>
 
             {justConfirmed && (
@@ -130,7 +130,7 @@ function LoginForm() {
                   color: "#1c5e70",
                 }}
               >
-                Thank you for confirming your email. This is the main login page. Each time you log in, just enter your email and a new magic link will be sent to your inbox.
+                Thank you for confirming your email. This is the main login page. Each time you log in, just enter your email and a new code will be sent to your inbox.
               </div>
             )}
 
@@ -220,7 +220,7 @@ function LoginForm() {
                   <path d="M7 4.5h1v4.5H7zM7 10h1v1.5H7z" fill="#388fa6" />
                 </svg>
                 <p className="text-xs leading-relaxed" style={{ color: "#1c5e70" }}>
-                  We&apos;ll send a secure login link to your inbox. Valid for 24 hours. No password required.
+                  We&apos;ll send a secure sign-in code to your inbox. Valid for 24 hours. No password required.
                 </p>
               </div>
 
@@ -242,7 +242,7 @@ function LoginForm() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                 ) : (
-                  <>Send magic link <ArrowRight size={15} /></>
+                  <>Send sign-in code <ArrowRight size={15} /></>
                 )}
               </button>
             </form>

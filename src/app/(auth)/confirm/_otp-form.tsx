@@ -47,10 +47,10 @@ export default function OtpForm({
       }}
     >
       <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "rgba(43,64,68,0.55)" }}>
-        Link not working?
+        Enter your code
       </p>
       <p className="text-sm leading-relaxed mb-4" style={{ color: "#7a8f94" }}>
-        Enter the 8-digit code from the same email instead.
+        Check your email for an 8-digit code and enter it below.
       </p>
 
       {error && (
