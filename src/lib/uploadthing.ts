@@ -27,24 +27,38 @@ export const ourFileRouter = {
       const url     = new URL(req.url);
       const orderId = url.searchParams.get("orderId") ?? req.headers.get("x-order-id") ?? null;
 
-      return { userId: user.id, orderId };
-    })
-    .onUploadComplete(async ({ metadata, file }) => {
-      const { userId, orderId } = metadata;
+      let order: {
+        project_id:            string | null;
+        credit_id:             string | null;
+        runs_used:             number;
+        gap_analysis_program:  string | null;
+      } | null = null;
 
       if (orderId) {
+        const serviceClient = await createServiceClient();
+        const { data } = await serviceClient
+          .from("orders")
+          .select("project_id, credit_id, runs_used, gap_analysis_program")
+          .eq("id", orderId)
+          .eq("customer_id", user.id)
+          .single();
+
+        if (!data) throw new Error("Order not found");
+        order = data;
+      }
+
+      return { userId: user.id, orderId, order };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      const { userId, orderId, order } = metadata;
+
+      if (order) {
         try {
           const serviceClient = await createServiceClient();
 
-          const { data: order } = await serviceClient
-            .from("orders")
-            .select("project_id, credit_id, runs_used, gap_analysis_program")
-            .eq("id", orderId)
-            .single();
-
           let storagePath: string | null = null;
 
-          if (order?.project_id && order?.credit_id) {
+          if (order.project_id && order.credit_id) {
             const { data: credit } = await serviceClient
               .from("credits")
               .select("credit_code")
@@ -55,7 +69,7 @@ export const ourFileRouter = {
               const attemptNumber = order.runs_used + 1;
               storagePath = `${userId}/${order.project_id}/orders/${orderId}-${credit.credit_code}/attempt-${attemptNumber}/${file.name}`;
             }
-          } else if (order?.gap_analysis_program) {
+          } else if (order.gap_analysis_program) {
             const attemptNumber = order.runs_used + 1;
             storagePath = `${userId}/gap-analysis/${order.gap_analysis_program}/${orderId}/attempt-${attemptNumber}/${file.name}`;
           }
