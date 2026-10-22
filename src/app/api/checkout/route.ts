@@ -70,12 +70,22 @@ export async function POST(req: Request) {
     }
 
     // Individual credit order — look up the Stripe price ID from the credits table
-    const { data: credit } = await supabase
+    const { data: credit, error: creditError } = await supabase
       .from("credits")
       .select("id, credit_name, credit_code, stripe_price_id, price")
       .eq("id", credit_id)
       .eq("is_active", true)
       .single();
+
+    const isValidUuid = typeof credit_id === "string"
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(credit_id);
+    console.log("[checkout] credits lookup", {
+      credit_id,
+      credit_id_is_valid_uuid: isValidUuid,
+      error_message: creditError?.message ?? null,
+      error_code: creditError?.code ?? null,
+      row_count: credit ? 1 : 0,
+    });
 
     if (!credit?.stripe_price_id) {
       return NextResponse.json({ error: "Credit not found or not configured for checkout" }, { status: 404 });
