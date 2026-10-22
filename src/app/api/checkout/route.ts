@@ -66,6 +66,8 @@ export async function POST(req: Request) {
         allow_promotion_codes: true,
       });
 
+      await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", newOrder.id);
+
       return NextResponse.json({ url: session.url });
     }
 
@@ -125,6 +127,8 @@ export async function POST(req: Request) {
       },
       allow_promotion_codes: true,
     });
+
+    await supabase.from("orders").update({ stripe_session_id: session.id }).eq("id", newOrder.id);
 
     return NextResponse.json({ url: session.url });
   } catch (err) {

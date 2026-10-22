@@ -447,6 +447,14 @@ export async function processOrder(
   const run   = runRes.data;
   const order = orderRes.data;
 
+  if (!order.payment_id) {
+    await supabase
+      .from("runs")
+      .update({ status: "failed", error_message: "payment not verified", completed_at: new Date().toISOString() })
+      .eq("id", runId);
+    throw new Error("payment not verified");
+  }
+
   const [projectRes, creditRes, customerRes] = await Promise.all([
     dbCall(supabase.from("projects").select("*").eq("id", order.project_id!).single(),  "fetch project"),
     dbCall(supabase.from("credits").select("*").eq("id", order.credit_id!).single(),    "fetch credit"),

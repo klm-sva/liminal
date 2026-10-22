@@ -31,12 +31,20 @@ export async function POST(request: Request) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("customer_id, credit_id")
+    .select("customer_id, credit_id, payment_id")
     .eq("id", orderId)
     .single();
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  if (!order.payment_id) {
+    await supabase
+      .from("runs")
+      .update({ status: "failed", error_message: "payment not verified", completed_at: new Date().toISOString() })
+      .eq("id", runId);
+    return NextResponse.json({ error: "Payment hasn't completed yet." }, { status: 402 });
   }
 
   const [customerRes, creditRes] = await Promise.all([

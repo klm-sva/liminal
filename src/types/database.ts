@@ -121,6 +121,7 @@ export type Order = {
   runs_used:                number;
   runs_remaining:           number;
   payment_id:               string | null;
+  stripe_session_id:        string | null;
   created_at:               string;
   delivered_at:             string | null;
   deletion_warning_sent:    boolean;
@@ -182,8 +183,8 @@ export type CreditInsert = Omit<Credit, "id" | "created_at" | "updated_at">;
 export type ProjectInsert = Omit<Project, "id" | "auto_extracted" | "flagged_fields" | "created_at" | "updated_at">
   & Partial<Pick<Project, "auto_extracted" | "flagged_fields">>;
 
-export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent" | "payment_id" | "gap_analysis_program" | "gap_analysis_results">
-  & Partial<Pick<Order, "status" | "payment_id" | "gap_analysis_program" | "gap_analysis_results">>;
+export type OrderInsert = Omit<Order, "id" | "status" | "runs_used" | "runs_remaining" | "created_at" | "delivered_at" | "deletion_warning_sent" | "qa_status" | "qa_approved_at" | "qa_changes_requested_at" | "qa_instructions" | "delivery_scheduled_at" | "delay_email_sent" | "payment_id" | "stripe_session_id" | "gap_analysis_program" | "gap_analysis_results">
+  & Partial<Pick<Order, "status" | "payment_id" | "stripe_session_id" | "gap_analysis_program" | "gap_analysis_results">>;
 
 export type RunInsert = Omit<
   Run,

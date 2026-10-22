@@ -14,6 +14,7 @@
 import { NextResponse }        from "next/server";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { getStripe }           from "@/lib/stripe";
 
 export const maxDuration = 300;
 import {
@@ -45,7 +46,7 @@ export async function POST(
   // Fetch order — must belong to this customer
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id, customer_id, status, runs_used, runs_remaining, credit_id, project_id")
+    .select("id, customer_id, status, runs_used, runs_remaining, credit_id, project_id, payment_id, stripe_session_id")
     .eq("id", orderId)
     .eq("customer_id", user.id)
     .single();
@@ -61,8 +62,25 @@ export async function POST(
     );
   }
 
-
   const serviceClient = await createServiceClient();
+
+  // Require a completed payment before any run can be created.
+  let paymentId = order.payment_id;
+  if (!paymentId) {
+    if (!order.stripe_session_id) {
+      return NextResponse.json({ error: "Payment hasn't completed yet." }, { status: 402 });
+    }
+
+    const session = await getStripe().checkout.sessions.retrieve(order.stripe_session_id);
+
+    if (session.payment_status === "paid" || session.payment_status === "no_payment_required") {
+      paymentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
+      await serviceClient.from("orders").update({ payment_id: paymentId }).eq("id", orderId);
+    } else {
+      return NextResponse.json({ error: "Payment hasn't completed yet." }, { status: 402 });
+    }
+  }
+
   const attemptNumber = order.runs_used + 1;
 
   // Create a run record for this attempt

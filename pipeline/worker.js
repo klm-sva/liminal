@@ -1357,6 +1357,10 @@ async function processGapAnalysis(orderId, runId) {
   if (orderRes.error) throw new Error(`Order not found: ${orderRes.error.message}`);
   const run = runRes.data;
   const order = orderRes.data;
+  if (!order.payment_id) {
+    await supabase.from("runs").update({ status: "failed", error_message: "payment not verified", completed_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
+    throw new Error("payment not verified");
+  }
   const program = order.gap_analysis_program ?? "leed_bd_c";
   const customerRes = await supabase.from("customers").select("*").eq("id", order.customer_id).single();
   if (customerRes.error) throw new Error(`Customer not found: ${customerRes.error.message}`);
@@ -3753,7 +3757,7 @@ OUTPUT STRUCTURE (for every credit)
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 
 LEED Online Submittal Form Inputs
-The section header must be exactly "LEED Online Submittal Form Inputs" \u2014 do not append a form number, credit code, or any other identifier. Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or standard reference values for this credit type. For any field requiring owner decision: [OWNER TO CONFIRM: specific description of what is needed]. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
+The section header must be exactly "LEED Online Submittal Form Inputs" \u2014 do not append a form number, credit code, or any other identifier. Reproduce only what appears on the actual form. Populate every field with real data sourced from the project address, attached documents, or public data retrieved via web search. If a field cannot be populated from any of these sources, do not fill it with a generic or typical value \u2014 mark it [OWNER TO CONFIRM: specific description of what is needed]. An unanswered field is correct; a plausible-sounding guess is not. Include the walking distance map placeholder exactly where the map upload appears on the form: <!-- WALKING_DISTANCE_MAP -->
 
 Supporting Documentation
 
@@ -4498,6 +4502,10 @@ async function processOrder(orderId, runId, additionalInstructions) {
   if (orderRes.error) throw new Error(`Order not found: ${orderRes.error.message}`);
   const run = runRes.data;
   const order = orderRes.data;
+  if (!order.payment_id) {
+    await supabase.from("runs").update({ status: "failed", error_message: "payment not verified", completed_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", runId);
+    throw new Error("payment not verified");
+  }
   const [projectRes, creditRes, customerRes] = await Promise.all([
     dbCall(supabase.from("projects").select("*").eq("id", order.project_id).single(), "fetch project"),
     dbCall(supabase.from("credits").select("*").eq("id", order.credit_id).single(), "fetch credit"),
