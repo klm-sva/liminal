@@ -40,3 +40,6 @@ next-env.d.ts
 # pipeline generated outputs (never commit these)
 /pipeline/output/*
 !/pipeline/output/.gitkeep
+
+# Python deps installed at build time (Railway) — not committed
+/.pydeps
