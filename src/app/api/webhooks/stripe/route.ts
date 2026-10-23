@@ -45,9 +45,7 @@ export async function POST(request: Request) {
       if (!credit_id && is_gap_analysis !== "true") break;
 
       const supabase  = getServiceClient();
-      const paymentId = typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : null;
+      const paymentId = session.payment_intent ?? session.id;
 
       let orderId: string | null = null;
 

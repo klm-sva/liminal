@@ -74,7 +74,7 @@ export async function POST(
     const session = await getStripe().checkout.sessions.retrieve(order.stripe_session_id);
 
     if (session.payment_status === "paid" || session.payment_status === "no_payment_required") {
-      paymentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
+      paymentId = session.payment_intent ?? session.id;
       await serviceClient.from("orders").update({ payment_id: paymentId }).eq("id", orderId);
     } else {
       return NextResponse.json({ error: "Payment hasn't completed yet." }, { status: 402 });
