@@ -1,6 +1,5 @@
 [build]
-builder = "nixpacks"
-buildCommand = "python3 -m pip install --break-system-packages --target=.pydeps -r requirements.txt && npm install --omit=dev && npm run build:worker"
+builder = "DOCKERFILE"
 
 
 [deploy]
