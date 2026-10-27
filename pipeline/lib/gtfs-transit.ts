@@ -640,11 +640,38 @@ function hasPublishedServiceInFeed(zipBuffer: Buffer): boolean {
   return false;
 }
 
+// Does this feed have at least one stop within the maximum search radius
+// (0.5mi — the rail threshold; bus is narrower but this is just an existence
+// check, not a qualification check, so the wider radius is the right bar).
+// Only parses stops.txt — already in memory from the ZIP we downloaded for
+// the calendar check, so this adds no network cost, just a small CSV parse.
+function hasNearbyStopInFeed(zipBuffer: Buffer, lat: number, lon: number): boolean {
+  const zip = new AdmZip(zipBuffer);
+
+  const entry = zip.getEntry("stops.txt")
+    ?? zip.getEntries().find((e) => e.entryName.endsWith("/stops.txt") || e.entryName === "stops.txt");
+  if (!entry) return false;
+
+  const rows = parseGtfsCsv(entry.getData().toString("utf-8"));
+  return rows.some((row) => {
+    const stopLat = parseFloat(row.stop_lat ?? "");
+    const stopLon = parseFloat(row.stop_lon ?? "");
+    if (isNaN(stopLat) || isNaN(stopLon)) return false;
+    return haversineMiles(lat, lon, stopLat, stopLon) <= RAIL_RADIUS_MILES;
+  });
+}
+
 /**
  * Determines whether we can currently produce trustworthy GTFS-based transit
  * data for a project location, without doing the full stop-clustering/trip-
  * counting work. Used to gate checkout for any credit that relies on this
  * data source (LEED LTc5, WELL v2 V05's non-Transit-Score path).
+ *
+ * A feed only counts as "available" if it has BOTH a published current
+ * service calendar AND at least one stop within the search radius — a feed
+ * that matches by catalog bounding box alone (e.g. an intercity carrier like
+ * Amtrak with no local stops) does not make transit data "available" for
+ * this location.
  */
 export async function checkTransitDataAvailability(
   lat: number,
@@ -656,17 +683,27 @@ export async function checkTransitDataAvailability(
     return { available: false, reason: "No transit data provider covers this location.", feedsChecked: 0 };
   }
 
+  let feedsChecked = 0;
+
   for (const feed of feeds) {
+    feedsChecked++;
     try {
       const zipBuffer = await downloadGtfsZipWithFallback(feed);
-      if (hasPublishedServiceInFeed(zipBuffer)) {
-        return {
-          available:    true,
-          reason:       `Transit schedule data available from ${feed.name}.`,
-          feedsChecked: feeds.length,
-        };
+
+      if (!hasPublishedServiceInFeed(zipBuffer)) {
+        console.log(`  [GTFS] ${feed.name} feed has no published service calendar`);
+        continue;
       }
-      console.log(`  [GTFS] ${feed.name} feed has no published service calendar`);
+      if (!hasNearbyStopInFeed(zipBuffer, lat, lon)) {
+        console.log(`  [GTFS] ${feed.name} has current data but no stops within ${RAIL_RADIUS_MILES} miles`);
+        continue;
+      }
+
+      return {
+        available:    true,
+        reason:       `Transit schedule data with a nearby stop is available from ${feed.name}.`,
+        feedsChecked,
+      };
     } catch (e) {
       console.warn(`  [GTFS] Availability check failed for ${feed.name}: ${(e as Error).message}`);
     }
@@ -674,8 +711,8 @@ export async function checkTransitDataAvailability(
 
   return {
     available:    false,
-    reason:       "No usable transit schedule data is available from providers for this location.",
-    feedsChecked: feeds.length,
+    reason:       "No provider has both current schedule data and a stop near this location.",
+    feedsChecked,
   };
 }
 
