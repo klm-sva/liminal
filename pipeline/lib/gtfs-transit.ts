@@ -43,6 +43,9 @@ const RAIL_ROUTE_TYPES = new Set([0, 1, 2, 4, 5, 7, 12]);
 const CACHE_DIR  = path.join(os.tmpdir(), "liminal-gtfs-cache");
 const CACHE_TTL  = 24 * 60 * 60 * 1000; // 24 hours in ms
 
+// Mobility Database catalog rows whose feed is no longer maintained at that URL
+const INACTIVE_CATALOG_STATUSES = new Set(["deprecated", "inactive"]);
+
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export interface ScheduleRow {
@@ -140,7 +143,7 @@ function parseGtfsCsv(text: string): Record<string, string>[] {
 
 const MOBILITY_DB_CATALOG = "https://bit.ly/catalogs-csv";
 
-export async function findGtfsFeedUrls(lat: number, lon: number): Promise<Array<{ url: string; name: string }>> {
+export async function findGtfsFeedUrls(lat: number, lon: number): Promise<Array<{ url: string; name: string; fallbackUrl?: string }>> {
   console.log(`  [GTFS] Searching Mobility Database catalog for feeds near ${lat.toFixed(4)}, ${lon.toFixed(4)}...`);
 
   let catalogText = "";
@@ -154,7 +157,13 @@ export async function findGtfsFeedUrls(lat: number, lon: number): Promise<Array<
 
   const rows = parseGtfsCsv(catalogText);
 
-  const matching = rows.filter((r) => {
+  const byId = new Map<string, Record<string, string>>();
+  for (const r of rows) {
+    const id = r["mdb_source_id"];
+    if (id) byId.set(id, r);
+  }
+
+  const bboxMatches = rows.filter((r) => {
     if (r["data_type"] !== "gtfs")           return false;
     if (r["location.country_code"] !== "US") return false;
 
@@ -170,12 +179,49 @@ export async function findGtfsFeedUrls(lat: number, lon: number): Promise<Array<
     return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
   });
 
-  console.log(`  [GTFS] Found ${matching.length} feed(s) covering this location`);
+  // Deprecated/inactive rows often have a `redirect.id` pointing at the catalog
+  // row for the same provider's current feed. Follow it (bounded, cycle-safe)
+  // until we land on a live row, so we never silently prefer a stale listing
+  // over the agency's current one just because both match the bounding box.
+  const resolved = new Map<string, { url: string; name: string; fallbackUrl?: string }>();
 
-  return matching.map((r) => ({
-    url:  r["urls.latest"] || r["urls.direct_download"],
-    name: r["provider"] || r["name"] || "Unknown Agency",
-  }));
+  for (const row of bboxMatches) {
+    let current = row;
+    const seen  = new Set<string>();
+
+    while (
+      INACTIVE_CATALOG_STATUSES.has(current["status"]) &&
+      current["redirect.id"] &&
+      !seen.has(current["mdb_source_id"])
+    ) {
+      seen.add(current["mdb_source_id"]);
+      const next = byId.get(current["redirect.id"]);
+      if (!next) break;
+      current = next;
+    }
+
+    if (INACTIVE_CATALOG_STATUSES.has(current["status"])) {
+      console.log(`  [GTFS] Skipping "${row["provider"] || row["name"]}" — deprecated/inactive with no live replacement`);
+      continue;
+    }
+
+    // Prefer the Mobility Database's own mirror (urls.latest), but keep the
+    // agency's direct URL as a fallback — the mirror has been observed to
+    // 404 for feeds the catalog otherwise lists as live/current.
+    const primaryUrl  = current["urls.latest"];
+    const directUrl    = current["urls.direct_download"];
+    const url          = primaryUrl || directUrl;
+    if (!url) continue;
+    const fallbackUrl  = primaryUrl && directUrl && directUrl !== primaryUrl ? directUrl : undefined;
+
+    const key = current["mdb_source_id"] || url;
+    if (resolved.has(key)) continue;
+    resolved.set(key, { url, name: current["provider"] || current["name"] || "Unknown Agency", fallbackUrl });
+  }
+
+  console.log(`  [GTFS] Found ${resolved.size} live feed(s) covering this location`);
+
+  return [...resolved.values()];
 }
 
 // ─── GTFS ZIP download with disk cache ───────────────────────────────────────
@@ -205,6 +251,16 @@ async function downloadGtfsZip(feedUrl: string, agencyName: string): Promise<Buf
   fs.writeFileSync(cachePath, buf);
   console.log(`  [GTFS] Downloaded ${Math.round(buf.length / 1024 / 1024 * 10) / 10} MB — cached`);
   return buf;
+}
+
+async function downloadGtfsZipWithFallback(feed: { url: string; name: string; fallbackUrl?: string }): Promise<Buffer> {
+  try {
+    return await downloadGtfsZip(feed.url, feed.name);
+  } catch (e) {
+    if (!feed.fallbackUrl) throw e;
+    console.warn(`  [GTFS] Primary URL failed for ${feed.name} (${(e as Error).message}) — trying direct_download fallback`);
+    return await downloadGtfsZip(feed.fallbackUrl, feed.name);
+  }
 }
 
 // ─── GTFS ZIP parser ──────────────────────────────────────────────────────────
@@ -265,24 +321,46 @@ function parseGtfsZip(zipBuffer: Buffer, agencyName: string): ParsedGtfs {
     });
   }
 
-  // calendar.txt — determine which service_ids run on weekdays vs weekends
-  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  // calendar.txt — determine which service_ids run on weekdays vs weekends.
+  //
+  // We do NOT reject rows because their end_date has passed relative to today.
+  // A feed's publish cadence is not evidence service stopped — if the catalog
+  // lists this source as live (not deprecated/inactive), the most recently
+  // published schedule period in the file IS the current schedule as far as
+  // we know, full stop. We do still need to pick ONE period rather than every
+  // period the agency has ever published, though: agencies often leave
+  // multiple non-concurrent periods in the same file (e.g. an academic-year
+  // calendar and a summer-session calendar) — summing both would double-count
+  // trips that never actually ran on the same day. So: take whichever rows
+  // belong to the most recently published period (latest end_date; rows with
+  // no end_date are treated as open-ended and always win).
   const weekdayServiceIds = new Set<string>();
   const weekendServiceIds = new Set<string>();
 
-  for (const row of readEntry("calendar.txt")) {
-    if (!row.service_id) continue;
-    if (row.end_date && row.end_date < todayStr) continue; // expired service
+  const calendarRows = readEntry("calendar.txt").filter((r) => r.service_id);
+  const openEndedRows = calendarRows.filter((r) => !r.end_date);
+  let currentPeriodRows: Record<string, string>[];
 
+  if (openEndedRows.length > 0) {
+    currentPeriodRows = openEndedRows;
+  } else if (calendarRows.length > 0) {
+    const latestEndDate = calendarRows.reduce((max, r) => (r.end_date > max ? r.end_date : max), "");
+    currentPeriodRows = calendarRows.filter((r) => r.end_date === latestEndDate);
+  } else {
+    currentPeriodRows = [];
+  }
+
+  for (const row of currentPeriodRows) {
     const weekday = ["monday", "tuesday", "wednesday", "thursday", "friday"].some((d) => row[d] === "1");
     const weekend = ["saturday", "sunday"].some((d) => row[d] === "1");
     if (weekday) weekdayServiceIds.add(row.service_id);
     if (weekend) weekendServiceIds.add(row.service_id);
   }
 
-  // If calendar.txt is empty, try calendar_dates.txt as fallback
-  if (weekdayServiceIds.size === 0) {
-    console.warn(`  [GTFS] calendar.txt yielded no active services — trying calendar_dates.txt`);
+  // If calendar.txt has no rows at all, fall back to calendar_dates.txt —
+  // same principle: use whatever's published, don't second-guess its age.
+  if (calendarRows.length === 0) {
+    console.warn(`  [GTFS] calendar.txt has no service rows — trying calendar_dates.txt`);
     const byService = new Map<string, Set<number>>(); // service_id → Set<day of week 1-7>
     for (const row of readEntry("calendar_dates.txt")) {
       if (!row.service_id || row.exception_type !== "1") continue;
@@ -415,7 +493,7 @@ function clusterStops(
 export async function getGtfsStopsNearProject(
   projectLat: number,
   projectLon: number,
-  feedUrls:   Array<{ url: string; name: string }>,
+  feedUrls:   Array<{ url: string; name: string; fallbackUrl?: string }>,
 ): Promise<GtfsStopResult[]> {
   const allResults: GtfsStopResult[] = [];
 
@@ -423,7 +501,7 @@ export async function getGtfsStopsNearProject(
     console.log(`\n  [GTFS] Processing feed: ${feed.name}`);
     let zipBuffer: Buffer;
     try {
-      zipBuffer = await downloadGtfsZip(feed.url, feed.name);
+      zipBuffer = await downloadGtfsZipWithFallback(feed);
     } catch (e) {
       console.warn(`  [GTFS] Download failed for ${feed.name}: ${(e as Error).message} — skipping`);
       continue;
@@ -528,6 +606,77 @@ export async function getGtfsStopsNearProject(
     if (a.qualifiesLeedPath1 !== b.qualifiesLeedPath1) return a.qualifiesLeedPath1 ? -1 : 1;
     return a.distanceMiles - b.distanceMiles;
   });
+}
+
+// ─── Pre-purchase availability check ──────────────────────────────────────────
+// Cheap existence check, meant to run BEFORE checkout so the customer can be
+// warned if we have no usable transit data for their address. Downloads the
+// same feed(s) the full run would use, but skips parsing stops/trips/
+// stop_times (the large files) — only calendar.txt/calendar_dates.txt are
+// read. A feed counts as usable if the catalog lists it as live (handled by
+// findGtfsFeedUrls) AND it actually publishes a schedule — we do not reject
+// it for being published a while ago; publish age isn't evidence service
+// stopped.
+
+export interface TransitAvailabilityResult {
+  available:    boolean;
+  reason:       string;
+  feedsChecked: number;
+}
+
+function hasPublishedServiceInFeed(zipBuffer: Buffer): boolean {
+  const zip = new AdmZip(zipBuffer);
+
+  const readEntry = (name: string): Record<string, string>[] => {
+    const entry = zip.getEntry(name)
+      ?? zip.getEntries().find((e) => e.entryName.endsWith("/" + name) || e.entryName === name);
+    if (!entry) return [];
+    return parseGtfsCsv(entry.getData().toString("utf-8"));
+  };
+
+  if (readEntry("calendar.txt").some((row) => row.service_id)) return true;
+  if (readEntry("calendar_dates.txt").some((row) => row.service_id && row.exception_type === "1")) return true;
+
+  return false;
+}
+
+/**
+ * Determines whether we can currently produce trustworthy GTFS-based transit
+ * data for a project location, without doing the full stop-clustering/trip-
+ * counting work. Used to gate checkout for any credit that relies on this
+ * data source (LEED LTc5, WELL v2 V05's non-Transit-Score path).
+ */
+export async function checkTransitDataAvailability(
+  lat: number,
+  lon: number,
+): Promise<TransitAvailabilityResult> {
+  const feeds = await findGtfsFeedUrls(lat, lon);
+
+  if (feeds.length === 0) {
+    return { available: false, reason: "No transit data provider covers this location.", feedsChecked: 0 };
+  }
+
+  for (const feed of feeds) {
+    try {
+      const zipBuffer = await downloadGtfsZipWithFallback(feed);
+      if (hasPublishedServiceInFeed(zipBuffer)) {
+        return {
+          available:    true,
+          reason:       `Transit schedule data available from ${feed.name}.`,
+          feedsChecked: feeds.length,
+        };
+      }
+      console.log(`  [GTFS] ${feed.name} feed has no published service calendar`);
+    } catch (e) {
+      console.warn(`  [GTFS] Availability check failed for ${feed.name}: ${(e as Error).message}`);
+    }
+  }
+
+  return {
+    available:    false,
+    reason:       "No usable transit schedule data is available from providers for this location.",
+    feedsChecked: feeds.length,
+  };
 }
 
 /**

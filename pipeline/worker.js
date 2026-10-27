@@ -2473,7 +2473,12 @@ async function findGtfsFeedUrls(lat, lon) {
     return [];
   }
   const rows2 = parseGtfsCsv(catalogText);
-  const matching = rows2.filter((r) => {
+  const byId = /* @__PURE__ */ new Map();
+  for (const r of rows2) {
+    const id = r["mdb_source_id"];
+    if (id) byId.set(id, r);
+  }
+  const bboxMatches = rows2.filter((r) => {
     if (r["data_type"] !== "gtfs") return false;
     if (r["location.country_code"] !== "US") return false;
     const url = r["urls.latest"] || r["urls.direct_download"];
@@ -2485,11 +2490,31 @@ async function findGtfsFeedUrls(lat, lon) {
     if (isNaN(minLat) || isNaN(maxLat) || isNaN(minLon) || isNaN(maxLon)) return false;
     return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
   });
-  console.log(`  [GTFS] Found ${matching.length} feed(s) covering this location`);
-  return matching.map((r) => ({
-    url: r["urls.latest"] || r["urls.direct_download"],
-    name: r["provider"] || r["name"] || "Unknown Agency"
-  }));
+  const resolved = /* @__PURE__ */ new Map();
+  for (const row of bboxMatches) {
+    let current = row;
+    const seen = /* @__PURE__ */ new Set();
+    while (INACTIVE_CATALOG_STATUSES.has(current["status"]) && current["redirect.id"] && !seen.has(current["mdb_source_id"])) {
+      seen.add(current["mdb_source_id"]);
+      const next = byId.get(current["redirect.id"]);
+      if (!next) break;
+      current = next;
+    }
+    if (INACTIVE_CATALOG_STATUSES.has(current["status"])) {
+      console.log(`  [GTFS] Skipping "${row["provider"] || row["name"]}" \u2014 deprecated/inactive with no live replacement`);
+      continue;
+    }
+    const primaryUrl = current["urls.latest"];
+    const directUrl = current["urls.direct_download"];
+    const url = primaryUrl || directUrl;
+    if (!url) continue;
+    const fallbackUrl = primaryUrl && directUrl && directUrl !== primaryUrl ? directUrl : void 0;
+    const key = current["mdb_source_id"] || url;
+    if (resolved.has(key)) continue;
+    resolved.set(key, { url, name: current["provider"] || current["name"] || "Unknown Agency", fallbackUrl });
+  }
+  console.log(`  [GTFS] Found ${resolved.size} live feed(s) covering this location`);
+  return [...resolved.values()];
 }
 async function downloadGtfsZip(feedUrl, agencyName) {
   fs7.mkdirSync(CACHE_DIR, { recursive: true });
@@ -2513,6 +2538,15 @@ async function downloadGtfsZip(feedUrl, agencyName) {
   fs7.writeFileSync(cachePath, buf);
   console.log(`  [GTFS] Downloaded ${Math.round(buf.length / 1024 / 1024 * 10) / 10} MB \u2014 cached`);
   return buf;
+}
+async function downloadGtfsZipWithFallback(feed) {
+  try {
+    return await downloadGtfsZip(feed.url, feed.name);
+  } catch (e) {
+    if (!feed.fallbackUrl) throw e;
+    console.warn(`  [GTFS] Primary URL failed for ${feed.name} (${e.message}) \u2014 trying direct_download fallback`);
+    return await downloadGtfsZip(feed.fallbackUrl, feed.name);
+  }
 }
 function parseGtfsZip(zipBuffer, agencyName) {
   const zip = new import_adm_zip.default(zipBuffer);
@@ -2546,19 +2580,27 @@ function parseGtfsZip(zipBuffer, agencyName) {
       type: parseInt(row.route_type ?? "3", 10)
     });
   }
-  const todayStr = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "");
   const weekdayServiceIds = /* @__PURE__ */ new Set();
   const weekendServiceIds = /* @__PURE__ */ new Set();
-  for (const row of readEntry("calendar.txt")) {
-    if (!row.service_id) continue;
-    if (row.end_date && row.end_date < todayStr) continue;
+  const calendarRows = readEntry("calendar.txt").filter((r) => r.service_id);
+  const openEndedRows = calendarRows.filter((r) => !r.end_date);
+  let currentPeriodRows;
+  if (openEndedRows.length > 0) {
+    currentPeriodRows = openEndedRows;
+  } else if (calendarRows.length > 0) {
+    const latestEndDate = calendarRows.reduce((max, r) => r.end_date > max ? r.end_date : max, "");
+    currentPeriodRows = calendarRows.filter((r) => r.end_date === latestEndDate);
+  } else {
+    currentPeriodRows = [];
+  }
+  for (const row of currentPeriodRows) {
     const weekday = ["monday", "tuesday", "wednesday", "thursday", "friday"].some((d) => row[d] === "1");
     const weekend = ["saturday", "sunday"].some((d) => row[d] === "1");
     if (weekday) weekdayServiceIds.add(row.service_id);
     if (weekend) weekendServiceIds.add(row.service_id);
   }
-  if (weekdayServiceIds.size === 0) {
-    console.warn(`  [GTFS] calendar.txt yielded no active services \u2014 trying calendar_dates.txt`);
+  if (calendarRows.length === 0) {
+    console.warn(`  [GTFS] calendar.txt has no service rows \u2014 trying calendar_dates.txt`);
     const byService = /* @__PURE__ */ new Map();
     for (const row of readEntry("calendar_dates.txt")) {
       if (!row.service_id || row.exception_type !== "1") continue;
@@ -2648,7 +2690,7 @@ async function getGtfsStopsNearProject(projectLat, projectLon, feedUrls) {
   [GTFS] Processing feed: ${feed.name}`);
     let zipBuffer;
     try {
-      zipBuffer = await downloadGtfsZip(feed.url, feed.name);
+      zipBuffer = await downloadGtfsZipWithFallback(feed);
     } catch (e) {
       console.warn(`  [GTFS] Download failed for ${feed.name}: ${e.message} \u2014 skipping`);
       continue;
@@ -2725,7 +2767,7 @@ async function getGtfsStopsNearProject(projectLat, projectLon, feedUrls) {
     return a.distanceMiles - b.distanceMiles;
   });
 }
-var import_axios2, import_adm_zip, fs7, path6, os2, RAIL_RADIUS_MILES, BUS_RADIUS_MILES, BUS_MIN_DIRECTIONAL, RAIL_MIN_DIRECTIONAL, CLUSTER_RADIUS_MILES, RAIL_ROUTE_TYPES, CACHE_DIR, CACHE_TTL, MOBILITY_DB_CATALOG;
+var import_axios2, import_adm_zip, fs7, path6, os2, RAIL_RADIUS_MILES, BUS_RADIUS_MILES, BUS_MIN_DIRECTIONAL, RAIL_MIN_DIRECTIONAL, CLUSTER_RADIUS_MILES, RAIL_ROUTE_TYPES, CACHE_DIR, CACHE_TTL, INACTIVE_CATALOG_STATUSES, MOBILITY_DB_CATALOG;
 var init_gtfs_transit = __esm({
   "pipeline/lib/gtfs-transit.ts"() {
     "use strict";
@@ -2743,6 +2785,7 @@ var init_gtfs_transit = __esm({
     RAIL_ROUTE_TYPES = /* @__PURE__ */ new Set([0, 1, 2, 4, 5, 7, 12]);
     CACHE_DIR = path6.join(os2.tmpdir(), "liminal-gtfs-cache");
     CACHE_TTL = 24 * 60 * 60 * 1e3;
+    INACTIVE_CATALOG_STATUSES = /* @__PURE__ */ new Set(["deprecated", "inactive"]);
     MOBILITY_DB_CATALOG = "https://bit.ly/catalogs-csv";
   }
 });
