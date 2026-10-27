@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Upload, PenLine, X } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { createClient } from "@/lib/supabase/client";
@@ -25,8 +25,21 @@ const TARGETS: Record<string, string[]> = {
 
 type Method = "upload" | "manual";
 
-export default function NewProjectPage() {
+function NewProjectForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("return_to");
+
+  function destinationFor(projectId: string): string {
+    return returnTo ? `${returnTo}?project_id=${projectId}` : `/projects/${projectId}`;
+  }
+
+  function createdDestination(projectId: string): string {
+    return returnTo
+      ? `/projects/${projectId}/created?return_to=${encodeURIComponent(returnTo)}`
+      : `/projects/${projectId}/created`;
+  }
+
   const [method,        setMethod]        = useState<Method>("manual");
   const [programs,      setPrograms]      = useState<string[]>(["leed_bdc_v41"]);
   const [target,        setTarget]        = useState("");
@@ -41,7 +54,7 @@ export default function NewProjectPage() {
     headers:          () => ({ "x-project-id": projectIdRef.current }),
     onUploadProgress: (p) => setUploadProgress(p),
     onClientUploadComplete: () => {
-      router.push(`/projects/${projectIdRef.current}/created`);
+      router.push(createdDestination(projectIdRef.current));
     },
     onUploadError: (err) => {
       setError(err.message ?? "Drawing upload failed. Please try again.");
@@ -139,10 +152,10 @@ export default function NewProjectPage() {
           await startUpload([drawingFile]);
           // redirect handled by onClientUploadComplete
         } else {
-          router.push(`/projects/${project.id}/created`);
+          router.push(createdDestination(project.id));
         }
       } else {
-        router.push(`/projects/${project.id}`);
+        router.push(destinationFor(project.id));
       }
     } catch (err) {
       setError((err as Error).message);
@@ -396,5 +409,13 @@ export default function NewProjectPage() {
       </div>
 
     </>
+  );
+}
+
+export default function NewProjectPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewProjectForm />
+    </Suspense>
   );
 }

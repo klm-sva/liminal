@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "WELL v2 Gap Analysis" };
@@ -18,6 +19,11 @@ export default async function WellV2GapAnalysisPage({
   searchParams: Promise<{ project_id?: string }>;
 }) {
   const { project_id: projectId } = await searchParams;
+
+  if (!projectId) {
+    redirect(`/orders/new/select-project?return_to=${encodeURIComponent("/orders/gap-analysis-well-v2")}`);
+  }
+
   return (
     <div className="min-h-screen bg-certify-white">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

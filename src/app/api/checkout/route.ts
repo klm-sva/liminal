@@ -10,6 +10,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "credit_id required" }, { status: 400 });
     }
 
+    if (!project_id) {
+      return NextResponse.json({ error: "project_id required" }, { status: 400 });
+    }
+
     const authClient = await createClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) {
@@ -18,6 +22,16 @@ export async function POST(req: Request) {
 
     const appUrl  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const supabase = await createServiceClient();
+
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, customer_id")
+      .eq("id", project_id)
+      .single();
+
+    if (!project || project.customer_id !== user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
     // Gap analysis — no DB credit record; charge a one-off $499 via price_data
     if (is_gap_analysis) {

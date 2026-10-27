@@ -6,8 +6,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Project Created" };
 
-export default async function ProjectCreatedPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectCreatedPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ return_to?: string }>;
+}) {
   const { id } = await params;
+  const { return_to: returnTo } = await searchParams;
 
   const supabase = await createClient();
   const { data: project } = await supabase
@@ -80,11 +87,23 @@ export default async function ProjectCreatedPage({ params }: { params: Promise<{
         )}
 
         <div className="flex flex-col gap-3">
+          {returnTo && (
+            <Link
+              href={`${returnTo}?project_id=${project.id}`}
+              className="w-full flex items-center justify-center gap-2 bg-certify-blue hover:bg-certify-teal text-white font-semibold py-3.5 rounded-xl transition-all shadow-md"
+            >
+              Continue <ArrowRight size={15} />
+            </Link>
+          )}
           <Link
             href={`/projects/${project.id}/edit`}
-            className="w-full flex items-center justify-center gap-2 bg-certify-deep hover:bg-certify-navy text-white font-semibold py-3.5 rounded-xl transition-all shadow-md"
+            className={`w-full flex items-center justify-center gap-2 font-semibold py-3.5 rounded-xl transition-all ${
+              returnTo
+                ? "border border-certify-cool-grey/20 text-certify-dark-grey hover:bg-certify-white text-sm"
+                : "bg-certify-deep hover:bg-certify-navy text-white shadow-md"
+            }`}
           >
-            Review project info <ArrowRight size={15} />
+            Review project info {!returnTo && <ArrowRight size={15} />}
           </Link>
           <Link
             href={`/projects/${project.id}`}

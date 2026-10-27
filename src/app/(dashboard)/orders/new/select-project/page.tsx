@@ -8,7 +8,13 @@ import type { ProgramType } from "@/types/database";
 
 export const metadata: Metadata = { title: "Select Project" };
 
-export default async function SelectProjectPage() {
+export default async function SelectProjectPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ return_to?: string }>;
+}) {
+  const { return_to: returnTo } = await searchParams;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -19,6 +25,10 @@ export default async function SelectProjectPage() {
         .eq("customer_id", user.id)
         .order("created_at", { ascending: false })
     : { data: [] };
+
+  const newProjectHref = returnTo
+    ? `/projects/new?return_to=${encodeURIComponent(returnTo)}`
+    : "/projects/new";
 
   return (
     <>
@@ -38,7 +48,7 @@ export default async function SelectProjectPage() {
           {(projects ?? []).map((project) => (
             <Link
               key={project.id}
-              href={`/projects/${project.id}/add-service`}
+              href={returnTo ? `${returnTo}?project_id=${project.id}` : `/projects/${project.id}/add-service`}
               className="group flex items-center gap-4 bg-white border border-certify-white rounded-2xl px-5 py-4 hover:border-certify-blue/30 hover:shadow-glass transition-all duration-200"
             >
               {/* Icon */}
@@ -65,7 +75,7 @@ export default async function SelectProjectPage() {
 
         {/* New project — dashed border */}
         <Link
-          href="/projects/new"
+          href={newProjectHref}
           className="flex items-center gap-4 border-2 border-dashed border-certify-cool-grey/25 hover:border-certify-blue/40 rounded-2xl px-5 py-4 transition-all duration-200 hover:bg-certify-blue/5 group"
         >
           <div className="w-10 h-10 rounded-xl bg-certify-white border border-certify-white flex items-center justify-center shrink-0">
@@ -82,7 +92,7 @@ export default async function SelectProjectPage() {
         </Link>
 
         <p className="text-xs text-certify-cool-grey/70 mt-5 text-center">
-          Don&apos;t have a project yet? Running a credit or feature will offer to create one automatically from your uploaded drawings.
+          Don&apos;t have a project yet? Create one above — you can upload a drawing set to auto-fill the details, or enter them manually.
         </p>
       </div>
     </>

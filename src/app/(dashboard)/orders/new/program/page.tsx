@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 
@@ -58,7 +59,17 @@ const PROGRAMS = [
   },
 ];
 
-export default function ChooseProgramPage() {
+export default async function ChooseProgramPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project_id?: string }>;
+}) {
+  const { project_id: projectId } = await searchParams;
+
+  if (!projectId) {
+    redirect(`/orders/new/select-project?return_to=${encodeURIComponent("/orders/new/program")}`);
+  }
+
   return (
     <div className="min-h-screen bg-certify-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -76,7 +87,7 @@ export default function ChooseProgramPage() {
           {PROGRAMS.map((prog) => (
             <Link
               key={prog.id}
-              href={`/orders/new/credit?program=${prog.id}`}
+              href={`/orders/new/credit?program=${prog.id}&project_id=${projectId}`}
               className="group flex items-start gap-5 bg-white border rounded-2xl p-6 transition-all duration-200 hover:shadow-glass hover:-translate-y-0.5"
               style={{ borderColor: prog.border, backgroundColor: prog.bg }}
             >
