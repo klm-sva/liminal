@@ -5,10 +5,20 @@ import { CheckCircle2, ArrowRight, Info } from "lucide-react";
 import StepProgress from "@/components/ui/StepProgress";
 import ProgramChip from "@/components/dashboard/ProgramChip";
 import { createClient } from "@/lib/supabase/server";
+import TransitAvailabilityGate from "./_transit-availability-gate";
 
 export const metadata: Metadata = { title: "Credit Details" };
 
 const STEPS = ["Program", "Credit", "Details", "Documents", "Payment"];
+
+// Credits whose generation depends on live GTFS transit provider data.
+// LTc5 always uses it; V05 only on its non-Transit-Score path, but the
+// pre-purchase check itself is identical either way.
+const TRANSIT_DATA_CREDIT_CODES = new Set(["ltc5", "v05"]);
+
+function needsTransitAvailabilityCheck(creditCode: string): boolean {
+  return TRANSIT_DATA_CREDIT_CODES.has(creditCode.toLowerCase().replace(/\s+/g, ""));
+}
 
 export default async function CreditDetailPage({
   params,
@@ -102,19 +112,23 @@ export default async function CreditDetailPage({
           </ul>
         </div>
 
-        {/* Price + CTA */}
-        <div className="flex items-center justify-between bg-certify-beige border border-certify-sand/40 rounded-xl px-5 py-4 mb-4">
-          <div>
-            <p className="font-serif text-2xl text-certify-deep">${(credit.price / 100).toFixed(0)}</p>
-            <p className="text-xs text-certify-cool-grey">per credit order · pilot price</p>
+        {/* Price + CTA (gated behind a transit data availability check for LTc5/V05) */}
+        {needsTransitAvailabilityCheck(credit.credit_code) && project_id ? (
+          <TransitAvailabilityGate projectId={project_id} continueHref={continueHref} price={credit.price} />
+        ) : (
+          <div className="flex items-center justify-between bg-certify-beige border border-certify-sand/40 rounded-xl px-5 py-4 mb-4">
+            <div>
+              <p className="font-serif text-2xl text-certify-deep">${(credit.price / 100).toFixed(0)}</p>
+              <p className="text-xs text-certify-cool-grey">per credit order · pilot price</p>
+            </div>
+            <Link
+              href={continueHref}
+              className="inline-flex items-center gap-1.5 bg-certify-blue hover:bg-certify-teal text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm group"
+            >
+              Continue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
-          <Link
-            href={continueHref}
-            className="inline-flex items-center gap-1.5 bg-certify-blue hover:bg-certify-teal text-white font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-md text-sm group"
-          >
-            Continue <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
+        )}
 
         <p className="text-xs text-certify-cool-grey text-center">Required documents listed on the next screen</p>
       </div>
