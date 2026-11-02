@@ -37,7 +37,7 @@ import { createServiceClient } from "./lib/supabase";
 import { extractCreditData, formatCreditDataForPrompt } from "./lib/extract-xlsx-row";
 import { reviewDocuments, type UploadedDocument } from "./document-review";
 import { reviewDrawings } from "./drawing-review";
-import { getOrAnalyzeDrawing, rebuildProjectProfile } from "./drawing-analysis";
+import { analyzeDrawingForRun, type DrawingFileProfile } from "./drawing-analysis";
 import { generateMap, measureWalkingDistances, type MapType, type WalkingRoute } from "./map-generation";
 import { findGtfsFeedUrls, getGtfsStopsNearProject, type GtfsStopResult } from "./lib/gtfs-transit";
 import { geocodeAddress } from "./lib/geocode";
@@ -45,8 +45,8 @@ import { logAuditEvent } from "./lib/supabase-ops";
 import { preparePdfDocument } from "./lib/pdf-to-images";
 import { injectTableCss, makeEditable } from "./lib/make-editable";
 import { generateCalculatorGuide, type CalcGuideResult } from "./lib/calculator-guide";
-import { extractSpecs, loadSpecsProfile, formatSpecsProfileForContext } from "./lib/specs-extract";
-import { extractDocument, loadAllDocumentProfiles, formatAllDocumentProfilesForContext } from "./lib/document-extract";
+import { extractSpecs, formatSpecsProfileForContext } from "./lib/specs-extract";
+import { extractDocument, formatAllDocumentProfilesForContext } from "./lib/document-extract";
 import { extractPdfContentFromBuffer } from "./lib/pdf-extract";
 import { CREDIT_SUBMISSION_PROMPT } from "./prompts/credit-submission";
 import { sendQAReviewEmail, sendAddressInvalidEmail } from "../src/lib/resend";
@@ -694,13 +694,11 @@ export async function processOrder(
     console.log(`    ✓ ${upload.filename}`);
   }
 
-  // ── Step 10: Drawing analysis — per order, cached project-wide ────────────
-  // Order uploads (not a separate project-level "drawing set" upload — that
-  // flow is effectively dead) are the only place real drawing content ever
-  // arrives. Each drawing-type upload is hashed; a hash already analyzed
-  // anywhere in this project (any order, any credit) is reused for free.
-  // Only genuinely new drawings pay the Python + vision analysis cost.
-  console.log(`  Step 10: Checking drawing analysis status...`);
+  // ── Step 10: Drawing analysis — this order's uploads only ─────────────────
+  // Scoped entirely to this run — never reuses or merges analysis from a
+  // different order or credit on this project. Results are held in memory
+  // for Step 11 and never written back to the project row.
+  console.log(`  Step 10: Checking for drawing uploads in this order...`);
 
   const drawingCandidates = uploadBuffers.filter((u) => {
     if (path.extname(u.filename).toLowerCase() !== ".pdf") return false;
@@ -708,41 +706,33 @@ export async function processOrder(
     return classified ? DRAWING_TYPE_PATTERN.test(classified.documentType) : false;
   });
 
+  const thisRunDrawingProfiles: DrawingFileProfile[] = [];
+
   if (drawingCandidates.length > 0) {
-    console.log(`    ${drawingCandidates.length} drawing-type upload(s) found — checking project cache...`);
-    let anyProcessed = false;
+    console.log(`    ${drawingCandidates.length} drawing-type upload(s) found — analyzing for this run...`);
 
     for (const file of drawingCandidates) {
       try {
-        const { cached } = await getOrAnalyzeDrawing(order.customer_id, order.project_id!, {
+        const profile = await analyzeDrawingForRun(order.customer_id, order.project_id!, {
           filename: file.filename,
           buffer:   file.buffer,
         });
-        console.log(`    ${cached ? "✓ reused cached analysis for" : "✓ analyzed"} ${file.filename}`);
-        anyProcessed = true;
+        thisRunDrawingProfiles.push(profile);
+        console.log(`    ✓ analyzed ${file.filename}`);
       } catch (err) {
         // Non-fatal — a drawing analysis failure must never block the order.
         console.warn(`    ⚠ Drawing analysis failed for ${file.filename}: ${(err as Error).message}`);
-      }
-    }
-
-    if (anyProcessed) {
-      try {
-        const { fileCount } = await rebuildProjectProfile(order.customer_id, order.project_id!);
-        console.log(`    ✓ project profile rebuilt from ${fileCount} cached drawing(s)`);
-      } catch (err) {
-        console.warn(`    ⚠ Failed to rebuild project profile: ${(err as Error).message}`);
       }
     }
   } else {
     console.log(`    No drawing-type uploads in this order — skipping drawing analysis`);
   }
 
-  // ── Step 10.5: Specs pre-extraction ──────────────────────────────────────
-  // Runs once per project — extracts compact product/material inventory from
-  // any uploaded spec documents (PDF, RTF, DOCX, TXT). All credits reuse the
-  // stored specs-profile.json rather than re-processing the raw files.
-  console.log(`  Step 10.5: Checking specs extraction status...`);
+  // ── Step 10.5: Specs extraction ───────────────────────────────────────────
+  // Scoped to this run only — extracts a compact product/material inventory
+  // from spec documents uploaded for THIS order. Never reuses a profile
+  // extracted for a different order or credit on this project.
+  console.log(`  Step 10.5: Checking for spec documents in this order...`);
   let specsProfileBlock = "";
 
   const specFiles = uploadBuffers.filter((u) => {
@@ -753,7 +743,7 @@ export async function processOrder(
            !u.filename.toLowerCase().includes("annotated");
   });
 
-  if (!(project as any).specs_extracted && specFiles.length > 0) {
+  if (specFiles.length > 0) {
     console.log(`    Running specs extraction on ${specFiles.length} document(s)...`);
     try {
       const specsProfile = await extractSpecs(order.project_id!, order.customer_id, specFiles);
@@ -762,29 +752,17 @@ export async function processOrder(
     } catch (err) {
       console.warn(`    ⚠ Specs extraction failed: ${(err as Error).message} — continuing without specs profile`);
     }
-  } else if ((project as any).specs_extracted) {
-    console.log(`    Specs already extracted — loading stored profile...`);
-    try {
-      const specsProfile = await loadSpecsProfile(order.customer_id, order.project_id!);
-      if (specsProfile) {
-        specsProfileBlock = formatSpecsProfileForContext(specsProfile);
-        console.log(`    ✓ Specs profile loaded — ${specsProfile.product_count} products`);
-      }
-    } catch (err) {
-      console.warn(`    ⚠ Could not load specs profile: ${(err as Error).message}`);
-    }
   } else {
-    console.log(`    No spec documents uploaded — skipping`);
+    console.log(`    No spec documents uploaded for this order — skipping`);
   }
 
-  // ── Step 10.6: Document pre-extraction ───────────────────────────────────
-  // Runs once per document — auto-detects type (geotechnical, energy model,
-  // Phase I ESA, commissioning, acoustics, site survey, lighting) and stores
-  // a compact profile. All credits load from storage; raw files never re-processed.
-  console.log(`  Step 10.6: Checking document extraction status...`);
+  // ── Step 10.6: Document extraction ────────────────────────────────────────
+  // Scoped to this run only — auto-detects type (geotechnical, energy model,
+  // Phase I ESA, commissioning, acoustics, site survey, lighting) for
+  // documents uploaded in THIS order. Never reuses a profile extracted for
+  // a different order or credit on this project.
+  console.log(`  Step 10.6: Checking for documents in this order...`);
   let docProfilesBlock = "";
-
-  const docProfiles = (project as any).doc_profiles_extracted as Record<string, boolean> ?? {};
 
   // Candidate files: PDFs/RTF/DOCX that aren't drawings, specs, or annotated drawings
   const docFiles = uploadBuffers.filter((u) => {
@@ -798,6 +776,7 @@ export async function processOrder(
   });
 
   if (docFiles.length > 0) {
+    const thisRunProfiles: Awaited<ReturnType<typeof extractDocument>>[] = [];
     for (const file of docFiles) {
       try {
         const profile = await extractDocument(order.project_id!, order.customer_id, {
@@ -805,40 +784,26 @@ export async function processOrder(
           buffer:   file.buffer,
           mimeType: file.mimeType,
         });
-        docProfiles[profile.type_slug] = true;
+        thisRunProfiles.push(profile);
         console.log(`    ✓ ${profile.type_slug} profile extracted from ${file.filename}`);
       } catch (err) {
         console.warn(`    ⚠ Document extraction failed for ${file.filename}: ${(err as Error).message}`);
       }
     }
+    if (thisRunProfiles.length > 0) {
+      docProfilesBlock = formatAllDocumentProfilesForContext(thisRunProfiles);
+    }
+  } else {
+    console.log(`    No documents uploaded for this order — skipping`);
   }
 
-  // Always load all stored profiles (covers current + previously-extracted)
-  try {
-    const storedProfiles = await loadAllDocumentProfiles(order.customer_id, order.project_id!);
-    if (storedProfiles.length > 0) {
-      docProfilesBlock = formatAllDocumentProfilesForContext(storedProfiles);
-      console.log(`    ✓ ${storedProfiles.length} document profile(s) loaded for context`);
-    }
-  } catch (err) {
-    console.warn(`    ⚠ Could not load document profiles: ${(err as Error).message}`);
-  }
-
-  // ── Step 11: Load project profile ────────────────────────────────────────
-  console.log(`  Step 11: Loading project profile...`);
-  const profilePath = `${order.customer_id}/${order.project_id!}/project-profile.json`;
-  let projectProfile: Record<string, unknown> = {};
-  const { data: profileData } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET).download(profilePath),
-    "download project profile",
-  );
-  if (profileData) {
-    try {
-      projectProfile = JSON.parse(await profileData.text());
-    } catch {
-      console.warn(`    Failed to parse project-profile.json — continuing without it`);
-    }
-  }
+  // ── Step 11: Project-level data ───────────────────────────────────────────
+  // Foundational data set when the project was created (editable any time in
+  // project settings) — read fresh every run, never mixed with per-run
+  // drawing analysis from Step 10. Kept as two distinct prompt blocks below
+  // so it's always clear which data came from the project vs. this run.
+  console.log(`  Step 11: Loading project-level data...`);
+  const projectLevelDrawingData = ((project as any).drawing_data as Record<string, unknown>) ?? {};
 
   // ── Step 12: Load credit requirements PDF from local reference folder ────────
   console.log(`  Step 12: Loading credit requirements PDF from pipeline/reference...`);
@@ -1112,10 +1077,21 @@ export async function processOrder(
   const projectDataBlock = [
     "DATA CONFLICT RULE: Where any uploaded document conflicts with owner-entered data below, always defer to the owner-entered data — the customer has reviewed and confirmed it. Use documents to fill gaps, not to override.",
     "",
-    "PROJECT DATA (extracted from construction drawings):",
-    ...Object.entries(projectProfile)
+    "PROJECT-LEVEL DATA (set when the project was created; editable any time in project settings — not specific to this credit):",
+    ...Object.entries(projectLevelDrawingData)
       .filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== undefined)
       .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
+    ...(thisRunDrawingProfiles.length > 0
+      ? [
+          "",
+          "DRAWINGS UPLOADED FOR THIS ORDER (applies to this credit only):",
+          ...thisRunDrawingProfiles.flatMap((p) =>
+            Object.entries(p.profile)
+              .filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== undefined)
+              .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
+          ),
+        ]
+      : []),
     "",
     "PROJECT ADDRESS (owner-entered — use this exact address for ALL location-based lookups including transit, walk score, distances, census data, and any web search requiring a location):",
     `  address: ${project.address ?? "(not provided)"}`,

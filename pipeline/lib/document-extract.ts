@@ -219,7 +219,10 @@ export async function extractDocumentContent(
   };
 }
 
-// ── Public: extract and store in Supabase (for production) ────────────────────
+// ── Public: extract for this run only (for production) ─────────────────────
+// Scoped entirely to the run that uploaded this file — does not persist a
+// project-wide profile or mark the project as having this document type
+// extracted, so every run reads only the documents it was actually given.
 
 export async function extractDocument(
   projectId:  string,
@@ -230,32 +233,12 @@ export async function extractDocument(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-  const client   = new Anthropic({ apiKey });
-  const supabase = createServiceClient();
-  const usage    = { input: 0, output: 0 };
+  const client = new Anthropic({ apiKey });
+  const usage  = { input: 0, output: 0 };
 
   const profile = await extractDocumentContent(file, client, usage);
 
-  const storagePath = `${customerId}/${projectId}/doc-profiles/${profile.type_slug}.json`;
-  const { error: uploadError } = await supabase.storage
-    .from(UPLOADS_BUCKET)
-    .upload(storagePath, JSON.stringify(profile, null, 2), { contentType: "application/json", upsert: true });
-
-  if (uploadError) throw new Error(`Failed to upload ${profile.type_slug} profile: ${uploadError.message}`);
-
-  // Record extracted type in project row
-  await supabase
-    .from("projects")
-    .select("doc_profiles_extracted")
-    .eq("id", projectId)
-    .single()
-    .then(({ data }) => {
-      const current = (data?.doc_profiles_extracted as Record<string, boolean>) ?? {};
-      current[profile.type_slug] = true;
-      return supabase.from("projects").update({ doc_profiles_extracted: current }).eq("id", projectId);
-    });
-
-  console.log(`  [doc-extract] ✓ ${profile.type_slug} stored — ${profile.type_name}`);
+  console.log(`  [doc-extract] ✓ ${profile.type_slug} extracted — ${profile.type_name}`);
   return profile;
 }
 

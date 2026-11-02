@@ -298,12 +298,13 @@ export async function extractSpecsContent(
 }
 
 /**
- * Extract product/material data from one or more spec documents.
- * Uploads specs-profile.json to Supabase and sets project.specs_extracted = true.
- * Use this in process-order.ts and the specs-analysis webhook.
+ * Extract product/material data from one or more spec documents uploaded
+ * for a single run. Scoped entirely to this run — does not persist a
+ * project-wide profile or mark the project as "already extracted", so
+ * every run reads only the spec documents it was actually given.
  *
- * @param projectId  — Supabase projects.id
- * @param customerId — Supabase customers.id
+ * @param projectId  — Supabase projects.id (unused here; kept for call-site compatibility)
+ * @param customerId — Supabase customers.id (unused here; kept for call-site compatibility)
  * @param files      — array of { filename, buffer, mimeType } from customer uploads
  */
 export async function extractSpecs(
@@ -315,30 +316,10 @@ export async function extractSpecs(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-  const client   = new Anthropic({ apiKey });
-  const supabase = createServiceClient();
-  const usage    = { input: 0, output: 0 };
+  const client = new Anthropic({ apiKey });
+  const usage  = { input: 0, output: 0 };
 
   const profile = await extractSpecsContent(files, client, usage);
-
-  // Upload to Supabase Storage
-  const storagePath = `${customerId}/${projectId}/${PROFILE_FILENAME}`;
-  const { error: uploadError } = await supabase.storage
-    .from(UPLOADS_BUCKET)
-    .upload(storagePath, JSON.stringify(profile, null, 2), {
-      contentType: "application/json",
-      upsert:      true,
-    });
-
-  if (uploadError) throw new Error(`Failed to upload specs-profile.json: ${uploadError.message}`);
-
-  // Mark project as specs_extracted
-  const { error: updateError } = await supabase
-    .from("projects")
-    .update({ specs_extracted: true })
-    .eq("id", projectId);
-
-  if (updateError) console.warn(`[specs-extract] Could not set specs_extracted flag: ${updateError.message}`);
 
   console.log(`  [specs-extract] ✓ ${profile.product_count} products extracted from ${profile.source_files.length} file(s)`);
   console.log(`  [specs-extract]   in:${usage.input.toLocaleString()} out:${usage.output.toLocaleString()} tokens`);

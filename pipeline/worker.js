@@ -1951,21 +1951,8 @@ Return only the JSON object.`;
 function hashDrawingBuffer(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
 }
-function drawingProfilePath(customerId, projectId, hash) {
-  return `${customerId}/${projectId}/drawing-profiles/${hash}.json`;
-}
 function drawingAnnotatedPath(customerId, projectId, hash) {
   return `${customerId}/${projectId}/drawing-annotated/${hash}.pdf`;
-}
-async function getCachedDrawingProfile(customerId, projectId, hash) {
-  const supabase = createServiceClient();
-  const { data: data2, error } = await supabase.storage.from("customer-uploads").download(drawingProfilePath(customerId, projectId, hash));
-  if (error || !data2) return null;
-  try {
-    return JSON.parse(await data2.text());
-  } catch {
-    return null;
-  }
 }
 async function runPythonAnalysis(projectId, customerId, localPdfPath, tmpDir) {
   const args = [
@@ -2013,14 +2000,9 @@ ${stderr.trim()}`);
     tokenUsage: summary.token_usage
   };
 }
-async function getOrAnalyzeDrawing(customerId, projectId, file) {
+async function analyzeDrawingForRun(customerId, projectId, file) {
   const hash = hashDrawingBuffer(file.buffer);
-  const cached = await getCachedDrawingProfile(customerId, projectId, hash);
-  if (cached) {
-    console.log(`  [drawing-cache] ${file.filename} \u2014 already analyzed for this project (hash ${hash.slice(0, 8)}), reusing cached profile`);
-    return { profile: cached, cached: true };
-  }
-  console.log(`  [drawing-cache] ${file.filename} \u2014 new drawing for this project, analyzing (hash ${hash.slice(0, 8)})...`);
+  console.log(`  [drawing-analysis] ${file.filename} \u2014 analyzing for this run (hash ${hash.slice(0, 8)})...`);
   const supabase = createServiceClient();
   const tmpDir = fs5.mkdtempSync(path4.join(os.tmpdir(), "certify-drawing-"));
   try {
@@ -2033,7 +2015,7 @@ async function getOrAnalyzeDrawing(customerId, projectId, file) {
       const pdfBytes = fs5.readFileSync(result.annotatedLocalPath);
       const { error: uploadErr } = await supabase.storage.from("customer-uploads").upload(remotePath, pdfBytes, { contentType: "application/pdf", upsert: true });
       if (uploadErr) {
-        console.warn(`  [drawing-cache] annotated PDF upload failed: ${uploadErr.message}`);
+        console.warn(`  [drawing-analysis] annotated PDF upload failed: ${uploadErr.message}`);
       } else {
         annotatedPdfPath = remotePath;
       }
@@ -2048,13 +2030,6 @@ async function getOrAnalyzeDrawing(customerId, projectId, file) {
       tokenUsage: result.tokenUsage,
       analyzedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    const { error: cacheUploadErr } = await supabase.storage.from("customer-uploads").upload(drawingProfilePath(customerId, projectId, hash), JSON.stringify(profileRecord, null, 2), {
-      contentType: "application/json",
-      upsert: true
-    });
-    if (cacheUploadErr) {
-      console.warn(`  [drawing-cache] failed to cache profile: ${cacheUploadErr.message}`);
-    }
     await logAuditEvent({
       eventType: "drawing_analyzed",
       entityType: "project",
@@ -2069,78 +2044,13 @@ async function getOrAnalyzeDrawing(customerId, projectId, file) {
         outputTokens: result.tokenUsage?.output_tokens ?? 0
       }
     });
-    return { profile: profileRecord, cached: false };
+    return profileRecord;
   } finally {
     try {
       fs5.rmSync(tmpDir, { recursive: true, force: true });
     } catch {
     }
   }
-}
-function mergeProfiles(a, b) {
-  const out = { ...a };
-  for (const [key, bVal] of Object.entries(b)) {
-    if (bVal === null || bVal === void 0) continue;
-    const aVal = out[key];
-    if (Array.isArray(aVal) && Array.isArray(bVal)) {
-      const combined = [...aVal, ...bVal];
-      out[key] = combined.filter(
-        (v, i) => combined.findIndex((v2) => JSON.stringify(v2) === JSON.stringify(v)) === i
-      );
-    } else if (aVal && bVal && typeof aVal === "object" && typeof bVal === "object" && !Array.isArray(aVal) && !Array.isArray(bVal)) {
-      out[key] = mergeProfiles(aVal, bVal);
-    } else {
-      out[key] = bVal;
-    }
-  }
-  return out;
-}
-async function rebuildProjectProfile(customerId, projectId) {
-  const supabase = createServiceClient();
-  const prefix = `${customerId}/${projectId}/drawing-profiles`;
-  const { data: files, error } = await supabase.storage.from("customer-uploads").list(prefix);
-  if (error || !files?.length) {
-    return { profile: {}, flaggedFields: [], fileCount: 0 };
-  }
-  let merged = {};
-  const flaggedFields = /* @__PURE__ */ new Set();
-  for (const f of files.filter((f2) => f2.name.endsWith(".json"))) {
-    const { data: data2, error: dlErr } = await supabase.storage.from("customer-uploads").download(`${prefix}/${f.name}`);
-    if (dlErr || !data2) continue;
-    try {
-      const record = JSON.parse(await data2.text());
-      merged = mergeProfiles(merged, record.profile ?? {});
-      (record.flaggedFields ?? []).forEach((ff) => flaggedFields.add(ff));
-    } catch {
-      continue;
-    }
-  }
-  await supabase.storage.from("customer-uploads").upload(`${customerId}/${projectId}/project-profile.json`, JSON.stringify(merged, null, 2), {
-    contentType: "application/json",
-    upsert: true
-  });
-  const fixtures = merged.plumbing_fixtures ?? {};
-  const parking = merged.parking ?? {};
-  const site = merged.site ?? {};
-  const updatePayload = {
-    auto_extracted: true,
-    flagged_fields: Array.from(flaggedFields),
-    drawings_analyzed_at: (/* @__PURE__ */ new Date()).toISOString(),
-    drawing_data: merged,
-    ...merged.building_type ? { building_type: merged.building_type } : {},
-    ...merged.primary_occupancy ? { primary_occupancy: merged.primary_occupancy } : {},
-    ...Object.keys(fixtures).length ? { plumbing_fixtures: fixtures } : {},
-    ...parking.total_spaces != null ? { total_parking: parking.total_spaces } : {},
-    ...parking.accessible_spaces != null ? { accessible_parking: parking.accessible_spaces } : {},
-    ...parking.bicycle_spaces != null ? { bicycle_parking: parking.bicycle_spaces } : {},
-    ...site.site_area_sqft != null ? { site_area_sqft: site.site_area_sqft } : {},
-    ...site.landscaping_area_sqft != null ? { landscaping_sqft: site.landscaping_area_sqft } : {},
-    ...site.impervious_surface_sqft != null ? { impervious_sqft: site.impervious_surface_sqft } : {},
-    ...site.building_footprint_sqft != null ? { building_footprint_sqft: site.building_footprint_sqft } : {}
-  };
-  const { error: updateErr } = await supabase.from("projects").update(updatePayload).eq("id", projectId);
-  if (updateErr) console.warn(`  [drawing-cache] projects table update failed: ${updateErr.message}`);
-  return { profile: merged, flaggedFields: Array.from(flaggedFields), fileCount: files.length };
 }
 var path4, fs5, os, crypto, import_child_process, import_util, execFileAsync, PYTHON_SCRIPT, PYTHON_BIN, TIMEOUT_MS;
 var init_drawing_analysis = __esm({
@@ -3308,17 +3218,8 @@ async function extractSpecs(projectId, customerId, files) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
   const client2 = new import_sdk4.default({ apiKey });
-  const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractSpecsContent(files, client2, usage2);
-  const storagePath = `${customerId}/${projectId}/${PROFILE_FILENAME}`;
-  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET2).upload(storagePath, JSON.stringify(profile, null, 2), {
-    contentType: "application/json",
-    upsert: true
-  });
-  if (uploadError) throw new Error(`Failed to upload specs-profile.json: ${uploadError.message}`);
-  const { error: updateError } = await supabase.from("projects").update({ specs_extracted: true }).eq("id", projectId);
-  if (updateError) console.warn(`[specs-extract] Could not set specs_extracted flag: ${updateError.message}`);
   console.log(`  [specs-extract] \u2713 ${profile.product_count} products extracted from ${profile.source_files.length} file(s)`);
   console.log(`  [specs-extract]   in:${usage2.input.toLocaleString()} out:${usage2.output.toLocaleString()} tokens`);
   return profile;
@@ -3498,37 +3399,10 @@ async function extractDocument(projectId, customerId, file) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
   const client2 = new import_sdk5.default({ apiKey });
-  const supabase = createServiceClient();
   const usage2 = { input: 0, output: 0 };
   const profile = await extractDocumentContent(file, client2, usage2);
-  const storagePath = `${customerId}/${projectId}/doc-profiles/${profile.type_slug}.json`;
-  const { error: uploadError } = await supabase.storage.from(UPLOADS_BUCKET3).upload(storagePath, JSON.stringify(profile, null, 2), { contentType: "application/json", upsert: true });
-  if (uploadError) throw new Error(`Failed to upload ${profile.type_slug} profile: ${uploadError.message}`);
-  await supabase.from("projects").select("doc_profiles_extracted").eq("id", projectId).single().then(({ data: data2 }) => {
-    const current = data2?.doc_profiles_extracted ?? {};
-    current[profile.type_slug] = true;
-    return supabase.from("projects").update({ doc_profiles_extracted: current }).eq("id", projectId);
-  });
-  console.log(`  [doc-extract] \u2713 ${profile.type_slug} stored \u2014 ${profile.type_name}`);
+  console.log(`  [doc-extract] \u2713 ${profile.type_slug} extracted \u2014 ${profile.type_name}`);
   return profile;
-}
-async function loadAllDocumentProfiles(customerId, projectId) {
-  const supabase = createServiceClient();
-  const prefix = `${customerId}/${projectId}/doc-profiles`;
-  const { data: files, error } = await supabase.storage.from(UPLOADS_BUCKET3).list(prefix);
-  if (error || !files?.length) return [];
-  const profiles = await Promise.all(
-    files.filter((f) => f.name.endsWith(".json")).map(async (f) => {
-      const { data: data2, error: dlErr } = await supabase.storage.from(UPLOADS_BUCKET3).download(`${prefix}/${f.name}`);
-      if (dlErr || !data2) return null;
-      try {
-        return JSON.parse(await data2.text());
-      } catch {
-        return null;
-      }
-    })
-  );
-  return profiles.filter((p) => p !== null);
 }
 function formatDocumentProfileForContext(profile) {
   return profile.context_block || `${profile.type_name} \u2014 ${profile.source_file}
@@ -3538,7 +3412,7 @@ function formatAllDocumentProfilesForContext(profiles) {
   if (!profiles.length) return "";
   return profiles.map(formatDocumentProfileForContext).join("\n\n");
 }
-var import_sdk5, fs10, path9, os4, import_child_process3, UPLOADS_BUCKET3, EXTRACTION_PROMPT2;
+var import_sdk5, fs10, path9, os4, import_child_process3, EXTRACTION_PROMPT2;
 var init_document_extract = __esm({
   "pipeline/lib/document-extract.ts"() {
     "use strict";
@@ -3548,7 +3422,6 @@ var init_document_extract = __esm({
     os4 = __toESM(require("os"));
     import_child_process3 = require("child_process");
     init_supabase();
-    UPLOADS_BUCKET3 = "customer-uploads";
     EXTRACTION_PROMPT2 = `You are analyzing a professional document uploaded as part of a LEED v4.1 building certification project.
 
 Read this document carefully and extract all information relevant to LEED credit submissions.
@@ -4576,7 +4449,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   console.log(`  Step 3: Attempt ${attemptNumber} \u2014 folder: ${attemptFolder}`);
   console.log(`  Step 4: Listing uploads from Storage...`);
   const { data: storageFiles, error: listError } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET4).list(attemptFolder),
+    supabase.storage.from(UPLOADS_BUCKET3).list(attemptFolder),
     "list uploads"
   );
   if (listError) throw new Error(`Failed to list uploads: ${listError.message}`);
@@ -4628,7 +4501,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   let drawingReviewIssues = [];
   if (attemptNumber === 1 && !project.auto_extracted) {
     const { data: drawingFiles } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET4).list(drawingsPath(order.customer_id, order.project_id)),
+      supabase.storage.from(UPLOADS_BUCKET3).list(drawingsPath(order.customer_id, order.project_id)),
       "list drawings for review"
     );
     const drawingPathsForReview = (drawingFiles ?? []).filter((f) => f.name?.endsWith(".pdf")).map((f) => `${drawingsPath(order.customer_id, order.project_id)}/${f.name}`);
@@ -4718,7 +4591,7 @@ async function processOrder(orderId, runId, additionalInstructions) {
   const uploadBuffers = [];
   for (const upload of uploads) {
     const { data: data2, error } = await dbCall(
-      supabase.storage.from(UPLOADS_BUCKET4).download(upload.storagePath),
+      supabase.storage.from(UPLOADS_BUCKET3).download(upload.storagePath),
       `download ${upload.filename}`
     );
     if (error || !data2) throw new Error(`Failed to download ${upload.storagePath}: ${error?.message}`);
@@ -4729,45 +4602,37 @@ async function processOrder(orderId, runId, additionalInstructions) {
     });
     console.log(`    \u2713 ${upload.filename}`);
   }
-  console.log(`  Step 10: Checking drawing analysis status...`);
+  console.log(`  Step 10: Checking for drawing uploads in this order...`);
   const drawingCandidates = uploadBuffers.filter((u) => {
     if (path10.extname(u.filename).toLowerCase() !== ".pdf") return false;
     const classified = reviewResult?.documents?.find((d) => d.filename === u.filename);
     return classified ? DRAWING_TYPE_PATTERN.test(classified.documentType) : false;
   });
+  const thisRunDrawingProfiles = [];
   if (drawingCandidates.length > 0) {
-    console.log(`    ${drawingCandidates.length} drawing-type upload(s) found \u2014 checking project cache...`);
-    let anyProcessed = false;
+    console.log(`    ${drawingCandidates.length} drawing-type upload(s) found \u2014 analyzing for this run...`);
     for (const file of drawingCandidates) {
       try {
-        const { cached } = await getOrAnalyzeDrawing(order.customer_id, order.project_id, {
+        const profile = await analyzeDrawingForRun(order.customer_id, order.project_id, {
           filename: file.filename,
           buffer: file.buffer
         });
-        console.log(`    ${cached ? "\u2713 reused cached analysis for" : "\u2713 analyzed"} ${file.filename}`);
-        anyProcessed = true;
+        thisRunDrawingProfiles.push(profile);
+        console.log(`    \u2713 analyzed ${file.filename}`);
       } catch (err) {
         console.warn(`    \u26A0 Drawing analysis failed for ${file.filename}: ${err.message}`);
-      }
-    }
-    if (anyProcessed) {
-      try {
-        const { fileCount } = await rebuildProjectProfile(order.customer_id, order.project_id);
-        console.log(`    \u2713 project profile rebuilt from ${fileCount} cached drawing(s)`);
-      } catch (err) {
-        console.warn(`    \u26A0 Failed to rebuild project profile: ${err.message}`);
       }
     }
   } else {
     console.log(`    No drawing-type uploads in this order \u2014 skipping drawing analysis`);
   }
-  console.log(`  Step 10.5: Checking specs extraction status...`);
+  console.log(`  Step 10.5: Checking for spec documents in this order...`);
   let specsProfileBlock = "";
   const specFiles = uploadBuffers.filter((u) => {
     const ext = path10.extname(u.filename).toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc", ".txt"].includes(ext) && !u.filename.toLowerCase().includes("drawing") && !u.filename.toLowerCase().includes("annotated");
   });
-  if (!project.specs_extracted && specFiles.length > 0) {
+  if (specFiles.length > 0) {
     console.log(`    Running specs extraction on ${specFiles.length} document(s)...`);
     try {
       const specsProfile = await extractSpecs(order.project_id, order.customer_id, specFiles);
@@ -4776,29 +4641,18 @@ async function processOrder(orderId, runId, additionalInstructions) {
     } catch (err) {
       console.warn(`    \u26A0 Specs extraction failed: ${err.message} \u2014 continuing without specs profile`);
     }
-  } else if (project.specs_extracted) {
-    console.log(`    Specs already extracted \u2014 loading stored profile...`);
-    try {
-      const specsProfile = await loadSpecsProfile(order.customer_id, order.project_id);
-      if (specsProfile) {
-        specsProfileBlock = formatSpecsProfileForContext(specsProfile);
-        console.log(`    \u2713 Specs profile loaded \u2014 ${specsProfile.product_count} products`);
-      }
-    } catch (err) {
-      console.warn(`    \u26A0 Could not load specs profile: ${err.message}`);
-    }
   } else {
-    console.log(`    No spec documents uploaded \u2014 skipping`);
+    console.log(`    No spec documents uploaded for this order \u2014 skipping`);
   }
-  console.log(`  Step 10.6: Checking document extraction status...`);
+  console.log(`  Step 10.6: Checking for documents in this order...`);
   let docProfilesBlock = "";
-  const docProfiles = project.doc_profiles_extracted ?? {};
   const docFiles = uploadBuffers.filter((u) => {
     const ext = path10.extname(u.filename).toLowerCase();
     const name = u.filename.toLowerCase();
     return [".pdf", ".rtf", ".docx", ".doc"].includes(ext) && !name.includes("drawing") && !name.includes("annotated") && !name.includes("spec") && !name.includes("specification");
   });
   if (docFiles.length > 0) {
+    const thisRunProfiles = [];
     for (const file of docFiles) {
       try {
         const profile = await extractDocument(order.project_id, order.customer_id, {
@@ -4806,36 +4660,20 @@ async function processOrder(orderId, runId, additionalInstructions) {
           buffer: file.buffer,
           mimeType: file.mimeType
         });
-        docProfiles[profile.type_slug] = true;
+        thisRunProfiles.push(profile);
         console.log(`    \u2713 ${profile.type_slug} profile extracted from ${file.filename}`);
       } catch (err) {
         console.warn(`    \u26A0 Document extraction failed for ${file.filename}: ${err.message}`);
       }
     }
-  }
-  try {
-    const storedProfiles = await loadAllDocumentProfiles(order.customer_id, order.project_id);
-    if (storedProfiles.length > 0) {
-      docProfilesBlock = formatAllDocumentProfilesForContext(storedProfiles);
-      console.log(`    \u2713 ${storedProfiles.length} document profile(s) loaded for context`);
+    if (thisRunProfiles.length > 0) {
+      docProfilesBlock = formatAllDocumentProfilesForContext(thisRunProfiles);
     }
-  } catch (err) {
-    console.warn(`    \u26A0 Could not load document profiles: ${err.message}`);
+  } else {
+    console.log(`    No documents uploaded for this order \u2014 skipping`);
   }
-  console.log(`  Step 11: Loading project profile...`);
-  const profilePath = `${order.customer_id}/${order.project_id}/project-profile.json`;
-  let projectProfile = {};
-  const { data: profileData } = await dbCall(
-    supabase.storage.from(UPLOADS_BUCKET4).download(profilePath),
-    "download project profile"
-  );
-  if (profileData) {
-    try {
-      projectProfile = JSON.parse(await profileData.text());
-    } catch {
-      console.warn(`    Failed to parse project-profile.json \u2014 continuing without it`);
-    }
-  }
+  console.log(`  Step 11: Loading project-level data...`);
+  const projectLevelDrawingData = project.drawing_data ?? {};
   console.log(`  Step 12: Loading credit requirements PDF from pipeline/reference...`);
   const pdfLookup = findCreditPdfBuffer(
     credit.program,
@@ -5050,8 +4888,15 @@ async function processOrder(orderId, runId, additionalInstructions) {
   const projectDataBlock = [
     "DATA CONFLICT RULE: Where any uploaded document conflicts with owner-entered data below, always defer to the owner-entered data \u2014 the customer has reviewed and confirmed it. Use documents to fill gaps, not to override.",
     "",
-    "PROJECT DATA (extracted from construction drawings):",
-    ...Object.entries(projectProfile).filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== void 0).map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
+    "PROJECT-LEVEL DATA (set when the project was created; editable any time in project settings \u2014 not specific to this credit):",
+    ...Object.entries(projectLevelDrawingData).filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== void 0).map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`),
+    ...thisRunDrawingProfiles.length > 0 ? [
+      "",
+      "DRAWINGS UPLOADED FOR THIS ORDER (applies to this credit only):",
+      ...thisRunDrawingProfiles.flatMap(
+        (p) => Object.entries(p.profile).filter(([k, v]) => k !== "analyzed_at" && v !== null && v !== void 0).map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)
+      )
+    ] : [],
     "",
     "PROJECT ADDRESS (owner-entered \u2014 use this exact address for ALL location-based lookups including transit, walk score, distances, census data, and any web search requiring a location):",
     `  address: ${project.address ?? "(not provided)"}`,
@@ -5429,7 +5274,7 @@ ${plainText}`
   if (step18OrderErr) throw new Error(`Step 18: Failed to mark order complete: ${step18OrderErr.message}`);
   const attemptFilePaths = uploads.map((u) => u.storagePath);
   if (attemptFilePaths.length > 0) {
-    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET4).remove(attemptFilePaths);
+    const { error: deleteUploadsErr } = await supabase.storage.from(UPLOADS_BUCKET3).remove(attemptFilePaths);
     if (deleteUploadsErr) console.warn(`  [WARN] Failed to delete customer uploads: ${deleteUploadsErr.message}`);
     else console.log(`  \u2713 deleted ${attemptFilePaths.length} customer upload(s) from storage`);
   }
@@ -5478,7 +5323,7 @@ ${plainText}`
 [process-order] \u2713 Complete \u2014 ${outputPaths.length} output(s) uploaded`);
   return { orderId, runId, status: "complete", outputPaths };
 }
-var import_sdk6, path10, fs11, envPath3, UPLOADS_BUCKET4, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, DRAWING_TYPE_PATTERN, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
+var import_sdk6, path10, fs11, envPath3, UPLOADS_BUCKET3, OUTPUTS_BUCKET2, REF_BASE, PROGRAM_REF_SUBDIR, LEED_CODE_RE, DRAWING_TYPE_PATTERN, MAP_OUTPUT_KEYWORDS, WEB_SEARCH_TOOL;
 var init_process_order = __esm({
   "pipeline/process-order.ts"() {
     "use strict";
@@ -5516,7 +5361,7 @@ var init_process_order = __esm({
         process.env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
       }
     }
-    UPLOADS_BUCKET4 = "customer-uploads";
+    UPLOADS_BUCKET3 = "customer-uploads";
     OUTPUTS_BUCKET2 = "order-outputs";
     REF_BASE = path10.join(process.cwd(), "pipeline/reference");
     PROGRAM_REF_SUBDIR = {
