@@ -117,13 +117,27 @@ export default function HeroSection() {
               fontSize: "18px",
               fontWeight: 300,
               color: "rgba(255,255,255,0.82)",
-              maxWidth: "500px",
-              marginBottom: "36px",
+              maxWidth: "720px",
+              marginBottom: "16px",
               lineHeight: 1.65,
+              whiteSpace: "nowrap",
             }}
           >
-            Upload your project information. Receive professionally prepared
-            certification documentation. Fast. Accurate.
+            Upload your project information. Receive professionally prepared certification documentation.
+          </p>
+
+          {/* Automation line */}
+          <p
+            style={{
+              fontSize: "21px",
+              fontWeight: 700,
+              color: "#FFFFFF",
+              maxWidth: "640px",
+              marginBottom: "36px",
+              lineHeight: 1.5,
+            }}
+          >
+            Drawing analysis. Project doc and spec review. Search and retrieval of data. All automated.
           </p>
 
           {/* Value badges */}
